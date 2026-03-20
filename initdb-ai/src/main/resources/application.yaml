@@ -1,0 +1,32 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: initDB-AI
+  ai:
+    deepseek:
+#      api-key: ${AI_DEEPSEEK_API_KEY:sk-bb31cab6a8ac4c04a4d74a9e8196a064}
+      api-key: ${AI_DEEPSEEK_API_KEY:1}
+      base-url: "http://127.0.0.1:8001/v1"
+      chat:
+        options:
+          model: deepseek/deepseek-r1-0528-qwen3-8b
+  thymeleaf:
+    cache: false
+  datasource:
+    #    url: jdbc:sqlite:./ecommerce.db
+    #    driver-class-name: org.sqlite.JDBC
+    url: jdbc:mysql://10.22.21.68:3306/dev_sungl_job
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: dev_sungl
+    password: mysql
+
+logging:
+  level:
+    cn.fish: DEBUG
+    com.alibaba.cloud.ai.graph: DEBUG
+
+## SQL Agent Configuration
+database-agent:
+  max-results: 10
+
