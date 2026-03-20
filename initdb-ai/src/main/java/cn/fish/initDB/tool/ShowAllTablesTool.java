@@ -40,12 +40,12 @@ import java.util.function.BiFunction;
  */
 @Slf4j
 @Component
-public class ListTablesTool implements BiFunction<ListTablesTool.Request, ToolContext, String> {
+public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, ToolContext, String> {
 
 
     private final JdbcTemplate jdbcTemplate;
 
-    public ListTablesTool(JdbcTemplate jdbcTemplate) {
+    public ShowAllTablesTool(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -87,8 +87,8 @@ public class ListTablesTool implements BiFunction<ListTablesTool.Request, ToolCo
     }
 
     public ToolCallback toolCallback() {
-        String description = "列出数据库中所有可用的表。在生成 SQL 查询之前，请先使用此工具了解有哪些表。此工具的返回结果是JSON格式的表对象列表，tableName是表编码，remarks是表说明";
-        return FunctionToolCallback.builder("list_tables", this)
+        String description = "列出数据库中所有可用的表。在返回给用户信息前，请先使用此工具了解有哪些表，然后根据你的分析输出合适的结果。此工具的返回结果是JSON格式的表对象列表，tableName是表编码，remarks是表说明";
+        return FunctionToolCallback.builder("show all tables", this)
                                    .description(description)
                                    .inputType(Request.class)
                                    .build();

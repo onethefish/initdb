@@ -15,7 +15,7 @@
  */
 package cn.fish.initDB.config;
 
-import cn.fish.initDB.tool.ListTablesTool;
+import cn.fish.initDB.tool.ShowAllTablesTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.springframework.ai.chat.model.ChatModel;
@@ -62,11 +62,11 @@ public class SqlAgentConfiguration {
             """;
 
     private final ChatModel chatModel;
-    private final ListTablesTool listTablesTool;
+    private final ShowAllTablesTool showAllTablesTool;
 
-    public SqlAgentConfiguration(ChatModel chatModel, ListTablesTool listTablesTool) {
+    public SqlAgentConfiguration(ChatModel chatModel, ShowAllTablesTool showAllTablesTool) {
         this.chatModel = chatModel;
-        this.listTablesTool = listTablesTool;
+        this.showAllTablesTool = showAllTablesTool;
     }
 
     @Bean
@@ -77,7 +77,7 @@ public class SqlAgentConfiguration {
                          .model(chatModel)
                          .saver(new MemorySaver())
                          // 设置工具
-                         .tools(listTablesTool.toolCallback()
+                         .tools(showAllTablesTool.toolCallback()
                                  //                    , getSchemaTool.toolCallback()
                          )
                          .build();
