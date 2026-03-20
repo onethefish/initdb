@@ -3,18 +3,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-<!--    <parent>-->
-<!--        <groupId>org.springframework.boot</groupId>-->
-<!--        <artifactId>spring-boot-starter-parent</artifactId>-->
-<!--        <version>3.5.7</version>-->
-<!--        <relativePath/> &lt;!&ndash; lookup parent from repository &ndash;&gt;-->
-<!--    </parent>-->
+    <parent>
+        <artifactId>initdb</artifactId>
+        <groupId>cn.fish</groupId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
 
-    <groupId>cn.fish</groupId>
     <artifactId>initdb-ai</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>initdb-ai</name>
-    <description>initdb-ai</description>
 
 
     <dependencies>
