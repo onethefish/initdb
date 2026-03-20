@@ -34,12 +34,13 @@ import java.util.UUID;
 public class DBAgentController {
 
 
-    private final ReactAgent sqlAgent;
+    private final ReactAgent reactAgent;
 
-    public DBAgentController(ReactAgent sqlAgent) {
-        this.sqlAgent = sqlAgent;
+    public DBAgentController(ReactAgent reactAgent) {
+        this.reactAgent = reactAgent;
     }
 
+    // 重定向到聊天首页
     @GetMapping("/")
     public String index() {
         return "index";
@@ -55,7 +56,7 @@ public class DBAgentController {
         }
         try {
             RunnableConfig config = RunnableConfig.builder().threadId(threadId).build();
-            NodeOutput result = sqlAgent.invokeAndGetOutput(request.getMessage(), config).orElse(null);
+            NodeOutput result = reactAgent.invokeAndGetOutput(request.getMessage(), config).orElse(null);
             String response = NodeOutputUtil.extractResponse(result);
             return new ChatResponse(response, threadId, true);
         } catch (Exception e) {

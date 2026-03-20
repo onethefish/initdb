@@ -80,7 +80,7 @@ public class DBAgentConfiguration {
     }
 
     @Bean
-    public ReactAgent sqlAgent() {
+    public ReactAgent reactAgent() {
         return ReactAgent.builder()
                          .name("database-agent")          // 智能体
                          .description(SYSTEM_PROMPT) //智能体的描述或系统提示词
