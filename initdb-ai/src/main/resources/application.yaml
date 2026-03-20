@@ -4,10 +4,10 @@ spring:
   application:
     name: initDB-AI
   ai:
-    deepseek:
+    openai:
 #      api-key: ${AI_DEEPSEEK_API_KEY:sk-bb31cab6a8ac4c04a4d74a9e8196a064}
       api-key: ${AI_DEEPSEEK_API_KEY:1}
-      base-url: "http://127.0.0.1:8001/v1"
+      base-url: "http://127.0.0.1:8001"
       chat:
         options:
           model: deepseek/deepseek-r1-0528-qwen3-8b
