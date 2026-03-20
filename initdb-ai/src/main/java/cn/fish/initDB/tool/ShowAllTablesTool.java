@@ -25,9 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -43,10 +43,10 @@ import java.util.function.BiFunction;
 public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, ToolContext, String> {
 
 
-    private final JdbcTemplate jdbcTemplate;
+    private final DataSource dataSource;
 
-    public ShowAllTablesTool(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public ShowAllTablesTool(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     @Override
@@ -54,7 +54,7 @@ public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, 
         log.info("ListTablesTool::apply");
         log.info("request={}", request);
         log.info("toolContext={}", toolContext);
-        try (Connection conn = jdbcTemplate.getDataSource().getConnection()) {
+        try (Connection conn = dataSource.getConnection()) {
             String catalog = conn.getCatalog();//目录名称，一般都为空
             //schema = "%";//数据库名，对于mysql来说用通配符
             DatabaseMetaData dbmd = conn.getMetaData();
