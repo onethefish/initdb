@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.function.BiFunction;
 
 /**
- * 查询表结构的工具
+ * 查询表清单工具
  */
 @Slf4j
 @Component
@@ -88,7 +88,7 @@ public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, 
 
     public ToolCallback toolCallback() {
         String description = "列出数据库中所有可用的表。在返回给用户信息前，请先使用此工具了解有哪些表，然后根据你的分析输出合适的结果。此工具的返回结果是JSON格式的表对象列表，tableName是表编码，remarks是表说明";
-        return FunctionToolCallback.builder("show_all_tables", this)
+        return FunctionToolCallback.builder("get_all_tables", this)
                                    .description(description)
                                    .inputType(Request.class)
                                    .build();

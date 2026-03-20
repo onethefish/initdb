@@ -31,12 +31,12 @@ import java.util.UUID;
 @Slf4j
 @Controller
 @RequestMapping("/api/sql")
-public class SqlAgentController {
+public class DBAgentController {
 
 
     private final ReactAgent sqlAgent;
 
-    public SqlAgentController(ReactAgent sqlAgent) {
+    public DBAgentController(ReactAgent sqlAgent) {
         this.sqlAgent = sqlAgent;
     }
 
