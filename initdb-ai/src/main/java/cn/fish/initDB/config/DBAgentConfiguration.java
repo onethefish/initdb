@@ -67,6 +67,7 @@ public class DBAgentConfiguration {
             1. 调用 get_all_tables 获取数据库中所有的表
             2. 调用 get_table_schema 获取数据库具体的表的详细信息
             3. 将结果综合为有帮助的回答
+            4. 回答结果解析
             """;
 
     private final ChatModel chatModel;
