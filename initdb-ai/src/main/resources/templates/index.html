@@ -623,7 +623,7 @@
                 const message = {role: 'bot', content: data.response};
                 console.log(message);
                 sessions[sessionIndex].messages.push(message);
-                addMessageToDOM('bot', message);
+                addMessageToDOM('bot', data.response);
             } else {
                 throw new Error(data.error || '请求失败');
             }
