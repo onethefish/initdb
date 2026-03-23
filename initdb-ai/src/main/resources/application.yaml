@@ -5,12 +5,11 @@ spring:
     name: initDB-AI
   ai:
     openai:
-#      api-key: ${AI_DEEPSEEK_API_KEY:sk-bb31cab6a8ac4c04a4d74a9e8196a064}
-      api-key: ${AI_DEEPSEEK_API_KEY:}
-      base-url: ""
+      api-key: ${AI_OPENAI_API-KEY}
+      base-url: ${AI_OPENAI_BASE-URL}
       chat:
         options:
-          model:
+          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL}
   thymeleaf:
     cache: false
 logging:
