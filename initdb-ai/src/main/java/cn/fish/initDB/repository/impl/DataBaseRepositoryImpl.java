@@ -24,8 +24,15 @@ import java.util.Map;
 public class DataBaseRepositoryImpl implements DataBaseRepository {
 
     private static final Cache<String, HikariDataSource> DATA_SOURCE_CACHE = Caffeine.newBuilder()
-                                                                                     //                                                                                     .maximumSize(128) // 最大支持128个会话
+                                                                                     .maximumSize(128) // 最大支持128个会话
                                                                                      .build();
+
+    private static final Cache<String, List<Table>> ALL_TABLE_CACHE = Caffeine.newBuilder()
+                                                                              .maximumSize(128) // 最大支持128个会话
+                                                                              .build();
+
+    private static final Cache<String, Table> TABLE_SCHEMA_CACHE = Caffeine.newBuilder()
+                                                                           .build();
 
     @Override
     public void test(ChatSession chatSession) {
@@ -83,81 +90,85 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
 
     @Override
     public List<Table> queryTableList(String sessionId) {
-        DataSource dataSource = getDataSource(sessionId);
-        List<Table> tables = new ArrayList<>();
-        try (Connection conn = dataSource.getConnection()) {
-            String catalog = conn.getCatalog();//目录名称，一般都为空
-            //schema = "%";//数据库名，对于mysql来说用通配符
-            DatabaseMetaData dbmd = conn.getMetaData();
-            String schema = dbmd.getUserName();//数据库名称
-            // 表第一个字段为表名，第二个为表注释
-            ResultSet tablesResultSet = dbmd.getTables(catalog, schema, "%", new String[]{"TABLE"});
-            while (tablesResultSet.next()) {
-                Table table = new Table();
-                String table_name = tablesResultSet.getString("TABLE_NAME");  //表名
-                String remarks = tablesResultSet.getString("REMARKS");       //表注释 不一定有
-                table.setTableName(table_name);
-                table.setRemarks(remarks);
-                tables.add(table);
+        return ALL_TABLE_CACHE.get(sessionId, v -> {
+            DataSource dataSource = getDataSource(sessionId);
+            List<Table> tables = new ArrayList<>();
+            try (Connection conn = dataSource.getConnection()) {
+                String catalog = conn.getCatalog();//目录名称，一般都为空
+                //schema = "%";//数据库名，对于mysql来说用通配符
+                DatabaseMetaData dbmd = conn.getMetaData();
+                String schema = dbmd.getUserName();//数据库名称
+                // 表第一个字段为表名，第二个为表注释
+                ResultSet tablesResultSet = dbmd.getTables(catalog, schema, "%", new String[]{"TABLE"});
+                while (tablesResultSet.next()) {
+                    Table table = new Table();
+                    String table_name = tablesResultSet.getString("TABLE_NAME");  //表名
+                    String remarks = tablesResultSet.getString("REMARKS");       //表注释 不一定有
+                    table.setTableName(table_name);
+                    table.setRemarks(remarks);
+                    tables.add(table);
+                }
+                return tables;
+            } catch (Exception ignored) {
+
             }
             return tables;
-        } catch (Exception ignored) {
-
-        }
-        return tables;
+        });
     }
 
     @Override
     public Table queryTableSchema(String sessionId, String tableName) {
-        DataSource dataSource = getDataSource(sessionId);
-        try (Connection conn = dataSource.getConnection()) {
-            DatabaseMetaData databaseMetaData = conn.getMetaData();
-            String catalog = conn.getCatalog();
-            //            ArrayList<Table> resultList = new ArrayList();
-            Table table = new Table();
-            table.setTableName(tableName);
-            // 获取主键
-            ResultSet metaDataPrimaryKeys = databaseMetaData.getPrimaryKeys(catalog, conn.getMetaData().getUserName(), tableName);
-            while (metaDataPrimaryKeys.next()) {
-                String column_name = metaDataPrimaryKeys.getString("COLUMN_NAME");
-                Integer key_seq = metaDataPrimaryKeys.getInt("KEY_SEQ");
-                table.addPrimaryKeysMap(key_seq, column_name);
-            }
-            // 获取索引
-            ResultSet indexInfos = databaseMetaData.getIndexInfo(catalog, conn.getMetaData().getUserName(), tableName, false, true);
-            int key_seq = 1;
-            while (indexInfos.next()) {
-                String index_name = indexInfos.getString("INDEX_NAME");
-                String column_name = indexInfos.getString("COLUMN_NAME");
-                //                        Integer key_seq = indexInfos.getInt("SEQ_IN_INDEX");
-                key_seq++;
-                if (!"PRIMARY".equalsIgnoreCase(index_name)) {
-                    table.setIndexMapMap(index_name, key_seq, column_name);
+        Table result = TABLE_SCHEMA_CACHE.get(sessionId + tableName, v -> {
+            DataSource dataSource = getDataSource(sessionId);
+            try (Connection conn = dataSource.getConnection()) {
+                DatabaseMetaData databaseMetaData = conn.getMetaData();
+                String catalog = conn.getCatalog();
+                //            ArrayList<Table> resultList = new ArrayList();
+                Table table = new Table();
+                table.setTableName(tableName);
+                // 获取主键
+                ResultSet metaDataPrimaryKeys = databaseMetaData.getPrimaryKeys(catalog, conn.getMetaData().getUserName(), tableName);
+                while (metaDataPrimaryKeys.next()) {
+                    String column_name = metaDataPrimaryKeys.getString("COLUMN_NAME");
+                    Integer key_seq = metaDataPrimaryKeys.getInt("KEY_SEQ");
+                    table.addPrimaryKeysMap(key_seq, column_name);
                 }
+                // 获取索引
+                ResultSet indexInfos = databaseMetaData.getIndexInfo(catalog, conn.getMetaData().getUserName(), tableName, false, true);
+                int key_seq = 1;
+                while (indexInfos.next()) {
+                    String index_name = indexInfos.getString("INDEX_NAME");
+                    String column_name = indexInfos.getString("COLUMN_NAME");
+                    //                        Integer key_seq = indexInfos.getInt("SEQ_IN_INDEX");
+                    key_seq++;
+                    if (!"PRIMARY".equalsIgnoreCase(index_name)) {
+                        table.setIndexMapMap(index_name, key_seq, column_name);
+                    }
+                }
+                table.indexMapSort();
+                // 获取表字段
+                ResultSet columns = databaseMetaData.getColumns(catalog, conn.getMetaData().getUserName(), tableName, "%");
+                while (columns.next()) {
+                    TableColumn tableColumn = new TableColumn();
+                    String column_name = columns.getString("COLUMN_NAME");
+                    String type_name = columns.getString("TYPE_NAME");// 数据类型
+                    String column_size = columns.getString("COLUMN_SIZE");// 长度
+                    String decimal_digits = columns.getString("DECIMAL_DIGITS");// 精度
+                    String column_def = columns.getString("COLUMN_DEF");// 默认值
+                    boolean is_nullable = columns.getBoolean("IS_NULLABLE");
+                    String remarks = columns.getString("REMARKS");// 注释
+                    tableColumn.setColumnInfo(column_name, type_name, column_size, decimal_digits, column_def, is_nullable);
+                    tableColumn.setRemarks(remarks);
+                    table.addTableColumnMap(column_name, tableColumn);
+                }
+                table.tableColumnSort();
+                table.dealColumn();
+                return table;
+            } catch (Exception ignored) {
+                return null;
             }
-            table.indexMapSort();
-            // 获取表字段
-            ResultSet columns = databaseMetaData.getColumns(catalog, conn.getMetaData().getUserName(), tableName, "%");
-            while (columns.next()) {
-                TableColumn tableColumn = new TableColumn();
-                String column_name = columns.getString("COLUMN_NAME");
-                String type_name = columns.getString("TYPE_NAME");// 数据类型
-                String column_size = columns.getString("COLUMN_SIZE");// 长度
-                String decimal_digits = columns.getString("DECIMAL_DIGITS");// 精度
-                String column_def = columns.getString("COLUMN_DEF");// 默认值
-                boolean is_nullable = columns.getBoolean("IS_NULLABLE");
-                String remarks = columns.getString("REMARKS");// 注释
-                tableColumn.setColumnInfo(column_name, type_name, column_size, decimal_digits, column_def, is_nullable);
-                tableColumn.setRemarks(remarks);
-                table.addTableColumnMap(column_name, tableColumn);
-            }
-            table.tableColumnSort();
-            table.dealColumn();
-            return table;
-        } catch (Exception ignored) {
-
-        }
-        return null;
+        });
+        return result;
     }
 
     @Override
