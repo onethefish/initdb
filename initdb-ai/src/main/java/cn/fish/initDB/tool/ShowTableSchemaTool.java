@@ -16,7 +16,7 @@
 package cn.fish.initDB.tool;
 
 import cn.fish.initDB.entity.Table;
-import cn.fish.initDB.entity.TableColumn;
+import cn.fish.initDB.repository.DataBaseRepository;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
@@ -26,16 +26,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.BiFunction;
 
 /**
@@ -43,30 +39,26 @@ import java.util.function.BiFunction;
  */
 @Slf4j
 @Component
-public class ShowTableSchemaTool implements BiFunction<ShowTableSchemaTool.Request, ToolContext, String> {
+public class ShowTableSchemaTool extends DataBaseTool implements BiFunction<ShowTableSchemaTool.Request, ToolContext, String> {
 
-
-    private final DataSource dataSource;
-
-    public ShowTableSchemaTool(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
+    @Autowired
+    private DataBaseRepository dataBaseRepository;
 
     @Override
     public String apply(Request request, ToolContext toolContext) {
         log.info("ShowTableSchemaTool::apply");
-        log.info("request={}", request);
-        log.info("toolContext={}", toolContext);
+        String sessionId = getSessionId(toolContext);
         List<String> tableNames = Arrays.stream(request.tables().split(","))
-                                        .map(String::trim)
-                                        .filter(s -> !s.isEmpty())
+                                        .map(String::trim).
+                                        filter(trim -> !trim.isEmpty()).
+                                        map(this::sanitizeTableName)
                                         .toList();
         if (tableNames.isEmpty()) {
             return "No table names provided. Please specify table names separated by commas.";
         }
         List<Table> tables = new ArrayList<>();
         for (String tableName : tableNames) {
-            Table table = getTableSchema(tableName);
+            Table table = dataBaseRepository.queryTableSchema(sessionId, tableName);
             if (table != null) {
                 tables.add(table);
             }
@@ -77,60 +69,6 @@ public class ShowTableSchemaTool implements BiFunction<ShowTableSchemaTool.Reque
 
     }
 
-    private Table getTableSchema(String input) {
-        try (Connection conn = dataSource.getConnection()) {
-            DatabaseMetaData databaseMetaData = conn.getMetaData();
-            String catalog = conn.getCatalog();
-            //            ArrayList<Table> resultList = new ArrayList();
-            Table table = new Table();
-            table.setTableName(sanitizeTableName(input));
-            String tableName = table.getTableName();
-            // 获取主键
-            ResultSet metaDataPrimaryKeys = databaseMetaData.getPrimaryKeys(catalog, conn.getMetaData().getUserName(), tableName);
-            while (metaDataPrimaryKeys.next()) {
-                String column_name = metaDataPrimaryKeys.getString("COLUMN_NAME");
-                Integer key_seq = metaDataPrimaryKeys.getInt("KEY_SEQ");
-                table.addPrimaryKeysMap(key_seq, column_name);
-            }
-            // 获取索引
-            ResultSet indexInfos = databaseMetaData.getIndexInfo(catalog, conn.getMetaData().getUserName(), tableName, false, true);
-            int key_seq = 1;
-            while (indexInfos.next()) {
-                String index_name = indexInfos.getString("INDEX_NAME");
-                String column_name = indexInfos.getString("COLUMN_NAME");
-                //                        Integer key_seq = indexInfos.getInt("SEQ_IN_INDEX");
-                key_seq++;
-                if (!"PRIMARY".equalsIgnoreCase(index_name)) {
-                    table.setIndexMapMap(index_name, key_seq, column_name);
-                }
-            }
-            table.indexMapSort();
-            // 获取表字段
-            ResultSet columns = databaseMetaData.getColumns(catalog, conn.getMetaData().getUserName(), tableName, "%");
-            while (columns.next()) {
-                TableColumn tableColumn = new TableColumn();
-                String column_name = columns.getString("COLUMN_NAME");
-                String type_name = columns.getString("TYPE_NAME");// 数据类型
-                String column_size = columns.getString("COLUMN_SIZE");// 长度
-                String decimal_digits = columns.getString("DECIMAL_DIGITS");// 精度
-                String column_def = columns.getString("COLUMN_DEF");// 默认值
-                boolean is_nullable = columns.getBoolean("IS_NULLABLE");
-                String remarks = columns.getString("REMARKS");// 注释
-                tableColumn.setColumnInfo(column_name, type_name, column_size, decimal_digits, column_def, is_nullable);
-                tableColumn.setRemarks(remarks);
-                table.addTableColumnMap(column_name, tableColumn);
-            }
-            table.tableColumnSort();
-            table.dealColumn();
-            // Get CREATE TABLE statement
-            //            String result = table.toString();
-            //            log.info(result);
-            return table;
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            return null;
-        }
-    }
 
     private String sanitizeTableName(String tableName) {
         // Basic SQL injection prevention - only allow alphanumeric and underscore

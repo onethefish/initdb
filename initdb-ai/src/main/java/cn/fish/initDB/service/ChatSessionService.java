@@ -6,4 +6,8 @@ public interface ChatSessionService {
 
     ChatSession add(ChatSession chatSession);
 
+    void delete(ChatSession chatSession);
+
+    void deleteAll();
+
 }

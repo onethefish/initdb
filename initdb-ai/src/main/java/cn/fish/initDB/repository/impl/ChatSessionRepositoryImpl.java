@@ -28,4 +28,9 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
     public void remove(ChatSession chatSession) {
         CHART_SESSION.invalidate(chatSession.getSessionId());
     }
+
+    @Override
+    public void removeAll() {
+        CHART_SESSION.invalidateAll();
+    }
 }

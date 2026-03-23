@@ -18,19 +18,19 @@ package cn.fish.initDB.controller;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 
-@Slf4j
 @Controller
 @RequestMapping("/db")
 public class DBAgentController {
 
-    @Autowired
-    private DBAgentService dbAgentService;
+    private final DBAgentService dbAgentService;
+
+    public DBAgentController(DBAgentService dbAgentService) {
+        this.dbAgentService = dbAgentService;
+    }
 
     @ResponseBody
     @PostMapping("/chat")

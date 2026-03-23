@@ -4,20 +4,21 @@ import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.initDB.util.NodeOutputUtil;
-import cn.hutool.core.util.IdUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 public class DBAgentServiceImpl implements DBAgentService {
 
-    @Autowired
-    private ReactAgent reactAgent;
+    private final ReactAgent reactAgent;
+
+    public DBAgentServiceImpl(ReactAgent reactAgent) {
+        this.reactAgent = reactAgent;
+    }
 
     @Override
     public ChatResponse chat(ChatRequest chatRequest) {
@@ -25,7 +26,7 @@ public class DBAgentServiceImpl implements DBAgentService {
         String sessionId = chatRequest.getSessionId();
         // todo
         if (sessionId == null || sessionId.isEmpty()) {
-            sessionId = IdUtil.simpleUUID();
+            return new ChatResponse("Sorry, an error occurred: sessionId is null", null, false);
         }
         try {
             RunnableConfig config = RunnableConfig.builder().threadId(sessionId).build();

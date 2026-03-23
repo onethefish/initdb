@@ -18,8 +18,6 @@ package cn.fish.initDB.tool;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.repository.DataBaseRepository;
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.map.MapUtil;
-import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
@@ -32,14 +30,7 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.function.BiFunction;
 
 /**
@@ -47,7 +38,7 @@ import java.util.function.BiFunction;
  */
 @Slf4j
 @Component
-public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, ToolContext, String> {
+public class ShowAllTablesTool extends DataBaseTool implements BiFunction<ShowAllTablesTool.Request, ToolContext, String> {
 
 
     @Autowired
@@ -56,12 +47,7 @@ public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, 
     @Override
     public String apply(Request request, ToolContext toolContext) {
         log.info("ListTablesTool::apply");
-        log.info("request={}", request);
-        Map<String, Object> context = toolContext.getContext();
-        log.info("toolContext={}", context);
-        RunnableConfig runnableConfig = (RunnableConfig) context.get("_AGENT_CONFIG_");
-        Optional<String> threadId = runnableConfig.threadId();
-        String sessionId = threadId.get();
+        String sessionId = getSessionId(toolContext);
         List<Table> tables = dataBaseRepository.queryTableList(sessionId);
         if (CollUtil.isNotEmpty(tables)) {
             return JSON.toJSONString(tables, JSONWriter.Feature.IgnoreEmpty);
@@ -70,6 +56,7 @@ public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, 
             return "Error listing tables";
         }
     }
+
 
     public ToolCallback toolCallback() {
         String description = "列出数据库中所有可用的表。在返回给用户信息前，请先使用此工具了解有哪些表，然后根据你的分析输出合适的结果。此工具的返回结果是JSON格式的表对象列表，tableName是表编码，remarks是表说明";

@@ -2,6 +2,7 @@ package cn.fish.initDB.repository.impl;
 
 import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
+import cn.fish.initDB.entity.TableColumn;
 import cn.fish.initDB.repository.DataBaseRepository;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -21,7 +22,7 @@ import java.util.List;
 public class DataBaseRepositoryImpl implements DataBaseRepository {
 
     private static final Cache<String, HikariDataSource> DATA_SOURCE_CACHE = Caffeine.newBuilder()
-//                                                                                     .maximumSize(128) // 最大支持128个会话
+                                                                                     //                                                                                     .maximumSize(128) // 最大支持128个会话
                                                                                      .build();
 
     @Override
@@ -53,6 +54,32 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     }
 
     @Override
+    public void remove(ChatSession chatSession) {
+        try {
+            DataSource dataSource = getDataSource(chatSession.getSessionId());
+            dataSourceClose(dataSource);
+            DATA_SOURCE_CACHE.invalidate(chatSession.getSessionId());
+        } catch (Exception ignored) {
+
+        }
+    }
+
+
+    @Override
+    public void removeAll() {
+        DATA_SOURCE_CACHE.asMap().forEach((key, value) -> {
+            dataSourceClose(value);
+        });
+        DATA_SOURCE_CACHE.invalidateAll();
+    }
+
+    private static void dataSourceClose(DataSource dataSource) {
+        if (dataSource instanceof HikariDataSource hikariDataSource) {
+            hikariDataSource.close();
+        }
+    }
+
+    @Override
     public List<Table> queryTableList(String sessionId) {
         DataSource dataSource = getDataSource(sessionId);
         List<Table> tables = new ArrayList<>();
@@ -76,6 +103,59 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
 
         }
         return tables;
+    }
+
+    @Override
+    public Table queryTableSchema(String sessionId, String tableName) {
+        DataSource dataSource = getDataSource(sessionId);
+        try (Connection conn = dataSource.getConnection()) {
+            DatabaseMetaData databaseMetaData = conn.getMetaData();
+            String catalog = conn.getCatalog();
+            //            ArrayList<Table> resultList = new ArrayList();
+            Table table = new Table();
+            table.setTableName(tableName);
+            // 获取主键
+            ResultSet metaDataPrimaryKeys = databaseMetaData.getPrimaryKeys(catalog, conn.getMetaData().getUserName(), tableName);
+            while (metaDataPrimaryKeys.next()) {
+                String column_name = metaDataPrimaryKeys.getString("COLUMN_NAME");
+                Integer key_seq = metaDataPrimaryKeys.getInt("KEY_SEQ");
+                table.addPrimaryKeysMap(key_seq, column_name);
+            }
+            // 获取索引
+            ResultSet indexInfos = databaseMetaData.getIndexInfo(catalog, conn.getMetaData().getUserName(), tableName, false, true);
+            int key_seq = 1;
+            while (indexInfos.next()) {
+                String index_name = indexInfos.getString("INDEX_NAME");
+                String column_name = indexInfos.getString("COLUMN_NAME");
+                //                        Integer key_seq = indexInfos.getInt("SEQ_IN_INDEX");
+                key_seq++;
+                if (!"PRIMARY".equalsIgnoreCase(index_name)) {
+                    table.setIndexMapMap(index_name, key_seq, column_name);
+                }
+            }
+            table.indexMapSort();
+            // 获取表字段
+            ResultSet columns = databaseMetaData.getColumns(catalog, conn.getMetaData().getUserName(), tableName, "%");
+            while (columns.next()) {
+                TableColumn tableColumn = new TableColumn();
+                String column_name = columns.getString("COLUMN_NAME");
+                String type_name = columns.getString("TYPE_NAME");// 数据类型
+                String column_size = columns.getString("COLUMN_SIZE");// 长度
+                String decimal_digits = columns.getString("DECIMAL_DIGITS");// 精度
+                String column_def = columns.getString("COLUMN_DEF");// 默认值
+                boolean is_nullable = columns.getBoolean("IS_NULLABLE");
+                String remarks = columns.getString("REMARKS");// 注释
+                tableColumn.setColumnInfo(column_name, type_name, column_size, decimal_digits, column_def, is_nullable);
+                tableColumn.setRemarks(remarks);
+                table.addTableColumnMap(column_name, tableColumn);
+            }
+            table.tableColumnSort();
+            table.dealColumn();
+            return table;
+        } catch (Exception ignored) {
+
+        }
+        return null;
     }
 
     private DataSource getDataSource(String sessionId) {

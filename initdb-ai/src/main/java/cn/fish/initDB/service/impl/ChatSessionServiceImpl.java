@@ -5,16 +5,18 @@ import cn.fish.initDB.repository.ChatSessionRepository;
 import cn.fish.initDB.repository.DataBaseRepository;
 import cn.fish.initDB.service.ChatSessionService;
 import cn.hutool.core.util.IdUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ChatSessionServiceImpl implements ChatSessionService {
 
-    @Autowired
-    private ChatSessionRepository chatSessionRepository;
-    @Autowired
-    private DataBaseRepository dataBaseRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final DataBaseRepository dataBaseRepository;
+
+    public ChatSessionServiceImpl(ChatSessionRepository chatSessionRepository, DataBaseRepository dataBaseRepository) {
+        this.chatSessionRepository = chatSessionRepository;
+        this.dataBaseRepository = dataBaseRepository;
+    }
 
     @Override
     public ChatSession add(ChatSession chatSession) {
@@ -25,5 +27,17 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         chatSessionRepository.add(chatSession);
         dataBaseRepository.add(chatSession);
         return chatSession;
+    }
+
+    @Override
+    public void delete(ChatSession chatSession) {
+        chatSessionRepository.remove(chatSession);
+        dataBaseRepository.remove(chatSession);
+    }
+
+    @Override
+    public void deleteAll() {
+        chatSessionRepository.removeAll();
+        dataBaseRepository.removeAll();
     }
 }

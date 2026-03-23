@@ -41,7 +41,7 @@
           margin-left: 8px;
       }
 
-      .new-chat-btn {
+      .create-chat-btn {
           width: 90%;
           padding: 9px 16px;
           margin: 16px;
@@ -56,14 +56,33 @@
           justify-content: center;
       }
 
-      .new-chat-btn:hover {
+      .create-chat-btn:hover {
           background-color: #3a8ee6;
       }
 
-      .new-chat-btn::before {
+      .create-chat-btn::before {
           content: '+';
           font-size: 16px;
           margin-right: 6px;
+      }
+
+      .delete-chat-btn {
+          width: 90%;
+          padding: 9px 16px;
+          margin: 16px;
+          background-color: #dc3545; /* Bootstrap 的 danger 颜色 */
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+
+      .delete-chat-btn:hover {
+          background-color: #bd2130;
       }
 
       .session-list {
@@ -177,6 +196,7 @@
           line-height: 1.5;
           font-size: 15px;
           word-wrap: break-word;
+          white-space: pre-line;
       }
 
       .user-message {
@@ -323,7 +343,8 @@
          alt="Logo" style="width: 24px; height: 24px;">
     <h1>智能数据库助手</h1>
   </div>
-  <button class="new-chat-btn" onclick="openModal()">创建新对话</button>
+  <button class="create-chat-btn" onclick="createModal()">创建新对话</button>
+  <button class="delete-chat-btn" onclick="deleteModal()">删除所有对话</button>
   <div class="session-list" id="sessionList">
     <!-- 会话项将通过JavaScript动态添加 -->
   </div>
@@ -338,7 +359,7 @@
     <!--    <div class="welcome-db-info">-->
     <!--      <strong>示例数据库:</strong> E-commerce | 表: customers, products, orders, order_items, categories-->
     <!--    </div>-->
-    <button class="new-chat-btn" onclick="openModal()" style="max-width: 200px;">创建第一个对话</button>
+    <button class="create-chat-btn" onclick="createModal()" style="max-width: 200px;">创建第一个对话</button>
   </div>
 
   <!-- 聊天容器 (默认隐藏) -->
@@ -364,14 +385,14 @@
       <label for="sessionName">会话名称</label>
       <input type="text" id="sessionName" required value="测试会话">
     </div>
-    <div class="form-group">
-      <label for="host">主机地址</label>
-      <input type="text" id="host" value="localhost">
-    </div>
-    <div class="form-group">
-      <label for="port">端口</label>
-      <input type="text" id="port" value="3306">
-    </div>
+    <!--    <div class="form-group">-->
+    <!--      <label for="host">主机地址</label>-->
+    <!--      <input type="text" id="host" value="localhost">-->
+    <!--    </div>-->
+    <!--    <div class="form-group">-->
+    <!--      <label for="port">端口</label>-->
+    <!--      <input type="text" id="port" value="3306">-->
+    <!--    </div>-->
     <div class="form-group">
       <label for="url">url</label>
       <input type="text" id="url" required value="jdbc:mysql://10.22.21.68:3306/dev_sungl_job">
@@ -417,17 +438,37 @@
     }
 
     // 打开模态框
-    function openModal() {
+    function createModal() {
         document.getElementById('sessionModal').style.display = 'flex';
     }
 
-    // 关闭模态框
+    async function deleteModal() {
+        try {
+            const response = await fetch('/chat/delete/all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            });
+        } catch (error) {
+            console.log(error)
+        }
+        sessions = [];
+        localStorage.clear();
+        renderSessionList();
+        document.getElementById('chatContainer').style.display = 'none';
+        document.getElementById('welcomeScreen').style.display = 'flex';
+
+    }
+
+    // 关闭创建新会话框
     function closeModal() {
         document.getElementById('sessionModal').style.display = 'none';
         // 清空表单
         document.getElementById('sessionName').value = '';
-        document.getElementById('host').value = '';
-        document.getElementById('port').value = '';
+        // document.getElementById('host').value = '';
+        // document.getElementById('port').value = '';
         document.getElementById('url').value = '';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
@@ -436,8 +477,8 @@
     // 创建新会话
     async function createNewSession() {
         const sessionName = document.getElementById('sessionName').value.trim();
-        const host = document.getElementById('host').value.trim();
-        const port = document.getElementById('port').value.trim();
+        // const host = document.getElementById('host').value.trim();
+        // const port = document.getElementById('port').value.trim();
         const url = document.getElementById('url').value.trim();
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
@@ -449,8 +490,6 @@
                 },
                 body: JSON.stringify({
                     sessionName: sessionName,
-                    host: host,
-                    port: parseInt(port),
                     url: url,
                     username: username,
                     password: password
@@ -462,7 +501,7 @@
                 const newSession = {
                     id: newSessionId, // 使用时间戳作为唯一ID
                     name: sessionName,
-                    config: {host, port, username, password},
+                    config: {username, password},
                     messages: [] // 新建会话时消息为空
                 };
                 sessions.unshift(newSession); // 将新会话添加到数组开头
@@ -582,8 +621,9 @@
             if (response.ok) {
                 // 添加机器人回复
                 const message = {role: 'bot', content: data.response};
+                console.log(message);
                 sessions[sessionIndex].messages.push(message);
-                addMessageToDOM('bot', data.response);
+                addMessageToDOM('bot', message);
             } else {
                 throw new Error(data.error || '请求失败');
             }

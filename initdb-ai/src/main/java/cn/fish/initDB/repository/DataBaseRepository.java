@@ -11,5 +11,11 @@ public interface DataBaseRepository {
 
     void add(ChatSession chatSession);
 
+    void remove(ChatSession chatSession);
+
+    void removeAll();
+
     List<Table> queryTableList(String sessionId);
+
+    Table queryTableSchema(String sessionId, String tableName);
 }

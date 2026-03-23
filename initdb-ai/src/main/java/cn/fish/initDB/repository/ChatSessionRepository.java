@@ -10,4 +10,5 @@ public interface ChatSessionRepository {
 
     void remove(ChatSession chatSession);
 
+    void removeAll();
 }
