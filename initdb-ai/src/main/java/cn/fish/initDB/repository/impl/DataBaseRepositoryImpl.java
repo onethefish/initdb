@@ -9,6 +9,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
@@ -17,6 +18,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class DataBaseRepositoryImpl implements DataBaseRepository {
@@ -156,6 +158,13 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
 
         }
         return null;
+    }
+
+    @Override
+    public List<Map<String, Object>> queryTableData(String sessionId, String sql) {
+        DataSource dataSource = getDataSource(sessionId);
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        return jdbcTemplate.queryForList(sql);
     }
 
     private DataSource getDataSource(String sessionId) {

@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.fish.initDB.tool;
+package cn.fish.initDB.tool.impl;
 
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.repository.DataBaseRepository;
+import cn.fish.initDB.tool.DataBaseAbstractTool;
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
@@ -27,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -38,15 +38,18 @@ import java.util.function.BiFunction;
  */
 @Slf4j
 @Component
-public class ShowAllTablesTool extends DataBaseTool implements BiFunction<ShowAllTablesTool.Request, ToolContext, String> {
+public class GetAllTablesTool extends DataBaseAbstractTool implements BiFunction<GetAllTablesTool.Request, ToolContext, String> {
 
 
-    @Autowired
-    private DataBaseRepository dataBaseRepository;
+    private final DataBaseRepository dataBaseRepository;
+
+    public GetAllTablesTool(DataBaseRepository dataBaseRepository) {
+        this.dataBaseRepository = dataBaseRepository;
+    }
 
     @Override
     public String apply(Request request, ToolContext toolContext) {
-        log.info("ListTablesTool::apply");
+        log.info("GetAllTablesTool::apply");
         String sessionId = getSessionId(toolContext);
         List<Table> tables = dataBaseRepository.queryTableList(sessionId);
         if (CollUtil.isNotEmpty(tables)) {

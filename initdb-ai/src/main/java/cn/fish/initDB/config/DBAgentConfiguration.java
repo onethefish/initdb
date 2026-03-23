@@ -15,8 +15,10 @@
  */
 package cn.fish.initDB.config;
 
-import cn.fish.initDB.tool.ShowAllTablesTool;
-import cn.fish.initDB.tool.ShowTableSchemaTool;
+import cn.fish.initDB.tool.impl.GetAllTablesTool;
+import cn.fish.initDB.tool.impl.GetTableDataTool;
+import cn.fish.initDB.tool.impl.GetTableSchemaTool;
+import cn.fish.initDB.tool.impl.QuerySqlCheckTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.springframework.ai.chat.model.ChatModel;
@@ -62,22 +64,42 @@ public class DBAgentConfiguration {
 
     private static final String SYSTEM_PROMPT = """
             你是一个专为与关系型数据库交互而设计的智能体(Agent)。
-            根据输入的问题，返回正确的答案。
+            根据输入的问题，如果用户明确需要查询数据则编写 语法正确的查询SQL语句来运行。
+            然后查看查询结果并返回答案。
+            
+            除非用户明确指定了希望获取的示例数量，否则始终将查询结果限制为最多 10 条。
+            
+            切勿对数据库执行任何 DML 语句（如 INSERT, UPDATE, DELETE, DROP 等），只允许执行 SELECT 查询。
+            
+            开始时，你应该始终先查看数据库中的表，看看可以查询什么。不要跳过此步骤。
+            
+            然后，你应该查询最相关表的详细信息（Schema）以了解其结构，帮助你生成正确的查询SQL语句
+            
+            最后，执行查询并根据结果提供清晰、自然的语言回答。
+            
+            获取表的详细信息（Schema），请使用 sql_check 工具在执行前验证你的 SQL。
+            
             请记住遵循以下步骤：
             1. 调用 get_all_tables 获取数据库中所有的表
-            2. 调用 get_table_schema 获取数据库具体的表的详细信息
-            3. 将结果综合为有帮助的回答
-            4. 回答结果解析
+            2. 调用 get_table_schema 获取数据库具体的表的详细信息（Schema）
+            3. 调用 sql_check 验证你生成的sql
+            4. 调用 get_table_data 获取表数据
+            5. 将结果综合为有帮助的回答
             """;
 
     private final ChatModel chatModel;
-    private final ShowAllTablesTool showAllTablesTool;
-    private final ShowTableSchemaTool showTableSchemaTool;
+    private final GetAllTablesTool getAllTablesTool;
+    private final GetTableSchemaTool getTableSchemaTool;
+    private final QuerySqlCheckTool querySqlCheckTool;
+    private final GetTableDataTool getTableDataTool;
 
-    public DBAgentConfiguration(ChatModel chatModel, ShowAllTablesTool showAllTablesTool, ShowTableSchemaTool showTableSchemaTool) {
+    public DBAgentConfiguration(ChatModel chatModel, GetAllTablesTool getAllTablesTool, GetTableSchemaTool getTableSchemaTool,
+                                QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool) {
         this.chatModel = chatModel;
-        this.showAllTablesTool = showAllTablesTool;
-        this.showTableSchemaTool = showTableSchemaTool;
+        this.getAllTablesTool = getAllTablesTool;
+        this.getTableSchemaTool = getTableSchemaTool;
+        this.querySqlCheckTool = querySqlCheckTool;
+        this.getTableDataTool = getTableDataTool;
     }
 
     @Bean
@@ -88,8 +110,10 @@ public class DBAgentConfiguration {
                          .model(chatModel)
                          .saver(new MemorySaver())
                          // 设置工具
-                         .tools(showAllTablesTool.toolCallback()
-                                 , showTableSchemaTool.toolCallback()
+                         .tools(getAllTablesTool.toolCallback()
+                                 , getTableSchemaTool.toolCallback()
+                                 , querySqlCheckTool.toolCallback()
+                                 , getTableDataTool.toolCallback()
                          )
                          .build();
     }

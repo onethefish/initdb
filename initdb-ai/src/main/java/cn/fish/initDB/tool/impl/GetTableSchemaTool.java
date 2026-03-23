@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.fish.initDB.tool;
+package cn.fish.initDB.tool.impl;
 
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.repository.DataBaseRepository;
+import cn.fish.initDB.tool.DataBaseAbstractTool;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
@@ -26,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -39,14 +39,17 @@ import java.util.function.BiFunction;
  */
 @Slf4j
 @Component
-public class ShowTableSchemaTool extends DataBaseTool implements BiFunction<ShowTableSchemaTool.Request, ToolContext, String> {
+public class GetTableSchemaTool extends DataBaseAbstractTool implements BiFunction<GetTableSchemaTool.Request, ToolContext, String> {
 
-    @Autowired
-    private DataBaseRepository dataBaseRepository;
+    private final DataBaseRepository dataBaseRepository;
+
+    public GetTableSchemaTool(DataBaseRepository dataBaseRepository) {
+        this.dataBaseRepository = dataBaseRepository;
+    }
 
     @Override
     public String apply(Request request, ToolContext toolContext) {
-        log.info("ShowTableSchemaTool::apply");
+        log.info("GetTableSchemaTool::apply");
         String sessionId = getSessionId(toolContext);
         List<String> tableNames = Arrays.stream(request.tables().split(","))
                                         .map(String::trim).

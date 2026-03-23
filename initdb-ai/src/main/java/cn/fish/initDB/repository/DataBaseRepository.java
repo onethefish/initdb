@@ -4,6 +4,7 @@ import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 
 import java.util.List;
+import java.util.Map;
 
 public interface DataBaseRepository {
 
@@ -18,4 +19,6 @@ public interface DataBaseRepository {
     List<Table> queryTableList(String sessionId);
 
     Table queryTableSchema(String sessionId, String tableName);
+
+    List<Map<String, Object>> queryTableData(String sessionId, String sql);
 }
