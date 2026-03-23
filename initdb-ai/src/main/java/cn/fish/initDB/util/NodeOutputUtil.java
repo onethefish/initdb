@@ -2,16 +2,27 @@ package cn.fish.initDB.util;
 
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
-import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.node.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 import org.springframework.ai.chat.messages.AbstractMessage;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 @Slf4j
 public class NodeOutputUtil {
+    private static final Parser parser = Parser.builder()
+                                               .extensions(Arrays.asList(TablesExtension.create()))
+                                               .build();
+    private static final HtmlRenderer renderer = HtmlRenderer.builder()
+                                                             .extensions(Arrays.asList(TablesExtension.create()))
+                                                             .build();
 
     public static String extractResponse(NodeOutput nodeOutput) {
         if (nodeOutput == null) {
@@ -19,7 +30,7 @@ public class NodeOutputUtil {
         }
         log.info("Received response: {}", nodeOutput);
         OverAllState state = nodeOutput.state();
-//         Try "output" key first (common for ReactAgent)
+        //         Try "output" key first (common for ReactAgent)
         Optional<Object> output = state.value("output");
         if (output.isPresent()) {
             return String.valueOf(output.get());
@@ -27,9 +38,16 @@ public class NodeOutputUtil {
 
         // Fallback to "messages" key
         Optional<List<AbstractMessage>> messages = state.value("messages");
-        if (messages.isPresent() && !messages.get().isEmpty()) {
+        if (messages.isPresent()) {
+            StringJoiner result = new StringJoiner("\n");
             List<AbstractMessage> msgList = messages.get();
-            return msgList.get(msgList.size() - 1).getText();
+            for (AbstractMessage abstractMessage : msgList) {
+                String text = abstractMessage.getText();
+                Node node = parser.parse(text);
+                String render = renderer.render(node);
+                result.add(render);
+            }
+            return result.toString();
         }
         String result = state.toString();
         if (StringUtils.isBlank(result)) {

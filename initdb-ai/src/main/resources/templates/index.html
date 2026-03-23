@@ -469,8 +469,8 @@
         document.getElementById('sessionName').value = '';
         // document.getElementById('host').value = '';
         // document.getElementById('port').value = '';
-        document.getElementById('url').value = '';
-        document.getElementById('username').value = '';
+        document.getElementById('url').value = 'jdbc:mysql://127.0.0.1:3306/xxx_xxx_xxx';
+        document.getElementById('username').value = 'xxx';
         document.getElementById('password').value = '';
     }
 
@@ -569,7 +569,7 @@
         const chatMessagesElement = document.getElementById('chatMessages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}-message`;
-        messageDiv.textContent = content;
+        messageDiv.innerHTML = content;
         chatMessagesElement.appendChild(messageDiv);
 
         // 滚动到底部
