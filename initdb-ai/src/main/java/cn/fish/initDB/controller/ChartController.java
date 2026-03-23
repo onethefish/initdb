@@ -1,29 +1,30 @@
 package cn.fish.initDB.controller;
 
-import cn.fish.initDB.entity.ChartSession;
-import cn.fish.initDB.entity.ChatRequest;
-import cn.fish.initDB.service.ChartSessionService;
-import cn.hutool.core.util.IdUtil;
+import cn.fish.initDB.entity.ChatSession;
+import cn.fish.initDB.service.ChatSessionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @Controller
-@RequestMapping("/chart")
+@RequestMapping("/chat")
 public class ChartController {
 
     @Autowired
-    private ChartSessionService chartSessionService;
+    private ChatSessionService chatSessionService;
 
-    @PostMapping("/create")
+    // 重定向到聊天首页
+    @GetMapping("/")
+    public String index() {
+        return "index";
+    }
+
     @ResponseBody
-    public ChartSession create(@RequestBody ChartSession chartSession) {
-        return chartSessionService.add(chartSession);
+    @PostMapping("/create")
+    public ChatSession create(@RequestBody ChatSession chatSession) {
+        return chatSessionService.add(chatSession);
     }
 
 }

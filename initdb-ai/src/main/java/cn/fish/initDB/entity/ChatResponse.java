@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class ChatResponse {
 
     private String response;
-    private String threadId;
+    private String sessionId;
     private boolean success;
 
 }

@@ -18,7 +18,7 @@
 
       /* 左侧栏样式 */
       .sidebar {
-          width: 260px;
+          width: 15%;
           background-color: #ffffff;
           border-right: 1px solid #e0e0e0;
           display: flex;
@@ -42,7 +42,7 @@
       }
 
       .new-chat-btn {
-          width: 100%;
+          width: 90%;
           padding: 9px 16px;
           margin: 16px;
           background-color: #409EFF;
@@ -106,6 +106,7 @@
           flex-direction: column;
           background-color: #fafafa;
           position: relative; /* 为模态框定位做准备 */
+          width: 80%;
       }
 
       /* 欢迎界面样式 */
@@ -361,23 +362,27 @@
     <h2>创建新对话</h2>
     <div class="form-group">
       <label for="sessionName">会话名称</label>
-      <input type="text" id="sessionName" required placeholder="例如：销售数据库查询">
+      <input type="text" id="sessionName" required value="测试会话">
     </div>
     <div class="form-group">
       <label for="host">主机地址</label>
-      <input type="text" id="host" required value="localhost">
+      <input type="text" id="host" value="localhost">
     </div>
     <div class="form-group">
       <label for="port">端口</label>
-      <input type="text" id="port" required value="3306">
+      <input type="text" id="port" value="3306">
+    </div>
+    <div class="form-group">
+      <label for="url">url</label>
+      <input type="text" id="url" required value="jdbc:mysql://10.22.21.68:3306/dev_sungl_job">
     </div>
     <div class="form-group">
       <label for="username">用户名</label>
-      <input type="text" id="username" required value="root">
+      <input type="text" id="username" required value="dev_sungl">
     </div>
     <div class="form-group">
       <label for="password">密码</label>
-      <input type="password" id="password" required value="password">
+      <input type="password" id="password" required value="mysql">
     </div>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closeModal()">取消</button>
@@ -388,13 +393,13 @@
 
 <script>
     // 用于存储所有会话的数组
-    // let sessions = JSON.parse(localStorage.getItem('dbSessions')) || []; // 不使用浏览器换成
-    let sessions = [];
+    let sessions = JSON.parse(localStorage.getItem('dbSessions')) || [];
+    // let sessions = [];
     let currentSessionId = null;
 
     // 保存会话到 localStorage
     function saveSessions() {
-        // localStorage.setItem('dbSessions', JSON.stringify(sessions));
+        localStorage.setItem('dbSessions', JSON.stringify(sessions));
     }
 
     // 渲染会话列表
@@ -421,10 +426,11 @@
         document.getElementById('sessionModal').style.display = 'none';
         // 清空表单
         document.getElementById('sessionName').value = '';
-        document.getElementById('host').value = 'localhost';
-        document.getElementById('port').value = '3306';
-        document.getElementById('username').value = 'root';
-        document.getElementById('password').value = 'password';
+        document.getElementById('host').value = '';
+        document.getElementById('port').value = '';
+        document.getElementById('url').value = '';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
     }
 
     // 创建新会话
@@ -432,10 +438,11 @@
         const sessionName = document.getElementById('sessionName').value.trim();
         const host = document.getElementById('host').value.trim();
         const port = document.getElementById('port').value.trim();
+        const url = document.getElementById('url').value.trim();
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
         try {
-            const response = await fetch('/chart/create', {
+            const response = await fetch('/chat/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -444,13 +451,13 @@
                     sessionName: sessionName,
                     host: host,
                     port: parseInt(port),
+                    url: url,
                     username: username,
                     password: password
                 })
             });
             if (response.ok) {
                 const data = await response.json();
-                console.log(data);
                 const newSessionId = data.sessionId; // 假设后端返回一个唯一的会话ID
                 const newSession = {
                     id: newSessionId, // 使用时间戳作为唯一ID
@@ -558,14 +565,14 @@
 
         try {
             // 向后端发送请求
-            const response = await fetch('/query', {
+            const response = await fetch('/db/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query: message,
-                    session_id: currentSessionId,
+                    message: message,
+                    sessionId: currentSessionId,
                     db_config: sessions[sessionIndex].config
                 })
             });
@@ -574,9 +581,9 @@
 
             if (response.ok) {
                 // 添加机器人回复
-                const botMsg = {role: 'bot', content: data.result};
-                sessions[sessionIndex].messages.push(botMsg);
-                addMessageToDOM('bot', data.result);
+                const message = {role: 'bot', content: data.response};
+                sessions[sessionIndex].messages.push(message);
+                addMessageToDOM('bot', data.response);
             } else {
                 throw new Error(data.error || '请求失败');
             }

@@ -16,6 +16,10 @@
 package cn.fish.initDB.tool;
 
 import cn.fish.initDB.entity.Table;
+import cn.fish.initDB.repository.DataBaseRepository;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.map.MapUtil;
+import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
@@ -25,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
@@ -33,6 +38,8 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 
 /**
@@ -43,46 +50,24 @@ import java.util.function.BiFunction;
 public class ShowAllTablesTool implements BiFunction<ShowAllTablesTool.Request, ToolContext, String> {
 
 
-    private final DataSource dataSource;
-
-    public ShowAllTablesTool(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
+    @Autowired
+    private DataBaseRepository dataBaseRepository;
 
     @Override
     public String apply(Request request, ToolContext toolContext) {
         log.info("ListTablesTool::apply");
         log.info("request={}", request);
-        log.info("toolContext={}", toolContext);
-        try (Connection conn = dataSource.getConnection()) {
-            String catalog = conn.getCatalog();//目录名称，一般都为空
-            //schema = "%";//数据库名，对于mysql来说用通配符
-            DatabaseMetaData dbmd = conn.getMetaData();
-            String schema = dbmd.getUserName();//数据库名称
-            // 表第一个字段为表名，第二个为表注释
-            ResultSet tablesResultSet = dbmd.getTables(catalog, schema, "%", new String[]{"TABLE"});
-            List<Table> tables = new ArrayList<>();
-            while (tablesResultSet.next()) {
-                Table table = new Table();
-                String table_name = tablesResultSet.getString("TABLE_NAME");  //表名
-                String remarks = tablesResultSet.getString("REMARKS");       //表注释 不一定有
-                table.setTableName(table_name);
-                table.setRemarks(remarks);
-                tables.add(table);
-            }
-            if (tables.isEmpty()) {
-                log.info("No tables found in the database");
-                return "No tables found in the database.";
-            }
-            String result = JSON.toJSONString(tables, JSONWriter.Feature.IgnoreEmpty);
-            //            String result = tables.stream()
-            //                                 .map(Table::getTableName)
-            //                                 .collect(Collectors.joining(",")); // 3. 使用逗号拼接
-            log.info("Found {} tables: {}", tables.size(), result);
-            return result;
-        } catch (Exception e) {
-            log.error("Error listing tables", e);
-            return "Error listing tables: " + e.getMessage();
+        Map<String, Object> context = toolContext.getContext();
+        log.info("toolContext={}", context);
+        RunnableConfig runnableConfig = (RunnableConfig) context.get("_AGENT_CONFIG_");
+        Optional<String> threadId = runnableConfig.threadId();
+        String sessionId = threadId.get();
+        List<Table> tables = dataBaseRepository.queryTableList(sessionId);
+        if (CollUtil.isNotEmpty(tables)) {
+            return JSON.toJSONString(tables, JSONWriter.Feature.IgnoreEmpty);
+        }
+        else {
+            return "Error listing tables";
         }
     }
 

@@ -17,15 +17,11 @@ package cn.fish.initDB.controller;
 
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
-import cn.fish.initDB.util.NodeOutputUtil;
-import com.alibaba.cloud.ai.graph.NodeOutput;
-import com.alibaba.cloud.ai.graph.RunnableConfig;
-import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import cn.fish.initDB.service.DBAgentService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
 
 
 @Slf4j
@@ -33,43 +29,20 @@ import java.util.UUID;
 @RequestMapping("/db")
 public class DBAgentController {
 
+    @Autowired
+    private DBAgentService dbAgentService;
 
-    private final ReactAgent reactAgent;
-
-    public DBAgentController(ReactAgent reactAgent) {
-        this.reactAgent = reactAgent;
-    }
-
-    // 重定向到聊天首页
-    @GetMapping("/")
-    public String index() {
-        return "index";
-    }
-
+    @ResponseBody
     @PostMapping("/chat")
-    @ResponseBody
-    public ChatResponse chat(@RequestBody ChatRequest request) {
-        log.info("Received chat request: {}", request.getMessage());
-        String threadId = request.getThreadId();
-        if (threadId == null || threadId.isEmpty()) {
-            threadId = UUID.randomUUID().toString();
-        }
-        try {
-            RunnableConfig config = RunnableConfig.builder().threadId(threadId).build();
-            NodeOutput result = reactAgent.invokeAndGetOutput(request.getMessage(), config).orElse(null);
-            String response = NodeOutputUtil.extractResponse(result);
-            return new ChatResponse(response, threadId, true);
-        } catch (Exception e) {
-            log.error("Error processing chat request", e);
-            return new ChatResponse("Sorry, an error occurred: " + e.getMessage(), threadId, false);
-        }
+    public ChatResponse chat(@RequestBody ChatRequest chatRequest) {
+        return dbAgentService.chat(chatRequest);
     }
 
-    @GetMapping("/chat")
     @ResponseBody
+    @GetMapping("/chat")
     public ChatResponse chatGet(@RequestParam("message") String message,
-                                @RequestParam(value = "threadId", required = false) String threadId) {
-        return chat(new ChatRequest(message, threadId));
+                                @RequestParam(value = "sessionId", required = false) String sessionId) {
+        return chat(new ChatRequest(message, sessionId));
     }
 
 
