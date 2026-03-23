@@ -6,11 +6,11 @@ spring:
   ai:
     openai:
 #      api-key: ${AI_DEEPSEEK_API_KEY:sk-bb31cab6a8ac4c04a4d74a9e8196a064}
-      api-key: ${AI_DEEPSEEK_API_KEY:1}
-      base-url: "http://127.0.0.1:8001"
+      api-key: ${AI_DEEPSEEK_API_KEY:sk-41d5bcb9effe476196e6a1907078a1ce}
+      base-url: "https://dashscope.aliyuncs.com/compatible-mode/"
       chat:
         options:
-          model: deepseek/deepseek-r1-0528-qwen3-8b
+          model: qwen-plus
   thymeleaf:
     cache: false
   datasource:

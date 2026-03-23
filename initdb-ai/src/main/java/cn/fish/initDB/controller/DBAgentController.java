@@ -30,7 +30,7 @@ import java.util.UUID;
 
 @Slf4j
 @Controller
-@RequestMapping("/api/sql")
+@RequestMapping("/db")
 public class DBAgentController {
 
 

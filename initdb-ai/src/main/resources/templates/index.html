@@ -1,323 +1,619 @@
 <!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring AI Alibaba - SQL Agent Demo</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a5276 0%, #2e86ab 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 900px;
-            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #0d3b66 0%, #1a5276 100%);
-            color: white;
-            padding: 24px;
-            text-align: center;
-        }
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-        .header p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-        .db-info {
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 12px;
-            font-size: 12px;
-        }
-        .db-info code {
-            background: rgba(0,0,0,0.2);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-        .chat-container {
-            height: 400px;
-            overflow-y: auto;
-            padding: 20px;
-            background: #f8f9fa;
-        }
-        .message {
-            margin-bottom: 16px;
-            display: flex;
-            flex-direction: column;
-        }
-        .message.user {
-            align-items: flex-end;
-        }
-        .message.assistant {
-            align-items: flex-start;
-        }
-        .message-content {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-            font-size: 14px;
-        }
-        .message.user .message-content {
-            background: linear-gradient(135deg, #1a5276 0%, #2e86ab 100%);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .message.assistant .message-content {
-            background: white;
-            color: #333;
-            border: 1px solid #e0e0e0;
-            border-bottom-left-radius: 4px;
-        }
-        .message-label {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 4px;
-        }
-        .input-container {
-            display: flex;
-            padding: 16px;
-            background: white;
-            border-top: 1px solid #e0e0e0;
-        }
-        .input-container input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        .input-container input:focus {
-            border-color: #1a5276;
-        }
-        .input-container button {
-            margin-left: 12px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #1a5276 0%, #2e86ab 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .input-container button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(26, 82, 118, 0.4);
-        }
-        .input-container button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .loading {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: #f0f0f0;
-            border-radius: 12px;
-            color: #666;
-        }
-        .loading-dots {
-            display: flex;
-            margin-left: 8px;
-        }
-        .loading-dots span {
-            width: 8px;
-            height: 8px;
-            background: #1a5276;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-        .example-queries {
-            padding: 16px;
-            background: #e8f4f8;
-            border-top: 1px solid #e0e0e0;
-        }
-        .example-queries h3 {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 8px;
-        }
-        .example-queries button {
-            margin: 4px;
-            padding: 8px 12px;
-            background: white;
-            border: 1px solid #1a5276;
-            color: #1a5276;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .example-queries button:hover {
-            background: #1a5276;
-            color: white;
-        }
-        .sql-result {
-            font-family: 'Courier New', monospace;
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 12px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin-top: 8px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能数据库助手</title>
+  <style>
+      /* 全局样式 */
+      body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 0;
+          height: 100vh;
+          background-color: #f5f7fa;
+          display: flex;
+          overflow: hidden; /* 防止出现外层滚动条 */
+      }
+
+      /* 左侧栏样式 */
+      .sidebar {
+          width: 260px;
+          background-color: #ffffff;
+          border-right: 1px solid #e0e0e0;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+      }
+
+      .header {
+          padding: 20px;
+          border-bottom: 1px solid #eee;
+          display: flex;
+          align-items: center;
+      }
+
+      .header h1 {
+          font-size: 18px;
+          font-weight: 600;
+          color: #333;
+          margin: 0;
+          margin-left: 8px;
+      }
+
+      .new-chat-btn {
+          width: 100%;
+          padding: 9px 16px;
+          margin: 16px;
+          background-color: #409EFF;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+
+      .new-chat-btn:hover {
+          background-color: #3a8ee6;
+      }
+
+      .new-chat-btn::before {
+          content: '+';
+          font-size: 16px;
+          margin-right: 6px;
+      }
+
+      .session-list {
+          flex-grow: 1;
+          overflow-y: auto;
+          padding: 8px;
+      }
+
+      .session-item {
+          padding: 12px 16px;
+          border-radius: 4px;
+          margin-bottom: 4px;
+          cursor: pointer;
+          word-break: break-all;
+          font-size: 14px;
+          color: #333;
+          display: flex;
+          align-items: center;
+      }
+
+      .session-item:hover {
+          background-color: #f0f2f5;
+      }
+
+      .session-item.active {
+          background-color: #ecf5ff;
+          color: #409EFF;
+      }
+
+      .session-item::before {
+          content: '💬';
+          margin-right: 8px;
+          font-size: 14px;
+      }
+
+      /* 主内容区样式 */
+      .main-content {
+          flex-grow: 1;
+          display: flex;
+          flex-direction: column;
+          background-color: #fafafa;
+          position: relative; /* 为模态框定位做准备 */
+      }
+
+      /* 欢迎界面样式 */
+      .welcome-screen {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 20px;
+          color: #666;
+      }
+
+      .welcome-screen h2 {
+          font-size: 24px;
+          color: #333;
+          margin-bottom: 10px;
+      }
+
+      .welcome-screen p {
+          font-size: 16px;
+          line-height: 1.6;
+          max-width: 600px;
+          margin: 0 auto 20px;
+          color: #555;
+      }
+
+      .welcome-db-info {
+          background-color: #eef7ff;
+          border: 1px dashed #409EFF;
+          border-radius: 8px;
+          padding: 15px 20px;
+          margin: 20px 0;
+          max-width: 600px;
+          font-size: 14px;
+          color: #409EFF;
+      }
+
+      /* 聊天区域样式 (默认隐藏) */
+      .chat-container {
+          display: none; /* 默认不显示 */
+          flex-direction: column;
+          height: 100%;
+      }
+
+      .chat-header {
+          padding: 16px 24px;
+          border-bottom: 1px solid #eee;
+          background-color: #fff;
+          font-size: 14px;
+          color: #666;
+      }
+
+      .chat-messages {
+          flex: 1;
+          padding: 20px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+      }
+
+      .message {
+          max-width: 70%;
+          padding: 12px 16px;
+          margin-bottom: 16px;
+          border-radius: 8px;
+          line-height: 1.5;
+          font-size: 15px;
+          word-wrap: break-word;
+      }
+
+      .user-message {
+          background-color: #e3f2fd;
+          align-self: flex-end;
+          border-bottom-right-radius: 2px;
+      }
+
+      .bot-message {
+          background-color: #f0f0f0;
+          align-self: flex-start;
+          border-bottom-left-radius: 2px;
+      }
+
+      .input-area {
+          padding: 16px;
+          background-color: #fff;
+          border-top: 1px solid #eee;
+          display: flex;
+      }
+
+      .input-area input {
+          flex: 1;
+          padding: 12px 16px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 15px;
+          outline: none;
+      }
+
+      .input-area input:focus {
+          border-color: #409EFF;
+      }
+
+      .input-area button {
+          margin-left: 10px;
+          padding: 12px 20px;
+          background-color: #409EFF;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 15px;
+      }
+
+      .input-area button:hover {
+          background-color: #3a8ee6;
+      }
+
+      .input-area button:disabled {
+          background-color: #a0cfff;
+          cursor: not-allowed;
+      }
+
+      /* 模态框样式 */
+      .modal {
+          display: none;
+          position: fixed;
+          z-index: 1000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0, 0, 0, 0.5);
+          align-items: center;
+          justify-content: center;
+      }
+
+      .modal-content {
+          background-color: #fff;
+          padding: 30px;
+          border-radius: 8px;
+          width: 420px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .modal h2 {
+          margin-top: 0;
+          font-size: 20px;
+          color: #333;
+          border-bottom: 1px solid #eee;
+          padding-bottom: 15px;
+      }
+
+      .form-group {
+          margin-bottom: 20px;
+      }
+
+      .form-group label {
+          display: block;
+          margin-bottom: 6px;
+          font-weight: 500;
+          color: #555;
+      }
+
+      .form-group input {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          box-sizing: border-box;
+      }
+
+      .modal-buttons {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+      }
+
+      .btn {
+          padding: 10px 20px;
+          border-radius: 4px;
+          font-size: 14px;
+          cursor: pointer;
+      }
+
+      .btn-primary {
+          background-color: #409EFF;
+          color: white;
+          border: none;
+      }
+
+      .btn-primary:hover {
+          background-color: #3a8ee6;
+      }
+
+      .btn-secondary {
+          background-color: #f0f0f0;
+          color: #333;
+          border: 1px solid #ccc;
+      }
+
+      .btn-secondary:hover {
+          background-color: #e0e0e0;
+      }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Spring AI Alibaba SQL Agent</h1>
-            <p>Natural Language to SQL - Ask questions about your database in plain language</p>
-            <div class="db-info">
-                Database: <code>E-commerce</code> |
-                Tables: <code>customers</code>, <code>products</code>, <code>orders</code>, <code>order_items</code>, <code>categories</code>
-            </div>
-        </div>
 
-        <div class="chat-container" id="chatContainer">
-            <div class="message assistant">
-                <span class="message-label">SQL Agent</span>
-                <div class="message-content">
-Hello! I'm a SQL Agent powered by Spring AI Alibaba. I can answer questions about the e-commerce database using natural language.
+<!-- 左侧栏 -->
+<div class="sidebar">
+  <div class="header">
+    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgdmlld0JveD0iMCAwIDE0IDE0Ij4KICA8Y2lyY2xlIGN4PSI3IiBjeT0iNyIgcj0iNyIgZmlsbD0iIzQwOUVGRiIgLz4KICA8cGF0aCBkPSJNOSA1aC0uN2MtLjYuMS0xIC42LTEgLjdzLS40IDEtLjcgMS4zbDEuMiAxLjJjLjMuMy43LjcuNyAxLjF2LjdjMCAuNDEuMzMuNzUuNzUuNzVoMS41YS43NS43NSAwIDAgMCAuNzUtLjc1di0xLjVhLjc1Ljc1IDAgMCAwLS43NS0uNzVjMC0uNC0uNC0uOC0uNy0xLjFsLTEuMi0xLjJjLS4zLS4zLS43LS43LTEtLjcuMS0uNC0uNi0uOC0xLjEtLjh6IiBmaWxsPSJ3aGl0ZSIgLz4KPC9zdmc+"
+         alt="Logo" style="width: 24px; height: 24px;">
+    <h1>智能数据库助手</h1>
+  </div>
+  <button class="new-chat-btn" onclick="openModal()">创建新对话</button>
+  <div class="session-list" id="sessionList">
+    <!-- 会话项将通过JavaScript动态添加 -->
+  </div>
+</div>
 
-You can ask me questions like:
-- "What are the top 5 best-selling products?"
-- "Show me customers from Beijing"
-- "What's the total revenue by category?"
+<!-- 主内容区 -->
+<div class="main-content">
+  <!-- 欢迎界面 (默认显示) -->
+  <div class="welcome-screen" id="welcomeScreen">
+    <h2>你好！我是智能数据库助手</h2>
+    <p>我可以通过自然语言查询你的数据库信息。开始之前，请先创建一个到数据库的新对话。</p>
+    <!--    <div class="welcome-db-info">-->
+    <!--      <strong>示例数据库:</strong> E-commerce | 表: customers, products, orders, order_items, categories-->
+    <!--    </div>-->
+    <button class="new-chat-btn" onclick="openModal()" style="max-width: 200px;">创建第一个对话</button>
+  </div>
 
-I'll analyze the database, generate SQL queries, and provide you with answers!
-                </div>
-            </div>
-        </div>
-
-        <div class="example-queries">
-            <h3>Try asking:</h3>
-            <button onclick="askExample('这个数据库有什么表?')">列出所有表</button>
-            <button onclick="askExample('Show me the top 5 customers by order amount')">Top customers</button>
-            <button onclick="askExample('What are the best-selling products?')">Best sellers</button>
-            <button onclick="askExample('How many orders are in each status?')">Order status</button>
-            <button onclick="askExample('What is the average order value by city?')">Avg order by city</button>
-        </div>
-
-        <div class="input-container">
-            <input type="text" id="messageInput" placeholder="Ask a question about the database..."
-                   onkeypress="if(event.key==='Enter')sendMessage()">
-            <button id="sendButton" onclick="sendMessage()">Send</button>
-        </div>
+  <!-- 聊天容器 (默认隐藏) -->
+  <div class="chat-container" id="chatContainer">
+    <div class="chat-header" id="currentSessionHeader">
+      <!-- 当前会话名将在此处动态更新 -->
     </div>
+    <div class="chat-messages" id="chatMessages">
+      <!-- 消息将通过JavaScript动态添加 -->
+    </div>
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="请输入你的问题..." onkeypress="handleKeyPress(event)" disabled>
+      <button onclick="sendMessage()" disabled>发送</button>
+    </div>
+  </div>
+</div>
 
-    <script>
-        let threadId = null;
+<!-- 创建对话模态框 -->
+<div id="sessionModal" class="modal">
+  <div class="modal-content">
+    <h2>创建新对话</h2>
+    <div class="form-group">
+      <label for="sessionName">会话名称</label>
+      <input type="text" id="sessionName" required placeholder="例如：销售数据库查询">
+    </div>
+    <div class="form-group">
+      <label for="host">主机地址</label>
+      <input type="text" id="host" required value="localhost">
+    </div>
+    <div class="form-group">
+      <label for="port">端口</label>
+      <input type="text" id="port" required value="3306">
+    </div>
+    <div class="form-group">
+      <label for="username">用户名</label>
+      <input type="text" id="username" required value="root">
+    </div>
+    <div class="form-group">
+      <label for="password">密码</label>
+      <input type="password" id="password" required value="password">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="createNewSession()">创建</button>
+    </div>
+  </div>
+</div>
 
-        function askExample(query) {
-            document.getElementById('messageInput').value = query;
+<script>
+    // 用于存储所有会话的数组
+    // let sessions = JSON.parse(localStorage.getItem('dbSessions')) || []; // 不使用浏览器换成
+    let sessions = [];
+    let currentSessionId = null;
+
+    // 保存会话到 localStorage
+    function saveSessions() {
+        // localStorage.setItem('dbSessions', JSON.stringify(sessions));
+    }
+
+    // 渲染会话列表
+    function renderSessionList() {
+        const sessionListElement = document.getElementById('sessionList');
+        sessionListElement.innerHTML = '';
+
+        sessions.forEach(session => {
+            const div = document.createElement('div');
+            div.className = `session-item ${session.id === currentSessionId ? 'active' : ''}`;
+            div.textContent = session.name;
+            div.onclick = () => switchSession(session.id);
+            sessionListElement.appendChild(div);
+        });
+    }
+
+    // 打开模态框
+    function openModal() {
+        document.getElementById('sessionModal').style.display = 'flex';
+    }
+
+    // 关闭模态框
+    function closeModal() {
+        document.getElementById('sessionModal').style.display = 'none';
+        // 清空表单
+        document.getElementById('sessionName').value = '';
+        document.getElementById('host').value = 'localhost';
+        document.getElementById('port').value = '3306';
+        document.getElementById('username').value = 'root';
+        document.getElementById('password').value = 'password';
+    }
+
+    // 创建新会话
+    async function createNewSession() {
+        const sessionName = document.getElementById('sessionName').value.trim();
+        const host = document.getElementById('host').value.trim();
+        const port = document.getElementById('port').value.trim();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        try {
+            const response = await fetch('/chart/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sessionName: sessionName,
+                    host: host,
+                    port: parseInt(port),
+                    username: username,
+                    password: password
+                })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log(data);
+                const newSessionId = data.sessionId; // 假设后端返回一个唯一的会话ID
+                const newSession = {
+                    id: newSessionId, // 使用时间戳作为唯一ID
+                    name: sessionName,
+                    config: {host, port, username, password},
+                    messages: [] // 新建会话时消息为空
+                };
+                sessions.unshift(newSession); // 将新会话添加到数组开头
+                saveSessions();
+                renderSessionList();
+                // 切换到新创建的会话
+                switchSession(newSession.id);
+
+                // 关闭模态框
+                closeModal();
+            } else {
+                const errorMessage = await response.text();
+                throw new Error(`创建失败: ${errorMessage}`);
+            }
+        } catch (error) {
+            console.error('Connection error:', error);
+            alert(error.message || '创建会话时候发送未知错误！');
+        } finally {
+            // todo
+        }
+
+    }
+
+    // 切换会话
+    function switchSession(sessionId) {
+        currentSessionId = sessionId;
+
+        // 查找当前会话对象
+        const session = sessions.find(s => s.id === sessionId);
+
+        if (session) {
+            // 显示聊天区域，隐藏欢迎界面
+            document.getElementById('chatContainer').style.display = 'flex';
+            document.getElementById('welcomeScreen').style.display = 'none';
+
+            // 更新聊天区域的头部
+            document.getElementById('currentSessionHeader').textContent = session.name;
+
+            // 加载并渲染该会话的消息历史
+            renderChatMessages(session.messages);
+
+            // 启用输入框和按钮
+            document.getElementById('userInput').disabled = false;
+            document.querySelector('.input-area button').disabled = false;
+        }
+
+        renderSessionList(); // 更新会话列表的高亮状态
+    }
+
+    // 渲染特定会话的消息
+    function renderChatMessages(messages) {
+        const chatMessagesElement = document.getElementById('chatMessages');
+        chatMessagesElement.innerHTML = '';
+
+        messages.forEach(msg => {
+            addMessageToDOM(msg.role, msg.content);
+        });
+
+        // 滚动到底部
+        chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
+    }
+
+    // 将消息添加到DOM
+    function addMessageToDOM(role, content) {
+        const chatMessagesElement = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}-message`;
+        messageDiv.textContent = content;
+        chatMessagesElement.appendChild(messageDiv);
+
+        // 滚动到底部
+        chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
+    }
+
+    // 发送消息
+    async function sendMessage() {
+        const inputElement = document.getElementById('userInput');
+        const message = inputElement.value.trim();
+
+        if (!message) return;
+
+        if (!currentSessionId) {
+            alert('请先创建并选择一个对话');
+            return;
+        }
+
+        // 查找当前会话对象
+        const sessionIndex = sessions.findIndex(s => s.id === currentSessionId);
+        if (sessionIndex === -1) return;
+
+        // 添加用户消息
+        const userMsg = {role: 'user', content: message};
+        sessions[sessionIndex].messages.push(userMsg);
+        addMessageToDOM('user', message);
+        inputElement.value = '';
+
+        // 禁用输入以等待响应
+        inputElement.disabled = true;
+        document.querySelector('.input-area button').disabled = true;
+
+        try {
+            // 向后端发送请求
+            const response = await fetch('/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: message,
+                    session_id: currentSessionId,
+                    db_config: sessions[sessionIndex].config
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // 添加机器人回复
+                const botMsg = {role: 'bot', content: data.result};
+                sessions[sessionIndex].messages.push(botMsg);
+                addMessageToDOM('bot', data.result);
+            } else {
+                throw new Error(data.error || '请求失败');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            // 添加错误消息
+            const errorMsg = {role: 'bot', content: `错误: ${error.message}`};
+            sessions[sessionIndex].messages.push(errorMsg);
+            addMessageToDOM('bot', `错误: ${error.message}`);
+        } finally {
+            // 重新启用输入
+            inputElement.disabled = false;
+            document.querySelector('.input-area button').disabled = false;
+            inputElement.focus();
+        }
+
+        // 发送完消息后保存会话
+        saveSessions();
+    }
+
+    // 回车键发送消息
+    function handleKeyPress(event) {
+        if (event.key === 'Enter') {
             sendMessage();
         }
+    }
 
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const sendButton = document.getElementById('sendButton');
-            const chatContainer = document.getElementById('chatContainer');
+    // 页面加载时初始化
+    window.onload = function () {
+        renderSessionList();
 
-            const message = input.value.trim();
-            if (!message) return;
-
-            // Add user message
-            addMessage(message, 'user');
-            input.value = '';
-            input.disabled = true;
-            sendButton.disabled = true;
-
-            // Add loading indicator
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message assistant';
-            loadingDiv.innerHTML = `
-                <span class="message-label">SQL Agent</span>
-                <div class="loading">
-                    Analyzing database<div class="loading-dots"><span></span><span></span><span></span></div>
-                </div>
-            `;
-            chatContainer.appendChild(loadingDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-
-            try {
-                const response = await fetch('/api/sql/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        threadId: threadId
-                    })
-                });
-
-                const data = await response.json();
-                threadId = data.threadId;
-
-                // Remove loading indicator
-                chatContainer.removeChild(loadingDiv);
-
-                // Add assistant response
-                addMessage(data.response, 'assistant');
-            } catch (error) {
-                chatContainer.removeChild(loadingDiv);
-                addMessage('Sorry, an error occurred. Please try again.', 'assistant');
-            }
-
-            input.disabled = false;
-            sendButton.disabled = false;
-            input.focus();
+        // 如果有会话，则默认加载第一个
+        if (sessions.length > 0 && !currentSessionId) {
+            switchSession(sessions[0].id);
         }
-
-        function addMessage(content, role) {
-            const chatContainer = document.getElementById('chatContainer');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
-            messageDiv.innerHTML = `
-                <span class="message-label">${role === 'user' ? 'You' : 'SQL Agent'}</span>
-                <div class="message-content">${escapeHtml(content)}</div>
-            `;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-    </script>
+        // 否则保持欢迎界面显示
+    };
+</script>
 </body>
 </html>
