@@ -107,7 +107,11 @@ public class DBAgentController {
     public void ask(@PathVariable String chatCode,
                     @RequestBody @Validated AiChatForm form) {
 
-        AiChatAskBo bo = assemble(chatCode, form);
+        AiChatAskBo bo = new AiChatAskBo()
+            .setChatCode(chatCode)
+            .setLastSessionId(form.getLastSessionId())
+            .setPrompt(form.getPrompt())
+            .setTags(form.getTags());
 
         try (OutputStream os = httpServletResponse.getOutputStream()) {
             httpServletResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
@@ -116,14 +120,6 @@ public class DBAgentController {
         } catch (Exception e) {
             log.warn("智能客服提问异常", e);
         }
-    }
-
-    private AiChatAskBo assemble(String chatCode, AiChatForm form) {
-        return new AiChatAskBo()
-            .setChatCode(chatCode)
-            .setLastSessionId(form.getLastSessionId())
-            .setPrompt(form.getPrompt());
-
     }
 
 

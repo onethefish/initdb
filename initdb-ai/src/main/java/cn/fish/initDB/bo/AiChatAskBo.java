@@ -34,5 +34,10 @@ public class AiChatAskBo {
      */
     private String lastSessionId;
 
+    /**
+     * 检索相关的参数
+     */
+    private List<String> tags;
+
 
 }
