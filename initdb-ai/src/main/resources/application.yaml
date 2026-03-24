@@ -19,5 +19,5 @@ logging:
 
 ## SQL Agent Configuration
 database-agent:
-  max-results: 10
+  max-results: 500
 
