@@ -43,7 +43,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                                                   .build();
             Collection<Checkpoint> list = baseCheckpointSaver.list(config);
             // 最大会话缓存数
-            if (list.size() > 10) {
+            if (list.size() > 5) {
                 baseCheckpointSaver.release(config);
             }
             NodeOutput result = reactAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
