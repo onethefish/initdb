@@ -61,7 +61,7 @@ public class GetTableDataTool extends DataBaseAbstractTool implements BiFunction
 
     }
 
-
+    // 安全兜底
     private String addLimitIfNeeded(String query) {
         String lowerQuery = query.toLowerCase();
         if (!lowerQuery.contains(" limit ") && !lowerQuery.contains("\nlimit ")) {
