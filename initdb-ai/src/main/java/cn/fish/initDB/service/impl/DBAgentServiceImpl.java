@@ -9,8 +9,10 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.Collection;
 
@@ -45,6 +47,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                 baseCheckpointSaver.release(config);
             }
             NodeOutput result = reactAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
+
             String response = NodeOutputUtil.extractResponse(result);
             return new ChatResponse(response, sessionId, true);
         } catch (Exception e) {
@@ -52,4 +55,23 @@ public class DBAgentServiceImpl implements DBAgentService {
             return new ChatResponse("Sorry, an error occurred: " + e.getMessage(), sessionId, false);
         }
     }
+
+    @Override
+    @SneakyThrows
+    // todo
+    public Flux<String> chatStream(ChatRequest chatRequest) {
+        log.info("Received chat request: {}", chatRequest.getMessage());
+        String sessionId = chatRequest.getSessionId();
+        if (sessionId == null || sessionId.isEmpty()) {
+        }
+        RunnableConfig config = RunnableConfig.builder()
+                                              .threadId(sessionId)
+                                              .mergeReasoningContent(true)
+                                              .build();
+        Flux<NodeOutput> stream = reactAgent.stream(chatRequest.getMessage(), config);
+        return stream.filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND())
+                     .map(NodeOutputUtil::extractResponse);
+    }
+
+
 }
