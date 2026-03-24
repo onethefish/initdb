@@ -27,7 +27,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.document.DocumentReader;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
-import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -55,14 +55,14 @@ public class DBAgentController {
     private final DBAgentService dbAgentService;
 
     private final HttpServletResponse httpServletResponse;
-    private final VectorStore vectorStore;
+    private final SimpleVectorStore simpleVectorStore;
 
     public DBAgentController(DBAgentService dbAgentService,
                              HttpServletResponse httpServletResponse,
-                             VectorStore vectorStore) {
+                             SimpleVectorStore simpleVectorStore) {
         this.dbAgentService = dbAgentService;
         this.httpServletResponse = httpServletResponse;
-        this.vectorStore = vectorStore;
+        this.simpleVectorStore = simpleVectorStore;
     }
 
     @ResponseBody
@@ -140,7 +140,7 @@ public class DBAgentController {
         DocumentReader reader = new TikaDocumentReader(resource);
         List<Document> documents = reader.get();
         List<Document> splitDocuments = new TokenTextSplitter().apply(documents);
-        vectorStore.add(splitDocuments);
+        simpleVectorStore.add(splitDocuments);
     }
 
 
