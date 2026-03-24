@@ -7,17 +7,23 @@ import cn.fish.initDB.util.NodeOutputUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
+import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Collection;
 
 @Slf4j
 @Service
 public class DBAgentServiceImpl implements DBAgentService {
 
     private final ReactAgent reactAgent;
+    private final BaseCheckpointSaver baseCheckpointSaver;
 
-    public DBAgentServiceImpl(ReactAgent reactAgent) {
+    public DBAgentServiceImpl(ReactAgent reactAgent, BaseCheckpointSaver baseCheckpointSaver) {
         this.reactAgent = reactAgent;
+        this.baseCheckpointSaver = baseCheckpointSaver;
     }
 
     @Override
@@ -33,6 +39,11 @@ public class DBAgentServiceImpl implements DBAgentService {
                                                   .threadId(sessionId)
                                                   .mergeReasoningContent(true)
                                                   .build();
+            Collection<Checkpoint> list = baseCheckpointSaver.list(config);
+            // 最大会话缓存数
+            if (list.size() > 10) {
+                baseCheckpointSaver.release(config);
+            }
             NodeOutput result = reactAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
             String response = NodeOutputUtil.extractResponse(result);
             return new ChatResponse(response, sessionId, true);
