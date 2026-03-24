@@ -13,7 +13,6 @@ import org.springframework.ai.chat.messages.AbstractMessage;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.StringJoiner;
 
 @Slf4j
 public class NodeOutputUtil {
@@ -39,15 +38,15 @@ public class NodeOutputUtil {
         // Fallback to "messages" key
         Optional<List<AbstractMessage>> messages = state.value("messages");
         if (messages.isPresent()) {
-            StringJoiner result = new StringJoiner("\n");
+//            StringJoiner result = new StringJoiner("\n");
             List<AbstractMessage> msgList = messages.get();
-            for (AbstractMessage abstractMessage : msgList) {
-                String text = abstractMessage.getText();
-                Node node = parser.parse(text);
-                String render = renderer.render(node);
-                result.add(render);
-            }
-            return result.toString();
+            // 拿最后一条
+            AbstractMessage abstractMessage = msgList.get(msgList.size() - 1);
+            String text = abstractMessage.getText();
+            Node node = parser.parse(text);
+            String render = renderer.render(node);
+//            result.add(render);
+            return render;
         }
         String result = state.toString();
         if (StringUtils.isBlank(result)) {

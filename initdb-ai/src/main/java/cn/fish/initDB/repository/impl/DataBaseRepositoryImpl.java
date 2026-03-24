@@ -161,6 +161,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                     tableColumn.setRemarks(remarks);
                     table.addTableColumnMap(column_name, tableColumn);
                 }
+                table.primaryKeysSort();
                 table.tableColumnSort();
                 table.dealColumn();
                 return table;
