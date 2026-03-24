@@ -20,7 +20,6 @@ import cn.fish.initDB.tool.impl.GetTableDataTool;
 import cn.fish.initDB.tool.impl.GetTableSchemaTool;
 import cn.fish.initDB.tool.impl.QuerySqlCheckTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -103,14 +102,21 @@ public class DBAgentConfiguration {
     }
 
     @Bean
-    public ReactAgent reactAgent() {
+    public ChatMemorySaver createChatMemorySaver() {
+        return new ChatMemorySaver();
+    }
 
+
+    @Bean
+    public ReactAgent reactAgent() {
 
         return ReactAgent.builder()
                          .name("database-agent")          // 智能体
                          .description(SYSTEM_PROMPT) //智能体的描述或系统提示词
                          .model(chatModel)
-                         .saver(new MemorySaver())
+                         .saver(createChatMemorySaver())
+                         .maxParallelTools(2)
+                         .enableLogging(true)
                          // 设置工具
                          .tools(getAllTablesTool.toolCallback()
                                  , getTableSchemaTool.toolCallback()

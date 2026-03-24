@@ -27,7 +27,9 @@ public class NodeOutputUtil {
         if (nodeOutput == null) {
             return "No response generated.";
         }
-        log.info("Received response: {}", nodeOutput);
+        if (log.isDebugEnabled()) {
+            log.debug("Received response: {}", nodeOutput);
+        }
         OverAllState state = nodeOutput.state();
         //         Try "output" key first (common for ReactAgent)
         Optional<Object> output = state.value("output");
@@ -38,14 +40,14 @@ public class NodeOutputUtil {
         // Fallback to "messages" key
         Optional<List<AbstractMessage>> messages = state.value("messages");
         if (messages.isPresent()) {
-//            StringJoiner result = new StringJoiner("\n");
+            //            StringJoiner result = new StringJoiner("\n");
             List<AbstractMessage> msgList = messages.get();
             // 拿最后一条
             AbstractMessage abstractMessage = msgList.get(msgList.size() - 1);
             String text = abstractMessage.getText();
             Node node = parser.parse(text);
             String render = renderer.render(node);
-//            result.add(render);
+            //            result.add(render);
             return render;
         }
         String result = state.toString();

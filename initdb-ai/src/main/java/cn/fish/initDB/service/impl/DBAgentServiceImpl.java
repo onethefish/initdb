@@ -29,7 +29,10 @@ public class DBAgentServiceImpl implements DBAgentService {
             return new ChatResponse("Sorry, an error occurred: sessionId is null", null, false);
         }
         try {
-            RunnableConfig config = RunnableConfig.builder().threadId(sessionId).build();
+            RunnableConfig config = RunnableConfig.builder()
+                                                  .threadId(sessionId)
+                                                  .mergeReasoningContent(true)
+                                                  .build();
             NodeOutput result = reactAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
             String response = NodeOutputUtil.extractResponse(result);
             return new ChatResponse(response, sessionId, true);

@@ -382,8 +382,8 @@
   <div class="modal-content">
     <h2>创建新对话</h2>
     <div class="form-group">
-      <label for="sessionName">会话名称</label>
-      <input type="text" id="sessionName" required value="测试会话">
+      <label for="sessionName">对话名称</label>
+      <input type="text" id="sessionName" required value="新的对话">
     </div>
     <!--    <div class="form-group">-->
     <!--      <label for="host">主机地址</label>-->
@@ -462,11 +462,13 @@
 
     }
 
+    let index = 1;
+
     // 关闭创建新会话框
     function closeModal() {
         document.getElementById('sessionModal').style.display = 'none';
         // 清空表单
-        document.getElementById('sessionName').value = '';
+        document.getElementById('sessionName').value = '新的对话' + (index++);
         // document.getElementById('host').value = '';
         // document.getElementById('port').value = '';
         document.getElementById('url').value = 'jdbc:mysql://127.0.0.1:3306/xxx_xxx_xxx';
