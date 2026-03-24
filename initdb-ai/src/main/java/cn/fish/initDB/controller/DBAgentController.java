@@ -27,6 +27,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.document.DocumentReader;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
@@ -141,6 +142,19 @@ public class DBAgentController {
         List<Document> documents = reader.get();
         List<Document> splitDocuments = new TokenTextSplitter().apply(documents);
         simpleVectorStore.add(splitDocuments);
+    }
+
+    /**
+     * 向量数据查询测试
+     */
+    @GetMapping("/select")
+    public List<Document> search(String  queryContent) {
+
+        return simpleVectorStore.similaritySearch(
+            SearchRequest.builder()
+                .query(queryContent)
+                .topK(queryContent.length()
+                ).build());
     }
 
 
