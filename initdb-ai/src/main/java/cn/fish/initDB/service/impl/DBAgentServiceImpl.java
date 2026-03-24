@@ -113,6 +113,7 @@ public class DBAgentServiceImpl implements DBAgentService {
 
     private ApplicationParam assemble(BaiLianReqDto dto) {
         ApplicationParam.ApplicationParamBuilder<?, ?> param = ApplicationParam.builder()
+            // todo 申请key 和secret
             .apiKey("aliyunProperties.getBaiLian().getApiKey()")
             .appId("baiLianAppTypeEnum.getAppId()")
             .prompt(dto.getPrompt());

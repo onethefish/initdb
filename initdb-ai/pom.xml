@@ -99,6 +99,11 @@
             <version>2.22.4</version>
         </dependency>
 
+        <!-- Spring AI Tika 文档读取（提供 TikaDocumentReader） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-tika-document-reader</artifactId>
+        </dependency>
 
     </dependencies>
 
