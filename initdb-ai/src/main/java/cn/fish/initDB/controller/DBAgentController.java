@@ -42,7 +42,7 @@ public class DBAgentController {
     @GetMapping("/chat")
     public ChatResponse chatGet(@RequestParam("message") String message,
                                 @RequestParam(value = "sessionId", required = false) String sessionId) {
-        return chat(new ChatRequest(message, sessionId));
+        return dbAgentService.chat(new ChatRequest(message, sessionId));
     }
 
 

@@ -6,10 +6,13 @@ spring:
   ai:
     openai:
       api-key: ${AI_OPENAI_API-KEY}
-      base-url: ${AI_OPENAI_BASE-URL}
+      base-url: "https://dashscope.aliyuncs.com/compatible-mode/"
       chat:
         options:
-          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL}
+          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL:qwen-plus}
+          max-tokens: 512
+          presencePenalty: 0.5
+
   thymeleaf:
     cache: false
 logging:
