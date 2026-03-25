@@ -7,6 +7,8 @@ import cn.fish.initDB.service.ChatSessionService;
 import cn.hutool.core.util.IdUtil;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ChatSessionServiceImpl implements ChatSessionService {
 
@@ -27,6 +29,11 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         chatSessionRepository.add(chatSession);
         dataBaseRepository.add(chatSession);
         return chatSession;
+    }
+
+    @Override
+    public List<ChatSession> queryList(ChatSession chatSession) {
+        return chatSessionRepository.queryList(chatSession);
     }
 
     @Override

@@ -6,8 +6,10 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Repository
 public class ChatSessionRepositoryImpl implements ChatSessionRepository {
@@ -17,12 +19,21 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
                                                                             .maximumSize(128) // 最大支持128个会话
                                                                             .build();
 
-    @Autowired
-    private BaseCheckpointSaver baseCheckpointSaver;
+    private final BaseCheckpointSaver baseCheckpointSaver;
+
+    public ChatSessionRepositoryImpl(BaseCheckpointSaver baseCheckpointSaver) {
+        this.baseCheckpointSaver = baseCheckpointSaver;
+    }
 
     @Override
     public ChatSession queryUnique(String sessionId) {
         return CHART_SESSION.getIfPresent(sessionId);
+    }
+
+    @Override
+    public List<ChatSession> queryList(ChatSession chatSession) {
+        // todo
+        return new ArrayList<>(CHART_SESSION.asMap().values());
     }
 
     @Override
@@ -42,7 +53,7 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
 
     @Override
     public void removeAll() {
-        CHART_SESSION.asMap().forEach((key,value)->{
+        CHART_SESSION.asMap().forEach((key, value) -> {
             try {
                 baseCheckpointSaver.release(RunnableConfig.builder().threadId(key).build());
             } catch (Exception ignored) {

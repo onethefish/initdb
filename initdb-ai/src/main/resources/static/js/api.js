@@ -9,11 +9,25 @@
     }
     // 兜底：尝试 json，否则返回文本
     const text = await response.text();
+    if (!text) return {};
     try {
       return JSON.parse(text);
     } catch (e) {
       return text;
     }
+  }
+
+  function buildUrlWithParams(url, params) {
+    if (!params || typeof params !== 'object' || Object.keys(params).length === 0) return url;
+    const usp = new URLSearchParams();
+    Object.keys(params).forEach(key => {
+      const value = params[key];
+      if (value === undefined || value === null) return;
+      usp.append(key, String(value));
+    });
+    const qs = usp.toString();
+    if (!qs) return url;
+    return url.includes('?') ? `${url}&${qs}` : `${url}?${qs}`;
   }
 
   function buildHttpError(response, body) {
@@ -60,28 +74,80 @@
     return parsedBody;
   }
 
-  async function requestJson(url, body) {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body || {})
-    });
+  async function requestJsonMethod(method, url, options) {
+    const opts = options || {};
+    const params = opts.params;
+    const body = opts.body;
+    const headers = opts.headers || {};
+
+    const finalUrl = buildUrlWithParams(url, params);
+    const fetchOptions = {
+      method: String(method || 'POST').toUpperCase(),
+      headers: {...headers}
+    };
+
+    // GET 通常不带 body（但如果调用方传了 body，这里也会按 method!==GET 处理）
+    if (fetchOptions.method !== 'GET' && body !== undefined) {
+      fetchOptions.headers['Content-Type'] = 'application/json';
+      fetchOptions.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(finalUrl, fetchOptions);
     const parsedBody = await parseResponseBody(response);
     return unwrapResponse(response, parsedBody);
   }
 
-  async function requestForm(url, formData) {
-    const response = await fetch(url, {
-      method: 'POST',
+  async function requestFormMethod(method, url, formData, options) {
+    const opts = options || {};
+    const params = opts.params;
+    const finalUrl = buildUrlWithParams(url, params);
+
+    const fetchOptions = {
+      method: String(method || 'POST').toUpperCase(),
       body: formData
-    });
+    };
+
+    const response = await fetch(finalUrl, fetchOptions);
     const parsedBody = await parseResponseBody(response);
     return unwrapResponse(response, parsedBody);
+  }
+
+  // Backward-compatible 封装：默认仍然是 POST
+  async function requestJson(url, body) {
+    return requestJsonMethod('POST', url, {body});
+  }
+
+  async function requestForm(url, formData) {
+    return requestFormMethod('POST', url, formData);
+  }
+
+  // 便利方法（JSON）
+  function get(url, params) {
+    return requestJsonMethod('GET', url, {params});
+  }
+
+  function post(url, body) {
+    return requestJsonMethod('POST', url, {body});
+  }
+
+  function put(url, body) {
+    return requestJsonMethod('PUT', url, {body});
+  }
+
+  function del(url, options) {
+    const opts = options || {};
+    return requestJsonMethod('DELETE', url, {params: opts.params, body: opts.body});
   }
 
   global.Api = {
     requestJson,
-    requestForm
+    requestForm,
+    requestJsonMethod,
+    requestFormMethod,
+    get,
+    post,
+    put,
+    del
   };
 })(window);
 

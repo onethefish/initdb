@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.websocket.DecodeException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Level;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
@@ -30,12 +29,15 @@ import java.util.StringJoiner;
  *
  * @author onethefish
  */
-@RestControllerAdvice
 @Slf4j
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @Autowired
-    private MultipartProperties multipartProperties;
+    private final MultipartProperties multipartProperties;
+
+    public GlobalExceptionHandler(MultipartProperties multipartProperties) {
+        this.multipartProperties = multipartProperties;
+    }
 
     /**
      * 处理所有未知异常
