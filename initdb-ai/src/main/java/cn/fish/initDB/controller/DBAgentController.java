@@ -15,43 +15,26 @@
  */
 package cn.fish.initDB.controller;
 
-import cn.fish.initDB.bo.AiChatAskBo;
-import cn.fish.initDB.controller.form.AiChatForm;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
-@Slf4j
+
 @Controller
 @RequestMapping("/db")
 public class DBAgentController {
 
     private final DBAgentService dbAgentService;
 
-    private final HttpServletResponse httpServletResponse;
-
-    public DBAgentController(DBAgentService dbAgentService,
-                             HttpServletResponse httpServletResponse) {
+    public DBAgentController(DBAgentService dbAgentService) {
         this.dbAgentService = dbAgentService;
-        this.httpServletResponse = httpServletResponse;
     }
 
     @ResponseBody
@@ -70,18 +53,18 @@ public class DBAgentController {
 
         // 3. 订阅 Flux，将数据通过 emitter 发送出去
         flux.subscribe(
-            data -> {
-                try {
-                    // 发送数据
-                    emitter.send(data, MediaType.TEXT_HTML);
-                } catch (IOException e) {
-                    emitter.completeWithError(e);
-                }
-            },
-            // 错误处理
-            emitter::completeWithError,
-            // 完成处理
-            emitter::complete
+                data -> {
+                    try {
+                        // 发送数据
+                        emitter.send(data, MediaType.TEXT_HTML);
+                    } catch (IOException e) {
+                        emitter.completeWithError(e);
+                    }
+                },
+                // 错误处理
+                emitter::completeWithError,
+                // 完成处理
+                emitter::complete
         );
 
         return emitter;
@@ -93,37 +76,6 @@ public class DBAgentController {
     public ChatResponse chatGet(@RequestParam("message") String message,
                                 @RequestParam(value = "sessionId", required = false) String sessionId) {
         return dbAgentService.chat(new ChatRequest(message, sessionId));
-    }
-
-
-    /**
-     * 提问
-     *
-     * @param chatCode 聊天编号
-     * @param form     form
-     */
-    @SneakyThrows
-    @PostMapping("/{chatCode}/ask")
-    public void ask(@PathVariable String chatCode,
-                    @RequestBody @Validated AiChatForm form) {
-
-        AiChatAskBo bo = assemble(chatCode, form);
-
-        try (OutputStream os = httpServletResponse.getOutputStream()) {
-            httpServletResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
-
-            dbAgentService.ask(os, bo);
-        } catch (Exception e) {
-            log.warn("智能客服提问异常", e);
-        }
-    }
-
-    private AiChatAskBo assemble(String chatCode, AiChatForm form) {
-        return new AiChatAskBo()
-            .setChatCode(chatCode)
-            .setLastSessionId(form.getLastSessionId())
-            .setPrompt(form.getPrompt());
-
     }
 
 

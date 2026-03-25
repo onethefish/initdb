@@ -1,8 +1,5 @@
 package cn.fish.initDB.service.impl;
 
-import cn.fish.initDB.bo.AiChatAskBo;
-import cn.fish.initDB.dto.BaiLianReqDto;
-import cn.fish.initDB.dto.BaiLianRespDto;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
@@ -17,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.io.OutputStream;
 import java.util.Collection;
 
 @Slf4j
@@ -75,15 +71,6 @@ public class DBAgentServiceImpl implements DBAgentService {
         Flux<NodeOutput> stream = reactAgent.stream(chatRequest.getMessage(), config);
         return stream.filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND())
                      .map(NodeOutputUtil::extractResponse);
-    }
-
-    @Override
-    public void ask(OutputStream os, AiChatAskBo bo) {
-        BaiLianReqDto dto = new BaiLianReqDto();
-        dto.setAskCode(bo.getChatCode())
-        	.setPrompt(bo.getPrompt())
-        	.setLastSessionId(bo.getLastSessionId());
-      // todo  BaiLianRespDto resp = reactAgent.request(os, dto);
     }
 
 
