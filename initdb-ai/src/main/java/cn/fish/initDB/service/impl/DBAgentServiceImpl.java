@@ -69,6 +69,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                                               .mergeReasoningContent(true)
                                               .build();
         Flux<NodeOutput> stream = reactAgent.stream(chatRequest.getMessage(), config);
+        // todo AI 乱改的 实际上用不了等一个大神
         return stream.filter(nodeOutput -> {
                          // 排除 START 和 END 节点
                          if (nodeOutput.isSTART() || nodeOutput.isEND()) {
