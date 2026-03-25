@@ -15,11 +15,8 @@
  */
 package cn.fish.initDB.config;
 
+import cn.fish.initDB.tool.impl.*;
 import cn.fish.savers.ChatMemorySaver;
-import cn.fish.initDB.tool.impl.GetAllTablesTool;
-import cn.fish.initDB.tool.impl.GetTableDataTool;
-import cn.fish.initDB.tool.impl.GetTableSchemaTool;
-import cn.fish.initDB.tool.impl.QuerySqlCheckTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -69,25 +66,20 @@ public class DBAgentConfiguration {
             你是一个专为与关系型数据库交互而设计的智能体(Agent)。
             根据输入的问题，如果用户明确需要查询数据则编写 语法正确的查询SQL语句来运行。
             然后查看查询结果并返回答案。
-            
             除非用户明确指定了希望获取的示例数量，否则始终将查询结果限制为最多 10 条。
-            
             切勿对数据库执行任何 DML 语句（如 INSERT, UPDATE, DELETE, DROP 等），只允许执行 SELECT 查询。
-            
             开始时，你应该始终先查看数据库中的表，看看可以查询什么。不要跳过此步骤。
-            
+            你可以尝试调用 knowledge_retrieval 工具来获取当前数据库的相关设计文档，这个文档信息用户不一定会提供
             然后，你应该查询最相关表的详细信息（Schema）以了解其结构，帮助你生成正确的查询SQL语句
-            
             最后，执行查询并根据结果提供清晰、自然的语言回答。
-            
             获取表的详细信息（Schema），请使用 sql_check 工具在执行前验证你的 SQL。
-            
             请记住遵循以下步骤：
             1. 调用 get_all_tables 获取数据库中所有的表
             2. 调用 get_table_schema 获取数据库具体的表的详细信息（Schema）
             3. 调用 sql_check 验证你生成的sql
             4. 调用 get_table_data 获取表数据
-            5. 将结果综合为有帮助的回答
+            5. 尝试调用 knowledge_retrieval 工具来获取当前数据库的相关设计文档
+            6. 将结果综合为有帮助的回答
             """;
 
     private final ChatModel chatModel;
@@ -95,14 +87,16 @@ public class DBAgentConfiguration {
     private final GetTableSchemaTool getTableSchemaTool;
     private final QuerySqlCheckTool querySqlCheckTool;
     private final GetTableDataTool getTableDataTool;
+    private final KnowledgeRetrievalTool knowledgeRetrievalTool;
 
     public DBAgentConfiguration(ChatModel chatModel, GetAllTablesTool getAllTablesTool, GetTableSchemaTool getTableSchemaTool,
-                                QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool) {
+                                QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool, KnowledgeRetrievalTool knowledgeRetrievalTool) {
         this.chatModel = chatModel;
         this.getAllTablesTool = getAllTablesTool;
         this.getTableSchemaTool = getTableSchemaTool;
         this.querySqlCheckTool = querySqlCheckTool;
         this.getTableDataTool = getTableDataTool;
+        this.knowledgeRetrievalTool = knowledgeRetrievalTool;
     }
     // 提供一个RAG向量库 todo
     @Bean
@@ -131,6 +125,7 @@ public class DBAgentConfiguration {
                                  , getTableSchemaTool.toolCallback()
                                  , querySqlCheckTool.toolCallback()
                                  , getTableDataTool.toolCallback()
+                                 , knowledgeRetrievalTool.toolCallback()
                          )
                          .build();
     }

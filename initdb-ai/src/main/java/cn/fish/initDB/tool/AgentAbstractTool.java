@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 
-public abstract class DataBaseAbstractTool {
+public abstract class AgentAbstractTool {
 
     public void log(ToolContext toolContext) {
 

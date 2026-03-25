@@ -16,7 +16,7 @@
 package cn.fish.initDB.tool.impl;
 
 import cn.fish.initDB.repository.DataBaseRepository;
-import cn.fish.initDB.tool.DataBaseAbstractTool;
+import cn.fish.initDB.tool.AgentAbstractTool;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -37,7 +37,7 @@ import java.util.function.BiFunction;
  */
 @Slf4j
 @Component
-public class GetTableDataTool extends DataBaseAbstractTool implements BiFunction<GetTableDataTool.Request, ToolContext, String> {
+public class GetTableDataTool extends AgentAbstractTool implements BiFunction<GetTableDataTool.Request, ToolContext, String> {
 
     private final DataBaseRepository dataBaseRepository;
 
