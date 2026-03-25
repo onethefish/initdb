@@ -36,7 +36,7 @@ public class ChartController {
     }
 
 
-    @PostMapping("/delete")
+    @DeleteMapping("/delete")
     public ResponseResult<Void> delete(@RequestBody ChatSession chatSession) {
         chatSessionService.delete(chatSession);
         chatSession.setSessionId(null);
@@ -44,7 +44,7 @@ public class ChartController {
     }
 
 
-    @PostMapping("/delete/all")
+    @DeleteMapping("/delete/all")
     public ResponseResult<Void> deleteAll() {
         chatSessionService.deleteAll();
         return ResponseResult.success();

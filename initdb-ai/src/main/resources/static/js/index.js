@@ -32,7 +32,7 @@ function createModal() {
 
 async function deleteModal() {
   try {
-    await Api.requestJson('/chat/delete/all', {});
+    await Api.del('/chat/delete/all');
   } catch (error) {
     console.log(error);
   }
@@ -65,7 +65,7 @@ async function createNewSession() {
   const password = document.getElementById('password').value;
 
   try {
-    const data = await Api.requestJson('/chat/create', {
+    const data = await Api.post('/chat/create', {
       sessionName,
       url,
       username,
@@ -166,7 +166,7 @@ async function sendMessage() {
   setSendButtonDisabled(true);
 
   try {
-    const data = await Api.requestJson('/db/chat', {
+    const data = await Api.post('/db/chat', {
       message,
       sessionId: currentSessionId,
       db_config: sessions[sessionIndex].config

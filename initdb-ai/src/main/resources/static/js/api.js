@@ -112,11 +112,6 @@
     return unwrapResponse(response, parsedBody);
   }
 
-  // Backward-compatible 封装：默认仍然是 POST
-  async function requestJson(url, body) {
-    return requestJsonMethod('POST', url, {body});
-  }
-
   async function requestForm(url, formData) {
     return requestFormMethod('POST', url, formData);
   }
@@ -140,10 +135,7 @@
   }
 
   global.Api = {
-    requestJson,
     requestForm,
-    requestJsonMethod,
-    requestFormMethod,
     get,
     post,
     put,
