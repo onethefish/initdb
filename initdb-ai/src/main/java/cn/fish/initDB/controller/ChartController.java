@@ -17,12 +17,6 @@ public class ChartController {
         this.chatSessionService = chatSessionService;
     }
 
-    // 重定向到聊天首页
-    @GetMapping("/")
-    public String index() {
-        return "index";
-    }
-
     @GetMapping("/query/list")
     public ResponseResult<List<ChatSession>> queryList() {
         List<ChatSession> chatSessions = chatSessionService.queryList(null);
