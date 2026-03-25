@@ -63,7 +63,7 @@ public class NodeOutputUtil {
         return result;
     }
 
-    private static String getHtml(String text) {
+    public static String getHtml(String text) {
         Node node = parser.parse(text);
         return renderer.render(node);
     }

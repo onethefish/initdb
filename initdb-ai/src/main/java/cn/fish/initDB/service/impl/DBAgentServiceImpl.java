@@ -11,6 +11,7 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
+import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -68,8 +69,20 @@ public class DBAgentServiceImpl implements DBAgentService {
                                               .mergeReasoningContent(true)
                                               .build();
         Flux<NodeOutput> stream = reactAgent.stream(chatRequest.getMessage(), config);
-        return stream.filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND())
-                     .map(NodeOutputUtil::extractResponse);
+        return stream.filter(nodeOutput -> {
+                         // 排除 START 和 END 节点
+                         if (nodeOutput.isSTART() || nodeOutput.isEND()) {
+                             return false;
+                         }
+                         // 只保留 StreamingOutput 类型（实时的流式输出）
+                         return nodeOutput instanceof StreamingOutput;
+                     })
+                     .map(nodeOutput -> {
+                         StreamingOutput streamingOutput = (StreamingOutput) nodeOutput;
+                         return streamingOutput.chunk();
+                     })
+                     .filter(chunk -> chunk != null && !chunk.trim().isEmpty())
+                     .map(NodeOutputUtil::getHtml);
     }
 
 
