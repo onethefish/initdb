@@ -4,8 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 /**
  * @author xwt
  * @since 2024-08-13 21:14
@@ -26,11 +24,6 @@ public class AiChatForm {
      * 上传的会话id
      */
     private String lastSessionId;
-
-    /**
-     * 检索相关的参数
-     */
-    private List<String> tags;
 
 
 }
