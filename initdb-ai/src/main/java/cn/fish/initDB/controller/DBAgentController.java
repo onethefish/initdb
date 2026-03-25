@@ -134,6 +134,7 @@ public class DBAgentController {
     }
 
     @SneakyThrows
+
     @PostMapping("/rag/importDocument")
     public void importDocument(MultipartFile file) {
         InputStreamResource resource = new InputStreamResource(file.getInputStream(), file.getOriginalFilename());
