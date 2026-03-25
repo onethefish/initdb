@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface VectorStoreRepository {
 
-    void add(List<Document> documents, String sessionId);
+    void add(List<Document> documents);
 
 }

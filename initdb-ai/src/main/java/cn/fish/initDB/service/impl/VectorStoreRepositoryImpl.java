@@ -17,11 +17,9 @@ public class VectorStoreRepositoryImpl implements VectorStoreRepository {
     }
 
     @Override
-    public void add(List<Document> documents, String sessionId) {
-        // todo 绑定会话文档防止串读
+    public void add(List<Document> documents) {
         vectorStore.add(documents);
     }
-
 
 
 }

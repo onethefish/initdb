@@ -24,7 +24,10 @@ public class DocumentServiceImpl implements DocumentService {
         List<Document> read = textReader.read();
         TokenTextSplitter splitter = new TokenTextSplitter();
         List<Document> splitDocuments = splitter.apply(read);
-        vectorStoreRepository.add(splitDocuments, sessionId);
+        for (Document document : splitDocuments) {
+            document.getMetadata().put("sessionId", sessionId);
+        }
+        vectorStoreRepository.add(splitDocuments);
     }
 
 
