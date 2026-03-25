@@ -4,6 +4,7 @@ import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.repository.ChatSessionRepository;
 import cn.fish.initDB.repository.DataBaseRepository;
 import cn.fish.initDB.service.ChatSessionService;
+import cn.fish.web.exception.CommonException;
 import cn.hutool.core.util.IdUtil;
 import org.springframework.stereotype.Service;
 
@@ -26,8 +27,12 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         //        dataBaseRepository.test(chatSession);
         // 保存连接信息
         chatSession.setSessionId(IdUtil.simpleUUID());
+        try {
+            dataBaseRepository.add(chatSession);
+        } catch (Exception e) {
+            throw new CommonException("数据库连接异常请检查参数", e);
+        }
         chatSessionRepository.add(chatSession);
-        dataBaseRepository.add(chatSession);
         return chatSession;
     }
 
