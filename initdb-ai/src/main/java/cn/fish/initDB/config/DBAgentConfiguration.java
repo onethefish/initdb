@@ -15,7 +15,7 @@
  */
 package cn.fish.initDB.config;
 
-import cn.fish.initDB.savers.ChatMemorySaver;
+import cn.fish.savers.ChatMemorySaver;
 import cn.fish.initDB.tool.impl.GetAllTablesTool;
 import cn.fish.initDB.tool.impl.GetTableDataTool;
 import cn.fish.initDB.tool.impl.GetTableSchemaTool;
