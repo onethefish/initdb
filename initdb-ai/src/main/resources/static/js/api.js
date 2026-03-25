@@ -26,6 +26,40 @@
     return new Error(`HTTP ${response.status} ${response.statusText}${details ? ` - ${details}` : ''}`);
   }
 
+  function isUnifiedResponse(body) {
+    return !!body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, 'code');
+  }
+
+  function normalizeUnifiedResponse(body) {
+    const code = body.code;
+    const ok = String(code) === '200';
+    const message = body.message || '';
+    const traceId = body.traceId || '';
+    return {ok, code, message, traceId, data: body.data};
+  }
+
+  function buildBusinessError(unified) {
+    const base = unified.message || `业务请求失败(code: ${unified.code})`;
+    const traceSuffix = unified.traceId ? ` [traceId: ${unified.traceId}]` : '';
+    return new Error(`${base}${traceSuffix}`);
+  }
+
+  function unwrapResponse(response, parsedBody) {
+    if (isUnifiedResponse(parsedBody)) {
+      const unified = normalizeUnifiedResponse(parsedBody);
+      if (!unified.ok) {
+        throw buildBusinessError(unified);
+      }
+      return unified.data;
+    }
+
+    if (!response.ok) {
+      throw buildHttpError(response, parsedBody);
+    }
+
+    return parsedBody;
+  }
+
   async function requestJson(url, body) {
     const response = await fetch(url, {
       method: 'POST',
@@ -33,10 +67,7 @@
       body: JSON.stringify(body || {})
     });
     const parsedBody = await parseResponseBody(response);
-    if (!response.ok) {
-      throw buildHttpError(response, parsedBody);
-    }
-    return parsedBody;
+    return unwrapResponse(response, parsedBody);
   }
 
   async function requestForm(url, formData) {
@@ -45,10 +76,7 @@
       body: formData
     });
     const parsedBody = await parseResponseBody(response);
-    if (!response.ok) {
-      throw buildHttpError(response, parsedBody);
-    }
-    return parsedBody;
+    return unwrapResponse(response, parsedBody);
   }
 
   global.Api = {

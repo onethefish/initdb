@@ -20,7 +20,6 @@ import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.web.response.ResponseResult;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
@@ -28,7 +27,7 @@ import reactor.core.publisher.Flux;
 import java.io.IOException;
 
 
-@Controller
+@RestController
 @RequestMapping("/db")
 public class DBAgentController {
 
@@ -38,7 +37,7 @@ public class DBAgentController {
         this.dbAgentService = dbAgentService;
     }
 
-    @ResponseBody
+    
     @PostMapping("/chat")
     public ResponseResult<ChatResponse> chat(@RequestBody ChatRequest chatRequest) {
         ChatResponse chat = dbAgentService.chat(chatRequest);
@@ -73,7 +72,7 @@ public class DBAgentController {
     }
 
 
-    @ResponseBody
+    
     @GetMapping("/chat")
     public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,
                                                 @RequestParam(value = "sessionId", required = false) String sessionId) {
