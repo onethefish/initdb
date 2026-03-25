@@ -6,7 +6,6 @@ import cn.fish.initDB.repository.VectorStoreRepository;
 import cn.fish.initDB.service.DocumentService;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.TextReader;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,12 +29,10 @@ public class DocumentServiceImpl implements DocumentService {
         }
         TextReader textReader = new TextReader(file.getResource());
         List<Document> read = textReader.read();
-        TokenTextSplitter splitter = new TokenTextSplitter();
-        List<Document> splitDocuments = splitter.apply(read);
-        for (Document document : splitDocuments) {
+        for (Document document : read) {
             document.getMetadata().put("sessionId", sessionId);
         }
-        vectorStoreRepository.add(splitDocuments);
+        vectorStoreRepository.add(read);
     }
 
 

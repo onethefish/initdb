@@ -763,10 +763,7 @@
             console.log('文件上传成功:', result);
 
             // 上传成功后，清空文件选择
-            document.getElementById('fileInput').value = '';
-            window.selectedFile = null;
-            document.getElementById('fileNameDisplay').style.display = 'none';
-            document.getElementById('uploadFileSendBtn').style.display = 'none';
+
 
             // 可以在这里调用您的 `sendMessage` 函数，将上传结果作为消息发送
             // 例如，将后端返回的处理结果作为一个普通消息发送出去
@@ -776,9 +773,12 @@
 
         } catch (error) {
             console.error('文件上传失败:', error);
+            // displayMessageInChat(`文件上传失败: ${error.message}`, 'assistant');
+        }finally {
+            document.getElementById('fileInput').value = '';
+            window.selectedFile = null;
             document.getElementById('fileNameDisplay').style.display = 'none';
             document.getElementById('uploadFileSendBtn').style.display = 'none';
-            // displayMessageInChat(`文件上传失败: ${error.message}`, 'assistant');
         }
     }
 
