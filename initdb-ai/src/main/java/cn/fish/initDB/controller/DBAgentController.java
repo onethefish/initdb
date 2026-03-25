@@ -23,12 +23,6 @@ import cn.fish.initDB.service.DBAgentService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.document.Document;
-import org.springframework.ai.document.DocumentReader;
-import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
-import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -39,13 +33,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 @Slf4j
 @Controller
@@ -55,14 +47,11 @@ public class DBAgentController {
     private final DBAgentService dbAgentService;
 
     private final HttpServletResponse httpServletResponse;
-    private final VectorStore vectorStore;
 
     public DBAgentController(DBAgentService dbAgentService,
-                             HttpServletResponse httpServletResponse,
-                             VectorStore vectorStore) {
+                             HttpServletResponse httpServletResponse) {
         this.dbAgentService = dbAgentService;
         this.httpServletResponse = httpServletResponse;
-        this.vectorStore = vectorStore;
     }
 
     @ResponseBody
@@ -131,17 +120,6 @@ public class DBAgentController {
         } catch (Exception e) {
             log.warn("智能客服提问异常", e);
         }
-    }
-
-    @SneakyThrows
-
-    @PostMapping("/rag/importDocument")
-    public void importDocument(MultipartFile file) {
-        InputStreamResource resource = new InputStreamResource(file.getInputStream(), file.getOriginalFilename());
-        DocumentReader reader = new TikaDocumentReader(resource);
-        List<Document> documents = reader.get();
-        List<Document> splitDocuments = new TokenTextSplitter().apply(documents);
-        vectorStore.add(splitDocuments);
     }
 
 
