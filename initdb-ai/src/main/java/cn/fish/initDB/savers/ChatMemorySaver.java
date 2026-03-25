@@ -1,4 +1,4 @@
-package cn.fish.initDB.config;
+package cn.fish.initDB.savers;
 
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 

@@ -15,12 +15,16 @@
  */
 package cn.fish.initDB.config;
 
+import cn.fish.initDB.savers.ChatMemorySaver;
 import cn.fish.initDB.tool.impl.GetAllTablesTool;
 import cn.fish.initDB.tool.impl.GetTableDataTool;
 import cn.fish.initDB.tool.impl.GetTableSchemaTool;
 import cn.fish.initDB.tool.impl.QuerySqlCheckTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.vectorstore.SimpleVectorStore;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -99,6 +103,11 @@ public class DBAgentConfiguration {
         this.getTableSchemaTool = getTableSchemaTool;
         this.querySqlCheckTool = querySqlCheckTool;
         this.getTableDataTool = getTableDataTool;
+    }
+    // 提供一个RAG向量库 todo
+    @Bean
+    public VectorStore createVectorStore(EmbeddingModel embeddingModel) {
+        return SimpleVectorStore.builder(embeddingModel).build();
     }
 
     @Bean
