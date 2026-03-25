@@ -47,7 +47,6 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.38</version>
         </dependency>
 
         <!-- Spring AI Alibaba Agent Framework -->
@@ -111,17 +110,6 @@
         </plugins>
     </build>
 
-    <repositories>
-        <repository>
-            <id>hedu-public</id>
-            <name>Project Releases Repositories</name>
-            <url>http://10.22.80.18:8080/repository/maven-hardo-public/</url>
-        </repository>
-        <repository>
-            <id>hedu-releases</id>
-            <name>Project Releases Repositories</name>
-            <url>http://10.22.80.18:8080/repository/maven-hardo-release/</url>
-        </repository>
-    </repositories>
+
 
 </project>

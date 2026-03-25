@@ -6,6 +6,7 @@ import com.alibaba.fastjson2.JSON;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.Signature;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
@@ -118,17 +119,22 @@ public class ControllerMethodLogAop {
     private Map<String, Object> getNameAndValue(ProceedingJoinPoint joinPoint) {
         Map<String, Object> param = new HashMap<>();
         Object[] paramValues = joinPoint.getArgs();
-        String[] paramNames = ((CodeSignature) joinPoint.getSignature()).getParameterNames();
-        for (int i = 0; i < paramNames.length; i++) {
-            Object paramValue = paramValues[i];
-            if (paramValue instanceof Serializable && !isContainsMultipartFile(paramValue)) {
-                param.put(paramNames[i], paramValues[i]);
+        Signature signature = joinPoint.getSignature();
+        if (signature instanceof CodeSignature codeSignature) {
+            String[] paramNames = codeSignature.getParameterNames();
+            if (paramNames != null) {
+                for (int i = 0; i < paramNames.length; i++) {
+                    Object paramValue = paramValues[i];
+                    if (paramValue instanceof Serializable && !isContainsMultipartFile(paramValue)) {
+                        param.put(paramNames[i], paramValues[i]);
+                    }
+                    else {
+                        param.put(paramNames[i], null == paramValue ? null : paramValue.getClass().getName());
+                    }
+                }
             }
-            else {
-                param.put(paramNames[i], null == paramValue ? null : paramValue.getClass().getName());
-            }
-
         }
+
         return param;
     }
 

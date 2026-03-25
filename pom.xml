@@ -58,13 +58,13 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>3.5.7</version>
             </dependency>
-<!--            <dependency>-->
-<!--                <groupId>com.alibaba.cloud.ai</groupId>-->
-<!--                <artifactId>spring-ai-alibaba-extensions-bom</artifactId>-->
-<!--                <version>${spring-ai-alibaba-extensions.version}</version>-->
-<!--                <type>pom</type>-->
-<!--                <scope>import</scope>-->
-<!--            </dependency>-->
+            <!--            <dependency>-->
+            <!--                <groupId>com.alibaba.cloud.ai</groupId>-->
+            <!--                <artifactId>spring-ai-alibaba-extensions-bom</artifactId>-->
+            <!--                <version>${spring-ai-alibaba-extensions.version}</version>-->
+            <!--                <type>pom</type>-->
+            <!--                <scope>import</scope>-->
+            <!--            </dependency>-->
         </dependencies>
     </dependencyManagement>
 
@@ -72,8 +72,28 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <encoding>utf-8</encoding>
+                    <compilerArgs>
+                        <!-- 关键配置：保留参数名信息 -->
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
             </plugin>
         </plugins>
     </build>
