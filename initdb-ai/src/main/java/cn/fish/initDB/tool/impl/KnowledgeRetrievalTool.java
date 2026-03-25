@@ -47,7 +47,7 @@ public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunct
 
     @Override
     public List<Document> apply(Request request, ToolContext toolContext) {
-        log.info("GetDocumentTool::apply");
+        log.info("KnowledgeRetrievalTool::apply");
         String sessionId = getSessionId(toolContext);
         int topK = request.topK() != null ? request.topK() : DEFAULT_TOP_K;
 
@@ -64,7 +64,7 @@ public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunct
 
     public ToolCallback toolCallback() {
         return FunctionToolCallback.builder("knowledge_retrieval", this)
-                                   .description("从用户上传的知识库中检索相关信息。当你需要回答关于当前数据库设计相关的的问题（例如数据库设计、数据库命名规范、分表设计）时，请使用此工具。该工具会执行语义搜索，根据查询内容查找最相关的技术文档。")
+                                   .description("从用户上传的知识库中检索相关信息。当你需要回答关于当前数据库相关的的问题（例如数据库设计、数据库使用、数据库命名规范、分表设计）时，请使用此工具。该工具会执行语义搜索，根据查询内容查找最相关的技术文档。")
                                    .inputType(Request.class)
                                    .build();
     }

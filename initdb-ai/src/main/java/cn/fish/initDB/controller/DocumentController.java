@@ -18,8 +18,10 @@ public class DocumentController {
     }
 
     @PostMapping("/upload/txt")
-    public void importTxtDocument(MultipartFile file, @RequestParam String sessionId) {
+    public String importTxtDocument(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) {
         documentService.importTxtDocument(file, sessionId);
+        // 简单处理下 后续换成统一的web对象返回
+        return "ok";
     }
 
 

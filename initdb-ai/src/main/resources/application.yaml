@@ -14,6 +14,9 @@ spring:
           temperature: 0.1          # 降低随机性，让回答更确定
           presencePenalty: 0.2      # 降低存在惩罚，避免干扰模型聚焦
           frequencyPenalty: 0.2     # 防止模型重复啰嗦
+      embedding:
+        options:
+          model: ${AI_OPENAI_EMBEDDING_OPTIONS_MODEL:text-embedding-v1}
   thymeleaf:
     cache: false
 logging:

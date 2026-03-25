@@ -372,7 +372,15 @@
     </div>
     <div class="input-area">
       <input type="text" id="userInput" placeholder="请输入你的问题..." onkeypress="handleKeyPress(event)" disabled>
-      <button onclick="sendMessage()" disabled>发送</button>
+
+      <!-- 文件上传相关元素 -->
+      <input type="file" id="fileInput" style="display: none;" accept=".txt" onchange="handleFileSelect(this)"/>
+      <button id="uploadFileSendBtn" class="btn-send-file" style="display: none; margin-right: 8px;" onclick="uploadSelectedFile()">上传并处理</button>
+      <span id="fileNameDisplay" style="display: none; margin-right: 8px; color: #666;">已选: </span>
+      <button id="uploadFileBtn" class="btn-upload" style="margin-right: 8px;" onclick="triggerFileInput()">上传文件</button>
+      <!-- /文件上传相关元素 -->
+
+      <button onclick="sendMessage()">发送</button>
     </div>
   </div>
 </div>
@@ -663,6 +671,97 @@
         }
         // 否则保持欢迎界面显示
     };
+
+    // 上传文件
+    function triggerFileInput() {
+        // 这里可以加入检查会话是否开启的逻辑，如果需要的话
+        // if (!sessionIsOpen) { alert('请先开启一个会话'); return; }
+        document.getElementById('fileInput').click();
+    }
+
+    function handleFileSelect(fileInput) {
+        const file = fileInput.files[0];
+        if (file) {
+            // 检查文件类型是否为 .txt
+            // 方式一：通过 MIME 类型检查 (更可靠)
+            if (file.type !== 'text/plain') {
+                alert('不支持的文件类型。请上传 .txt 文件。');
+                fileInput.value = ''; // 清空选择
+                return;
+            }
+            // // 方式二：通过文件扩展名检查
+            // const fileName = file.name.toLowerCase();
+            // if (!fileName.endsWith('.txt')) {
+            //     alert('不支持的文件类型。请上传 .txt 文件。');
+            //     fileInput.value = ''; // 清空选择
+            //     return;
+            // }
+
+            // 存储选中的文件到全局变量，供上传函数使用
+            window.selectedFile = file;
+            document.getElementById('fileNameDisplay').textContent = `已选: ${file.name}`;
+            document.getElementById('fileNameDisplay').style.display = 'inline';
+            document.getElementById('uploadFileSendBtn').style.display = 'inline-block';
+        } else {
+            // 用户取消了选择
+            window.selectedFile = null;
+            document.getElementById('fileNameDisplay').style.display = 'none';
+            document.getElementById('uploadFileSendBtn').style.display = 'none';
+        }
+    }
+
+    async function uploadSelectedFile() {
+        if (!window.selectedFile) {
+            console.warn("没有选中的文件可供上传。");
+            return;
+        }
+
+        const userInput = document.getElementById('userInput');
+        // 检查输入框是否禁用，如果禁用则无法获取当前会话ID
+        if (userInput.disabled) {
+            alert('请先开启一个会话后再上传文件。');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', window.selectedFile);
+        formData.append('sessionId', currentSessionId); // 如果您的应用有管理会话ID，请加上这行
+
+        try {
+            // 在消息区显示正在上传的信息（可选）
+            // displayMessageInChat('正在上传文件...', 'user');
+            const response = await fetch('/document/upload/txt', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('文件上传成功:', result);
+
+            // 上传成功后，清空文件选择
+            document.getElementById('fileInput').value = '';
+            window.selectedFile = null;
+            document.getElementById('fileNameDisplay').style.display = 'none';
+            document.getElementById('uploadFileSendBtn').style.display = 'none';
+
+            // 可以在这里调用您的 `sendMessage` 函数，将上传结果作为消息发送
+            // 例如，将后端返回的处理结果作为一个普通消息发送出去
+            // 假设 `displayMessageInChat` 是您用来显示消息的函数
+            // displayMessageInChat(`文件 "${window.selectedFile.name}" 已成功上传并处理。`, 'assistant');
+            // displayMessageInChat(result.message || '处理完成。', 'assistant');
+
+        } catch (error) {
+            console.error('文件上传失败:', error);
+            document.getElementById('fileNameDisplay').style.display = 'none';
+            document.getElementById('uploadFileSendBtn').style.display = 'none';
+            // displayMessageInChat(`文件上传失败: ${error.message}`, 'assistant');
+        }
+    }
+
 </script>
 </body>
 </html>
