@@ -4,6 +4,8 @@ import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.repository.ChatSessionRepository;
 import cn.fish.initDB.repository.VectorStoreRepository;
 import cn.fish.initDB.service.DocumentService;
+import cn.fish.web.exception.CommonException;
+import cn.hutool.core.util.ObjUtil;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.TextReader;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +26,8 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public void importTxtDocument(MultipartFile file, String sessionId) {
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
-        if (chatSession == null) {
-            throw new RuntimeException("会话不存在 sessionId : " + sessionId);
+        if (ObjUtil.isEmpty(chatSession)) {
+            throw new CommonException("Sorry, an error occurred: chatSession is null");
         }
         TextReader textReader = new TextReader(file.getResource());
         List<Document> read = textReader.read();

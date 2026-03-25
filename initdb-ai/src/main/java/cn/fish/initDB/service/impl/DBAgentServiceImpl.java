@@ -4,6 +4,8 @@ import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.initDB.util.NodeOutputUtil;
+import cn.fish.web.exception.CommonException;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -30,11 +32,9 @@ public class DBAgentServiceImpl implements DBAgentService {
 
     @Override
     public ChatResponse chat(ChatRequest chatRequest) {
-        log.info("Received chat request: {}", chatRequest.getMessage());
         String sessionId = chatRequest.getSessionId();
-        // todo
-        if (sessionId == null || sessionId.isEmpty()) {
-            return new ChatResponse("Sorry, an error occurred: sessionId is null", null, false);
+        if (StrUtil.isEmpty(sessionId)) {
+            throw new CommonException("Sorry, an error occurred: sessionId is null");
         }
         try {
             RunnableConfig config = RunnableConfig.builder()
@@ -49,20 +49,19 @@ public class DBAgentServiceImpl implements DBAgentService {
             NodeOutput result = reactAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
 
             String response = NodeOutputUtil.extractResponse(result);
-            return new ChatResponse(response, sessionId, true);
+            return new ChatResponse(response, sessionId);
         } catch (Exception e) {
-            log.error("Error processing chat request", e);
-            return new ChatResponse("Sorry, an error occurred: " + e.getMessage(), sessionId, false);
+            throw new CommonException("Sorry, an error occurred: sessionId is null");
         }
     }
 
     @Override
     @SneakyThrows
-    // todo
     public Flux<String> chatStream(ChatRequest chatRequest) {
         log.info("Received chat request: {}", chatRequest.getMessage());
         String sessionId = chatRequest.getSessionId();
-        if (sessionId == null || sessionId.isEmpty()) {
+        if (StrUtil.isEmpty(sessionId)) {
+            throw new CommonException("Sorry, an error occurred: sessionId is null");
         }
         RunnableConfig config = RunnableConfig.builder()
                                               .threadId(sessionId)

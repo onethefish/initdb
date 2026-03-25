@@ -1,4 +1,4 @@
-package cn.fish.initDB.service.impl;
+package cn.fish.initDB.repository.impl;
 
 import cn.fish.initDB.repository.VectorStoreRepository;
 import org.springframework.ai.document.Document;

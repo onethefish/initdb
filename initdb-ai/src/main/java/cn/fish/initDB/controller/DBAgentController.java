@@ -18,14 +18,10 @@ package cn.fish.initDB.controller;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
+import cn.fish.web.response.ResponseResult;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
@@ -44,8 +40,9 @@ public class DBAgentController {
 
     @ResponseBody
     @PostMapping("/chat")
-    public ChatResponse chat(@RequestBody ChatRequest chatRequest) {
-        return dbAgentService.chat(chatRequest);
+    public ResponseResult<ChatResponse> chat(@RequestBody ChatRequest chatRequest) {
+        ChatResponse chat = dbAgentService.chat(chatRequest);
+        return ResponseResult.success(chat);
     }
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -58,18 +55,18 @@ public class DBAgentController {
 
         // 3. 订阅 Flux，将数据通过 emitter 发送出去
         flux.subscribe(
-            data -> {
-                try {
-                    // 发送数据
-                    emitter.send(data, MediaType.TEXT_HTML);
-                } catch (IOException e) {
-                    emitter.completeWithError(e);
-                }
-            },
-            // 错误处理
-            emitter::completeWithError,
-            // 完成处理
-            emitter::complete
+                data -> {
+                    try {
+                        // 发送数据
+                        emitter.send(data, MediaType.TEXT_HTML);
+                    } catch (IOException e) {
+                        emitter.completeWithError(e);
+                    }
+                },
+                // 错误处理
+                emitter::completeWithError,
+                // 完成处理
+                emitter::complete
         );
 
         return emitter;
@@ -78,65 +75,11 @@ public class DBAgentController {
 
     @ResponseBody
     @GetMapping("/chat")
-    public ChatResponse chatGet(@RequestParam("message") String message,
-                                @RequestParam(value = "sessionId", required = false) String sessionId) {
-        return dbAgentService.chat(new ChatRequest(message, sessionId));
+    public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,
+                                                @RequestParam(value = "sessionId", required = false) String sessionId) {
+        ChatResponse chat = dbAgentService.chat(new ChatRequest(message, sessionId));
+        return ResponseResult.success(chat);
     }
-
-//
-//    /**
-//     * 提问
-//     *
-//     * @param chatCode 聊天编号
-//     * @param form     form
-//     */
-//    @SneakyThrows
-//    @PostMapping("/{chatCode}/ask")
-//    public void ask(@PathVariable String chatCode,
-//                    @RequestBody @Validated AiChatForm form) {
-//
-//        AiChatAskBo bo = new AiChatAskBo()
-//            .setChatCode(chatCode)
-//            .setLastSessionId(form.getLastSessionId())
-//            .setPrompt(form.getPrompt())
-//            .setTags(form.getTags());
-//
-//        try (OutputStream os = httpServletResponse.getOutputStream()) {
-//            httpServletResponse.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
-//
-//            dbAgentService.ask(os, bo);
-//        } catch (Exception e) {
-//            log.warn("智能客服提问异常", e);
-//        }
-//    }
-//
-//    @SneakyThrows
-//    @PostMapping("/rag/importDocument")
-//    public void importDocument(MultipartFile file) {
-//        InputStreamResource resource = new InputStreamResource(file.getInputStream(), file.getOriginalFilename());
-//        DocumentReader reader = new TikaDocumentReader(resource);
-//        List<Document> documents = reader.get();
-//        List<Document> splitDocuments = new TokenTextSplitter().apply(documents);
-//        // todo
-////        EmbeddingModel embeddingModel = new TransformersEmbeddingModel();
-////
-////        SimpleVectorStore  vectorStore = new SimpleVectorStore(embeddingModel);
-////        vectorStore.add(splitDocuments);
-//    }
-//
-//    /**
-//     * 向量数据查询测试
-//     */
-//    @GetMapping("/select")
-//    public List<Document> search(String  queryContent) {
-//
-////        return vectorStore.similaritySearch(
-////            SearchRequest.builder()
-////                .query(queryContent)
-////                .topK(queryContent.length()
-////                ).build());
-//        return null;
-//    }
 
 
 }

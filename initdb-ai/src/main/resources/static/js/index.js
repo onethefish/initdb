@@ -72,7 +72,7 @@ async function createNewSession() {
       password
     });
 
-    const newSessionId = data.sessionId; // 假设后端返回一个唯一的会话ID
+    const newSessionId = data.sessionId;
     const newSession = {
       id: newSessionId,
       name: sessionName,

@@ -11,6 +11,5 @@ public class ChatResponse {
 
     private String response;
     private String sessionId;
-    private boolean success;
 
 }

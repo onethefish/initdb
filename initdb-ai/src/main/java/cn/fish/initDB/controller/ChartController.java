@@ -2,6 +2,7 @@ package cn.fish.initDB.controller;
 
 import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.service.ChatSessionService;
+import cn.fish.web.response.ResponseResult;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,22 +24,23 @@ public class ChartController {
 
     @ResponseBody
     @PostMapping("/create")
-    public ChatSession create(@RequestBody ChatSession chatSession) {
-        return chatSessionService.add(chatSession);
+    public ResponseResult<ChatSession> create(@RequestBody ChatSession chatSession) {
+        ChatSession add = chatSessionService.add(chatSession);
+        return ResponseResult.success(add);
     }
 
     @ResponseBody
     @PostMapping("/delete")
-    public ChatSession delete(@RequestBody ChatSession chatSession) {
+    public ResponseResult<Void> delete(@RequestBody ChatSession chatSession) {
         chatSessionService.delete(chatSession);
         chatSession.setSessionId(null);
-        return chatSession;
+        return ResponseResult.success();
     }
 
     @ResponseBody
     @PostMapping("/delete/all")
-    public ChatSession deleteAll() {
+    public ResponseResult<Void> deleteAll() {
         chatSessionService.deleteAll();
-        return new ChatSession();
+        return ResponseResult.success();
     }
 }

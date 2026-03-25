@@ -1,6 +1,7 @@
 package cn.fish.initDB.controller;
 
 import cn.fish.initDB.service.DocumentService;
+import cn.fish.web.response.ResponseResult;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,10 +19,9 @@ public class DocumentController {
     }
 
     @PostMapping("/upload/txt")
-    public String importTxtDocument(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) {
+    public ResponseResult<Void> importTxtDocument(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) {
         documentService.importTxtDocument(file, sessionId);
-        // 简单处理下 后续换成统一的web对象返回
-        return "ok";
+        return ResponseResult.success();
     }
 
 
