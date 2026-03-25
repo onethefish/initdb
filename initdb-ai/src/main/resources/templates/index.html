@@ -680,7 +680,27 @@
     }
 
     function handleFileSelect(fileInput) {
+
+        // 获取文件列表
+        const files = fileInput.files;
+        if (files.length === 0) {
+            // 用户取消了选择
+            window.selectedFile = null;
+            document.getElementById('fileNameDisplay').style.display = 'none';
+            document.getElementById('uploadFileSendBtn').style.display = 'none';
+            return;
+        }
+        // 严格限制为单个文件
+        if (files.length > 1) {
+            alert('每次只能上传一个文件，请重新选择。');
+            fileInput.value = ''; // 清空选择
+            window.selectedFile = null;
+            document.getElementById('fileNameDisplay').style.display = 'none';
+            document.getElementById('uploadFileSendBtn').style.display = 'none';
+            return;
+        }
         const file = fileInput.files[0];
+
         if (file) {
             // 检查文件类型是否为 .txt
             // 方式一：通过 MIME 类型检查 (更可靠)
@@ -734,7 +754,7 @@
                 method: 'POST',
                 body: formData,
             });
-
+            // todo 通用返回后续统一调整前后端接口规范
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
