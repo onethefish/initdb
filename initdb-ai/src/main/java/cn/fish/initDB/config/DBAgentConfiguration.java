@@ -16,17 +16,16 @@
 package cn.fish.initDB.config;
 
 import cn.fish.initDB.tool.impl.*;
-import cn.fish.savers.ChatMemorySaver;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
-import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 
 @Configuration
+@AutoConfigureAfter(RepositoryConfig.class)
 public class DBAgentConfiguration {
 
 
@@ -88,25 +87,18 @@ public class DBAgentConfiguration {
     private final QuerySqlCheckTool querySqlCheckTool;
     private final GetTableDataTool getTableDataTool;
     private final KnowledgeRetrievalTool knowledgeRetrievalTool;
+    private final MemorySaver memorySaver;
 
     public DBAgentConfiguration(ChatModel chatModel, GetAllTablesTool getAllTablesTool, GetTableSchemaTool getTableSchemaTool,
-                                QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool, KnowledgeRetrievalTool knowledgeRetrievalTool) {
+                                QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool,
+                                KnowledgeRetrievalTool knowledgeRetrievalTool, MemorySaver memorySaver) {
         this.chatModel = chatModel;
         this.getAllTablesTool = getAllTablesTool;
         this.getTableSchemaTool = getTableSchemaTool;
         this.querySqlCheckTool = querySqlCheckTool;
         this.getTableDataTool = getTableDataTool;
         this.knowledgeRetrievalTool = knowledgeRetrievalTool;
-    }
-    // 提供一个RAG向量库 todo
-    @Bean
-    public VectorStore createVectorStore(EmbeddingModel embeddingModel) {
-        return SimpleVectorStore.builder(embeddingModel).build();
-    }
-
-    @Bean
-    public ChatMemorySaver createChatMemorySaver() {
-        return new ChatMemorySaver();
+        this.memorySaver = memorySaver;
     }
 
 
@@ -117,7 +109,7 @@ public class DBAgentConfiguration {
                          .name("database-agent")          // 智能体
                          .description(SYSTEM_PROMPT) //智能体的描述或系统提示词
                          .model(chatModel)
-                         .saver(createChatMemorySaver())
+                         .saver(memorySaver)
                          .maxParallelTools(2)
                          .enableLogging(true)
                          // 设置工具
