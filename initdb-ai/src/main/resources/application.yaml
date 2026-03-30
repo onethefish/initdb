@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 spring:
   application:
     name: initDB-AI
@@ -17,13 +17,28 @@ spring:
       embedding:
         options:
           model: ${AI_OPENAI_EMBEDDING_OPTIONS_MODEL:text-embedding-v1}
+    alibaba:
+      mcp:
+        nacos:
+          namespace: public
+          server-addr: 127.0.0.1:8848
+          username: nacos
+          password: nacos
+          register:
+            enabled: true
+            service-group: mcp-server       ## 指定分组名称
+            service-name: db-mcp-server     ## 指定服务名称
   thymeleaf:
     cache: false
 logging:
   level:
     cn.fish: DEBUG
     com.alibaba.cloud.ai.graph: INFO
-
+    io:
+      modelcontextprotocol:
+        client: DEBUG
+        spec: DEBUG
+        server: DEBUG
 ## SQL Agent Configuration
 database-agent:
   max-results: 500

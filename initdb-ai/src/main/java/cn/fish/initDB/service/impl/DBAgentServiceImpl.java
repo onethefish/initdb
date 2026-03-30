@@ -14,6 +14,8 @@ import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.springaicommunity.mcp.annotation.McpTool;
+import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -84,6 +86,12 @@ public class DBAgentServiceImpl implements DBAgentService {
                      })
                      .filter(chunk -> chunk != null && !chunk.trim().isEmpty())
                      .map(NodeOutputUtil::getHtml);
+    }
+
+    @Override
+    @McpTool(description = "获取会话中的数据库相关信息")
+    public String getDBChart(@McpToolParam(description = "message") String message, @McpToolParam(description = "Session id") String sessionId) {
+        return chat(new ChatRequest(message, sessionId)).getResponse();
     }
 
 

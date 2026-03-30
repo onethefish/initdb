@@ -10,4 +10,5 @@ public interface DBAgentService {
 
     Flux<String> chatStream(ChatRequest chatRequest);
 
+    String getDBChart(String message, String sessionId);
 }
