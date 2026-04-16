@@ -18,6 +18,7 @@ package cn.fish.initDB.config;
 import cn.fish.initDB.tool.impl.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
@@ -120,6 +121,11 @@ public class DBAgentConfiguration {
                                  , knowledgeRetrievalTool.toolCallback()
                          )
                          .build();
+    }
+
+    @Bean
+    public ChatClient chatClient() {
+        return ChatClient.builder(chatModel).build();
     }
 
 

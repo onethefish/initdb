@@ -4,6 +4,7 @@ import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
 import cn.fish.initDB.repository.DataBaseRepository;
+import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zaxxer.hikari.HikariConfig;
@@ -48,8 +49,12 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     private static HikariConfig createHikariConfig(ChatSession chatSession) {
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(chatSession.getUrl());
-        hikariConfig.setUsername(chatSession.getUsername());
-        hikariConfig.setPassword(chatSession.getPassword());
+        if (StrUtil.isNotBlank(chatSession.getUsername())){
+            hikariConfig.setUsername(chatSession.getUsername());
+        }
+        if (StrUtil.isNotBlank(chatSession.getPassword())){
+            hikariConfig.setPassword(chatSession.getPassword());
+        }
         hikariConfig.setMaximumPoolSize(5);
         hikariConfig.setMinimumIdle(1);
         return hikariConfig;

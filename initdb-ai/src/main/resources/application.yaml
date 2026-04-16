@@ -25,9 +25,10 @@ spring:
           username: nacos
           password: nacos
           register:
-            enabled: true
+            enabled: false
             service-group: mcp-server       ## 指定分组名称
             service-name: db-mcp-server     ## 指定服务名称
+            service-register: false
   thymeleaf:
     cache: false
 logging:

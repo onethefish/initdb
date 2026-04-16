@@ -52,8 +52,8 @@ function closeModal() {
 
   // 清空表单并重置为默认值
   document.getElementById('sessionName').value = '新的对话' + (index++);
-  document.getElementById('url').value = 'jdbc:mysql://127.0.0.1:3306/xxx_xxx_xxx?useSSL=false&serverTimezone=Asia/Shanghai&connectTimeout=5000';
-  document.getElementById('username').value = 'xxx';
+  document.getElementById('url').value = 'jdbc:h2:';
+  document.getElementById('username').value = '';
   document.getElementById('password').value = '';
 }
 

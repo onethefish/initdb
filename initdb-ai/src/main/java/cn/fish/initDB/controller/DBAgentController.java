@@ -19,12 +19,8 @@ import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.web.response.ResponseResult;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
-
-import java.io.IOException;
 
 
 @RestController
@@ -37,42 +33,19 @@ public class DBAgentController {
         this.dbAgentService = dbAgentService;
     }
 
-    
+
     @PostMapping("/chat")
     public ResponseResult<ChatResponse> chat(@RequestBody ChatRequest chatRequest) {
         ChatResponse chat = dbAgentService.chat(chatRequest);
         return ResponseResult.success(chat);
     }
 
-    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chatStream(@RequestBody ChatRequest chatRequest) {
-        // 1. 创建 Emitter，超时时间设为 0 表示永不超时（或者设置具体的毫秒数）
-        SseEmitter emitter = new SseEmitter(0L);
-
-        // 2. 获取 Flux 数据流
-        Flux<String> flux = dbAgentService.chatStream(chatRequest);
-
-        // 3. 订阅 Flux，将数据通过 emitter 发送出去
-        flux.subscribe(
-                data -> {
-                    try {
-                        // 发送数据
-                        emitter.send(data, MediaType.TEXT_HTML);
-                    } catch (IOException e) {
-                        emitter.completeWithError(e);
-                    }
-                },
-                // 错误处理
-                emitter::completeWithError,
-                // 完成处理
-                emitter::complete
-        );
-
-        return emitter;
+    @PostMapping(value = "/chat/stream")
+    public Flux<String> chatStream(@RequestBody ChatRequest chatRequest) {
+        return dbAgentService.chatStream(chatRequest);
     }
 
 
-    
     @GetMapping("/chat")
     public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,
                                                 @RequestParam(value = "sessionId", required = false) String sessionId) {
