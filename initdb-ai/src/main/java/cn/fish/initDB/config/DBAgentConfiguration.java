@@ -19,6 +19,8 @@ import cn.fish.initDB.tool.impl.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
@@ -125,7 +127,12 @@ public class DBAgentConfiguration {
 
     @Bean
     public ChatClient chatClient() {
-        return ChatClient.builder(chatModel).build();
+        MessageWindowChatMemory messageWindowChatMemory = MessageWindowChatMemory.builder()
+                                                               .maxMessages(10)
+                                                               .build();
+        return ChatClient.builder(chatModel)
+                         .defaultAdvisors(MessageChatMemoryAdvisor.builder(messageWindowChatMemory).build())
+                         .build();
     }
 
 
