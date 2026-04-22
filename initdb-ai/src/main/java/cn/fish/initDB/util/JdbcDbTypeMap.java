@@ -2,6 +2,7 @@ package cn.fish.initDB.util;
 
 
 import cn.hutool.core.map.MapUtil;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Map;
 /**
  * @author DongJu Chen
  */
+@Slf4j
 public class JdbcDbTypeMap {
     /**
      * 类型转换映射Mapping
@@ -20,7 +22,7 @@ public class JdbcDbTypeMap {
 
     static {
         JavaTypeMapping.put("DECIMAL", new String[]{"DECIMAL", "DOUBLE", "NUMERIC", "NUMBER"});
-        JavaTypeMapping.put("STRING", new String[]{"VARCHAR", "VARCHAR2", "NVARCHAR2"});
+        JavaTypeMapping.put("STRING", new String[]{"VARCHAR", "VARCHAR2", "NVARCHAR2", "CHARACTER", "VARYING","CHARACTER VARYING"});
         JavaTypeMapping.put("CHAR", new String[]{"CHAR"});
         JavaTypeMapping.put("INTEGER", new String[]{"INTEGER", "TINYINT", "INT"});
         JavaTypeMapping.put("BIGINT", new String[]{"BIGINT"});
@@ -48,7 +50,8 @@ public class JdbcDbTypeMap {
                 }
             }
         }
-        throw new Exception(dbTypeCurrent + "找不到正确的类型，请修改，JdbcDbTypeMap的JavaTypeMapping初始化");
+        log.warn(dbTypeCurrent + "找不到正确的类型，请修改，JdbcDbTypeMap的JavaTypeMapping初始化");
+        return "UNKNOWN";
     }
 
     public static String getColumnSize(String javaType, String columnSizeCurrent) {

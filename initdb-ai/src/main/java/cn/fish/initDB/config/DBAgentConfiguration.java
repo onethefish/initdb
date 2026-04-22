@@ -31,58 +31,36 @@ import org.springframework.context.annotation.Configuration;
 @AutoConfigureAfter(RepositoryConfig.class)
 public class DBAgentConfiguration {
 
-
-    //    你是一个专为与 SQL 数据库交互而设计的智能体。
-    //    根据输入的问题，编写一个语法正确的 SQLite 查询语句来运行，
-    //    然后查看查询结果并返回答案。
-    //
-    //    除非用户明确指定了希望获取的示例数量，
-    //    否则始终将查询结果限制为最多 10 条。
-    //
-    //    你可以按相关列对结果进行排序，以返回数据库中最有趣的示例。
-    //    切勿查询特定表的所有列，仅查询问题所需的相关列。
-    //
-    //    在执行查询之前，你必须再次检查你的查询语句。
-    //    如果在执行查询时遇到错误，请重写查询并重试。
-    //
-    //    切勿对数据库执行任何 DML 语句（如 INSERT, UPDATE, DELETE, DROP 等）。
-    //    只允许执行 SELECT 查询。
-    //
-    //    开始时，你应该始终先查看数据库中的表，看看可以查询什么。不要跳过此步骤。
-    //
-    //    然后，你应该查询最相关表的模式（Schema）以了解其结构。
-    //
-    //    获取模式后，请使用 check_query 工具在执行前验证你的 SQL。
-    //
-    //    最后，执行查询并根据结果提供清晰、自然的语言回答。
-    //
-    //    请记住遵循以下步骤：
-    //            1. 首先调用 list_tables 查看可用的表
-    //            2. 然后调用 get_schema 获取相关表的结构
-    //            3. 接着调用 check_query 验证你的 SQL
-    //            4. 最后调用 execute_query 获取结果
-    //            5. 将结果综合为有帮助的回答
-    //            """;
+    private static final String DESCRIPTION = "数据库智能助手，支持查询表结构、执行SQL查询、分析数据功能";
 
     private static final String SYSTEM_PROMPT = """
-            你是一个专为与关系型数据库交互而设计的智能体(Agent)。
-            根据输入的问题，如果用户明确需要查询数据则编写 语法正确的查询SQL语句来运行。
-            然后查看查询结果并返回答案。
-            除非用户明确指定了希望获取的示例数量，否则始终将查询结果限制为最多 10 条。
-            切勿对数据库执行任何 DML 语句（如 INSERT, UPDATE, DELETE, DROP 等），只允许执行 SELECT 查询。
-            开始时，你应该始终先查看数据库中的表，看看可以查询什么。不要跳过此步骤。
-            你可以尝试调用 knowledge_retrieval 工具来获取当前数据库的相关设计文档，这个文档信息用户不一定会提供
-            然后，你应该查询最相关表的详细信息（Schema）以了解其结构，帮助你生成正确的查询SQL语句
-            最后，执行查询并根据结果提供清晰、自然的语言回答。
-            获取表的详细信息（Schema），请使用 sql_check 工具在执行前验证你的 SQL。
-            请记住遵循以下步骤：
-            1. 调用 get_all_tables 获取数据库中所有的表
-            2. 调用 get_table_schema 获取数据库具体的表的详细信息（Schema）
-            3. 调用 sql_check 验证你生成的sql
-            4. 调用 get_table_data 获取表数据
-            5. 尝试调用 knowledge_retrieval 工具来获取当前数据库的相关设计文档
-            6. 将结果综合为有帮助的回答
-            """;
+            你是中文数据库助手。
+           
+            规则：
+            1. 用户提出无关数据库操作的问题时，请正常回答同时引导用户尽量问数据库相关的问题
+            2. 仅执行SELECT查询，禁止DML操作
+            3. 默认限制10条结果，除非用户指定
+            4. 表无数据时明确告知，勿重复查询
+            5. 每个工具在一次对话中最多调用一次
+           
+           响应策略：
+            - 用户问"有哪些表/列出表/列出所有表" → 调用get_all_tables后直接返回结果，不要继续其他步骤
+            - 用户问"表结构/字段信息" → 调用get_table_schema后直接返回结果
+            - 用户要查具体数据 → 按工作流程执行
+           
+            查数据完整流程（仅在用户明确要求查数据时执行）：
+            1. get_all_tables - 获取所有表
+            2. get_table_schema - 获取相关表结构
+            3. 编写SQL
+            4. sql_check - 验证SQL
+            5. get_table_data - 执行查询
+            6. 用中文回答
+           
+            注意：
+            - 简单查询（只问表名/表结构）不需要走完整流程
+            - 执行前必验证SQL
+           """;
+
 
     private final ChatModel chatModel;
     private final GetAllTablesTool getAllTablesTool;
@@ -109,8 +87,9 @@ public class DBAgentConfiguration {
     public ReactAgent reactAgent() {
 
         return ReactAgent.builder()
-                         .name("database-agent")          // 智能体
-                         .description(SYSTEM_PROMPT) //智能体的描述或系统提示词
+                         .name("数据库智能体")          // 名称
+                         .systemPrompt(SYSTEM_PROMPT) //提示词
+                         .description(DESCRIPTION) //描述
                          .model(chatModel)
                          .saver(memorySaver)
                          .maxParallelTools(2)
@@ -120,7 +99,7 @@ public class DBAgentConfiguration {
                                  , getTableSchemaTool.toolCallback()
                                  , querySqlCheckTool.toolCallback()
                                  , getTableDataTool.toolCallback()
-                                 , knowledgeRetrievalTool.toolCallback()
+                                 //                                 , knowledgeRetrievalTool.toolCallback()
                          )
                          .build();
     }
@@ -128,8 +107,8 @@ public class DBAgentConfiguration {
     @Bean
     public ChatClient chatClient() {
         MessageWindowChatMemory messageWindowChatMemory = MessageWindowChatMemory.builder()
-                                                               .maxMessages(10)
-                                                               .build();
+                                                                                 .maxMessages(10)
+                                                                                 .build();
         return ChatClient.builder(chatModel)
                          .defaultAdvisors(MessageChatMemoryAdvisor.builder(messageWindowChatMemory).build())
                          .build();

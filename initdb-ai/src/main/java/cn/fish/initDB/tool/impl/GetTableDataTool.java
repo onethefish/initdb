@@ -45,7 +45,7 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
         this.dataBaseRepository = dataBaseRepository;
     }
 
-    @Value("${database-agent.max-results:500}")
+    @Value("${database-agent.max-results:10}")
     private int maxResults;
 
     @Override
@@ -75,8 +75,10 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
     }
 
     public ToolCallback toolCallback() {
-        String description = "执行数据库的SQL SELECT查询并返回结果，返回的查询结果为JSON对象格式。重要提示：出于安全考虑，仅允许SELECT查询。DML语句（INSERT, UPDATE, DELETE, " +
-                "DROP）将被拒绝。在执行前，请始终使用check_query来验证您的查询。默认情况下，结果限制为 " + maxResults + " 行";
+        String description = "执行数据库的SQL SELECT查询并返回结果，返回的查询结果为JSON对象格式。" +
+                "如果输出为 [] 表示这张表没数据，请不要重复调用。" +
+                "重要提示：出于安全考虑，仅允许SELECT查询。DML语句（INSERT, UPDATE, DELETE, DROP）将被拒绝。" +
+                "在执行前，请始终使用check_query来验证您的查询。默认情况下，结果限制为 " + maxResults + " 行";
         return FunctionToolCallback.builder("get_table_data", this)
                                    .description(description)
                                    .inputType(Request.class)

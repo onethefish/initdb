@@ -9,6 +9,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -20,7 +21,9 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Repository
 public class DataBaseRepositoryImpl implements DataBaseRepository {
 
@@ -33,6 +36,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                                                                               .build();
 
     private static final Cache<String, Table> TABLE_SCHEMA_CACHE = Caffeine.newBuilder()
+                                                                           .expireAfterWrite(1, TimeUnit.MINUTES)
                                                                            .build();
 
     @Override
@@ -49,10 +53,10 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     private static HikariConfig createHikariConfig(ChatSession chatSession) {
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(chatSession.getUrl());
-        if (StrUtil.isNotBlank(chatSession.getUsername())){
+        if (StrUtil.isNotBlank(chatSession.getUsername())) {
             hikariConfig.setUsername(chatSession.getUsername());
         }
-        if (StrUtil.isNotBlank(chatSession.getPassword())){
+        if (StrUtil.isNotBlank(chatSession.getPassword())) {
             hikariConfig.setPassword(chatSession.getPassword());
         }
         hikariConfig.setMaximumPoolSize(5);
@@ -170,7 +174,8 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                 table.tableColumnSort();
                 table.dealColumn();
                 return table;
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.error(e.getMessage(), e);
                 return null;
             }
         });
