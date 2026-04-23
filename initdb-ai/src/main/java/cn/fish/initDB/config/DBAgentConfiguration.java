@@ -59,6 +59,7 @@ public class DBAgentConfiguration {
             注意：
             - 简单查询（只问表名/表结构）不需要走完整流程
             - 执行前必验证SQL
+            - 工具返回空结果时必须如实告知，不得自行编造数据
            """;
 
 
