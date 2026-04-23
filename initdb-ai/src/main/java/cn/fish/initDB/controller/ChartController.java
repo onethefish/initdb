@@ -1,8 +1,8 @@
 package cn.fish.initDB.controller;
 
+import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.service.ChatSessionService;
-import cn.fish.web.response.ResponseResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

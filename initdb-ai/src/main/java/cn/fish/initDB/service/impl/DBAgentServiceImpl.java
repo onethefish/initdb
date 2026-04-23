@@ -1,10 +1,10 @@
 package cn.fish.initDB.service.impl;
 
+import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.initDB.util.NodeOutputUtil;
-import cn.fish.web.exception.CommonException;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.RunnableConfig;

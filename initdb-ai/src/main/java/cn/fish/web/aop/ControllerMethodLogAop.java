@@ -1,7 +1,7 @@
 package cn.fish.web.aop;
 
 
-import cn.fish.web.response.ResponseResult;
+import cn.fish.cloud.serva.web.response.ResponseResult;
 import com.alibaba.fastjson2.JSON;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;

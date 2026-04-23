@@ -1,7 +1,7 @@
 package cn.fish.initDB.controller;
 
+import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.initDB.service.DocumentService;
-import cn.fish.web.response.ResponseResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
