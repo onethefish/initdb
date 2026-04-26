@@ -3,6 +3,33 @@ server:
 spring:
   application:
     name: initDB-AI
+  datasource:
+    url: jdbc:h2:mem:initdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
   ai:
     openai:
       api-key: ${AI_OPENAI_API-KEY}
@@ -43,4 +70,20 @@ logging:
 ## SQL Agent Configuration
 database-agent:
   max-results: 500
+
+## Security Configuration
+security:
+  jwt:
+    secret: ${JWT_SECRET:initdb-ai-jwt-secret-key-must-be-at-least-256-bits-long-for-security}
+    access-token-expiration: 7200
+    refresh-token-expiration: 604800
+    issuer: initdb-ai
+  captcha:
+    expiration: 300
+    length: 6
+    send-interval: 60
+    daily-limit: 10
+  login:
+    max-attempts: 5
+    lock-duration: 900
 
