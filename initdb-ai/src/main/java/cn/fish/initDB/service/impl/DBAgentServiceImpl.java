@@ -11,14 +11,12 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
-import lombok.SneakyThrows;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import lombok.extern.slf4j.Slf4j;
 import org.springaicommunity.mcp.annotation.McpTool;
 import org.springaicommunity.mcp.annotation.McpToolParam;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 
 import java.util.Collection;
 
@@ -28,12 +26,58 @@ public class DBAgentServiceImpl implements DBAgentService {
 
     private final ReactAgent reactAgent;
     private final BaseCheckpointSaver baseCheckpointSaver;
-    private final ChatClient chatClient;
 
-    public DBAgentServiceImpl(ReactAgent reactAgent, BaseCheckpointSaver baseCheckpointSaver, ChatClient chatClient) {
-        this.reactAgent = reactAgent;
+    private static final String DESCRIPTION = "数据库智能助手，支持查询表结构、执行SQL查询、分析数据功能";
+    private static final String SYSTEM_PROMPT = """
+             你是中文数据库助手。
+            
+             规则：
+             1. 用户提出无关数据库操作的问题时，请正常回答同时引导用户尽量问数据库相关的问题
+             2. 仅执行SELECT查询，禁止DML操作
+             3. 默认限制10条结果，除非用户指定
+             4. 表无数据时明确告知，勿重复查询
+             5. 每个工具在一次对话中最多调用一次
+            
+            响应策略：
+             - 用户问"有哪些表/列出表/列出所有表" → 调用get_all_tables后直接返回结果，不要继续其他步骤
+             - 用户问"表结构/字段信息" → 调用get_table_schema后直接返回结果
+             - 用户要查具体数据 → 按工作流程执行
+            
+             查数据完整流程（仅在用户明确要求查数据时执行）：
+             1. get_all_tables - 获取所有表
+             2. get_table_schema - 获取相关表结构
+             3. 编写SQL
+             4. sql_check - 验证SQL
+             5. get_table_data - 执行查询
+             6. 用中文回答
+            
+             注意：
+             - 简单查询（只问表名/表结构）不需要走完整流程
+             - 执行前必验证SQL
+             - 工具返回空结果时必须如实告知，不得自行编造数据
+            """;
+
+
+    public DBAgentServiceImpl(BaseCheckpointSaver baseCheckpointSaver, ChatModel chatModel, GetAllTablesTool getAllTablesTool,
+                              GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool,
+                              KnowledgeRetrievalTool knowledgeRetrievalTool, MemorySaver memorySaver) {
         this.baseCheckpointSaver = baseCheckpointSaver;
-        this.chatClient = chatClient;
+        this.reactAgent = ReactAgent.builder()
+                                    .name("数据库智能体")          // 名称
+                                    .systemPrompt(SYSTEM_PROMPT) //提示词
+                                    .description(DESCRIPTION) //描述
+                                    .model(chatModel)
+                                    .saver(memorySaver)
+                                    .maxParallelTools(2)
+                                    .enableLogging(true)
+                                    // 设置工具
+                                    .tools(getAllTablesTool.toolCallback()
+                                            , getTableSchemaTool.toolCallback()
+                                            , querySqlCheckTool.toolCallback()
+                                            , getTableDataTool.toolCallback()
+                                            //                                 , knowledgeRetrievalTool.toolCallback()
+                                    )
+                                    .build();
     }
 
     @Override
@@ -59,23 +103,6 @@ public class DBAgentServiceImpl implements DBAgentService {
         } catch (Exception e) {
             throw new CommonException("Sorry, an error occurred: sessionId is null");
         }
-    }
-
-    @Override
-    @SneakyThrows
-    public Flux<String> chatStream(ChatRequest chatRequest) {
-        log.info("Received chat request: {}", chatRequest.getMessage());
-        String sessionId = chatRequest.getSessionId();
-        if (StrUtil.isEmpty(sessionId)) {
-            throw new CommonException("Sorry, an error occurred: sessionId is null");
-        }
-
-        ChatClient.ChatClientRequestSpec clientRequestSpec = chatClient.prompt()
-                                                                       .user(chatRequest.getMessage())
-                                                                       .advisors(memoryAdvisor -> memoryAdvisor
-                                                                               .param(ChatMemory.CONVERSATION_ID, sessionId)
-                                                                       );
-        return clientRequestSpec.stream().content();
     }
 
     @Override

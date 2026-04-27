@@ -1,4 +1,4 @@
-package cn.fish.initDB.tool;
+package cn.fish.initDB.service;
 
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import org.springframework.ai.chat.model.ToolContext;

@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.fish.initDB.tool.impl;
+package cn.fish.initDB.service.impl;
 
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.repository.DataBaseRepository;
-import cn.fish.initDB.tool.AgentAbstractTool;
+import cn.fish.initDB.service.AgentAbstractTool;
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;

@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.fish.initDB.tool.impl;
+package cn.fish.initDB.service.impl;
 
 import cn.fish.initDB.repository.VectorStoreRepository;
-import cn.fish.initDB.tool.AgentAbstractTool;
+import cn.fish.initDB.service.AgentAbstractTool;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;

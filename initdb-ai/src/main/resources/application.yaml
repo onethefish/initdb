@@ -6,10 +6,11 @@ spring:
   ai:
     openai:
       api-key: ${AI_OPENAI_API-KEY}
-      base-url: "https://dashscope.aliyuncs.com/compatible-mode/"
+      base-url: "http://127.0.0.1:8001"
+#      base-url: "https://dashscope.aliyuncs.com/compatible-mode/"
       chat:
         options:
-          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL:qvq-max-2025-03-25}
+          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL:google/gemma-3-4b}
           max-tokens: 512
           temperature: 0.1          # 降低随机性，让回答更确定
           presencePenalty: 0.2      # 降低存在惩罚，避免干扰模型聚焦
@@ -42,5 +43,5 @@ logging:
         server: DEBUG
 ## SQL Agent Configuration
 database-agent:
-  max-results: 500
+  max-results: 10
 
