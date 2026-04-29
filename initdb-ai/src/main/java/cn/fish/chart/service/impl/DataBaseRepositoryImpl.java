@@ -1,9 +1,9 @@
-package cn.fish.initDB.repository.impl;
+package cn.fish.chart.service.impl;
 
 import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
-import cn.fish.initDB.repository.DataBaseRepository;
+import cn.fish.chart.service.DataBaseRepository;
 import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;

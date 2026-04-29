@@ -2,7 +2,7 @@ package cn.fish.initDB.service.impl;
 
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.initDB.entity.ChatSession;
-import cn.fish.initDB.repository.ChatSessionRepository;
+import cn.fish.chart.service.ChatSessionRepository;
 import cn.fish.initDB.repository.VectorStoreRepository;
 import cn.fish.initDB.service.DocumentService;
 import cn.hutool.core.util.ObjUtil;

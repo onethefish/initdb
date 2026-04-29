@@ -15,7 +15,7 @@
  */
 package cn.fish.initDB.service.impl;
 
-import cn.fish.initDB.repository.DataBaseRepository;
+import cn.fish.chart.service.DataBaseRepository;
 import cn.fish.initDB.service.AgentAbstractTool;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
