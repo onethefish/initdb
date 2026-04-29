@@ -27,9 +27,9 @@ import java.util.Map;
 @Service
 public class DBAgentServiceImpl implements DBAgentService {
 
-    private final ReactAgent reactAgent;
+    private final ReactAgent dbAgent;
+    private final ReactAgent summaryAgent;
     private final BaseCheckpointSaver baseCheckpointSaver;
-
     private static final String DESCRIPTION = "数据库智能助手，支持查询表结构、执行SQL查询、分析数据功能";
     private static final String SYSTEM_PROMPT = """
              你是中文数据库助手。
@@ -60,27 +60,45 @@ public class DBAgentServiceImpl implements DBAgentService {
              - 工具返回空结果时必须如实告知，不得自行编造数据
             """;
 
+    private static final String SUMMARY_PROMPT = """
+            你是对话总结助手。将以下对话历史总结为简洁的要点:
+            - 用户的核心需求
+            - 涉及的关键表和字段
+            - 重要的SQL查询或结论
+            
+            要求:
+            - 用中文总结
+            - 控制在100字以内
+            - 保留关键技术细节
+            """;
 
     public DBAgentServiceImpl(BaseCheckpointSaver baseCheckpointSaver, ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                               GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool,
                               KnowledgeRetrievalTool knowledgeRetrievalTool, MemorySaver memorySaver) {
         this.baseCheckpointSaver = baseCheckpointSaver;
-        this.reactAgent = ReactAgent.builder()
-                                    .name("数据库智能体")          // 名称
-                                    .systemPrompt(SYSTEM_PROMPT) //提示词
-                                    .description(DESCRIPTION) //描述
-                                    .model(chatModel)
-                                    .saver(memorySaver)
-                                    .maxParallelTools(2)
-                                    .enableLogging(true)
-                                    // 设置工具
-                                    .tools(getAllTablesTool.toolCallback()
-                                            , getTableSchemaTool.toolCallback()
-                                            , querySqlCheckTool.toolCallback()
-                                            , getTableDataTool.toolCallback()
-                                            //                                 , knowledgeRetrievalTool.toolCallback()
-                                    )
-                                    .build();
+        this.dbAgent = ReactAgent.builder()
+                                 .name("数据库智能体")          // 名称
+                                 .systemPrompt(SYSTEM_PROMPT) //提示词
+                                 .description(DESCRIPTION) //描述
+                                 .model(chatModel)
+                                 .saver(memorySaver)
+                                 .maxParallelTools(2)
+                                 .enableLogging(true)
+                                 // 设置工具
+                                 .tools(getAllTablesTool.toolCallback()
+                                         , getTableSchemaTool.toolCallback()
+                                         , querySqlCheckTool.toolCallback()
+                                         , getTableDataTool.toolCallback()
+                                         //                                 , knowledgeRetrievalTool.toolCallback()
+                                 )
+                                 .build();
+
+        this.summaryAgent = ReactAgent.builder()
+                                      .name("对话总结助手")
+                                      .systemPrompt(SUMMARY_PROMPT)
+                                      .model(chatModel)
+                                      .enableLogging(false)
+                                      .build();
     }
 
     @Override
@@ -94,13 +112,8 @@ public class DBAgentServiceImpl implements DBAgentService {
                                                   .threadId(sessionId)
                                                   .mergeReasoningContent(true)
                                                   .build();
-            Collection<Checkpoint> list = baseCheckpointSaver.list(config);
-            // 最大会话缓存数
-            if (list.size() > 5) {
-                baseCheckpointSaver.release(config);
-            }
-            NodeOutput result = reactAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
-
+            NodeOutput result = dbAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
+            autoSummarizeIfNeeded(config);
             String response = NodeOutputUtil.extractResponse(result);
             return new ChatResponse(response, sessionId);
         } catch (Exception e) {
@@ -119,13 +132,9 @@ public class DBAgentServiceImpl implements DBAgentService {
                                                   .threadId(sessionId)
                                                   .mergeReasoningContent(true)
                                                   .build();
-            Collection<Checkpoint> list = baseCheckpointSaver.list(config);
-            // 最大会话缓存数
-            if (list.size() > 5) {
-                baseCheckpointSaver.release(config);
-            }
-            Flux<NodeOutput> stream = reactAgent.stream(chatRequest.getMessage(), config);
+            Flux<NodeOutput> stream = dbAgent.stream(chatRequest.getMessage(), config);
             return stream
+                    .doOnComplete(() -> autoSummarizeIfNeeded(config))
                     .filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND()) // 过滤掉开始和结束事件
                     .map(nodeOutput -> {
                         if (nodeOutput instanceof StreamingOutput) {
@@ -155,4 +164,32 @@ public class DBAgentServiceImpl implements DBAgentService {
     }
 
 
+    private void autoSummarizeIfNeeded(RunnableConfig config) {
+        try {
+            Collection<Checkpoint> checkpoints = baseCheckpointSaver.list(config);
+            if (checkpoints.size() >= 4) {
+                StringBuilder conversationHistory = new StringBuilder();
+                checkpoints.forEach(checkpoint -> {
+                    checkpoint.getState().forEach((key, value) -> {
+                        if ("messages".equals(key) && value != null) {
+                            conversationHistory.append(value.toString()).append("\n");
+                        }
+                    });
+                });
+
+                if (!conversationHistory.isEmpty()) {
+                    summaryAgent.invoke(conversationHistory.toString(), config);
+                    log.info("Auto summary generated for session: {}", config.threadId().orElse("unknown"));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to generate auto summary", e);
+        }
+    }
+//    private void manageCheckpoints(RunnableConfig config) throws Exception {
+//        Collection<Checkpoint> checkpoints = baseCheckpointSaver.list(config);
+//        if (checkpoints.size() > 5) {
+//            baseCheckpointSaver.release(config);
+//        }
+//    }
 }
