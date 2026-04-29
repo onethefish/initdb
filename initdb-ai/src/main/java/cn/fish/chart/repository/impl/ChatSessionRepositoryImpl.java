@@ -1,6 +1,6 @@
 package cn.fish.chart.repository.impl;
 
-import cn.fish.chart.repository.ChatSessionMapper;
+import cn.fish.chart.mapper.ChatSessionMapper;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.initDB.entity.ChatSession;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
