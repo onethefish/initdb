@@ -1,5 +1,4 @@
 target/
-!**/src/main/**/target/
 !**/src/test/**/target/
 
 ### STS ###
@@ -24,7 +23,6 @@ target/
 /nbdist/
 /.nb-gradle/
 build/
-!**/src/main/**/build/
 !**/src/test/**/build/
 
 ### VS Code ###
