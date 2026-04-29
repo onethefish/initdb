@@ -12,12 +12,14 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import lombok.extern.slf4j.Slf4j;
 import org.springaicommunity.mcp.annotation.McpTool;
 import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.Collection;
@@ -137,9 +139,16 @@ public class DBAgentServiceImpl implements DBAgentService {
                     .doOnComplete(() -> autoSummarizeIfNeeded(config))
                     .filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND()) // 过滤掉开始和结束事件
                     .map(nodeOutput -> {
-                        if (nodeOutput instanceof StreamingOutput) {
-                            String chunk = ((StreamingOutput<?>) nodeOutput).chunk();
-                            return chunk != null ? chunk : "";
+                        if (nodeOutput instanceof StreamingOutput streamingOutput) {
+                            // 翻倍输出问题处理
+                            if (streamingOutput.getOutputType().equals(OutputType.AGENT_MODEL_FINISHED)) {
+                                return "";
+                            }
+                            String chunk = streamingOutput.chunk();
+                            if (chunk != null) {
+                                return chunk;
+                            }
+                            return "";
                         }
                         else {
                             Map<String, Object> data = nodeOutput.state().data();
@@ -150,7 +159,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                             return "";
                         }
                     })
-                    .filter(org.springframework.util.StringUtils::hasText);
+                    .filter(StringUtils::hasText);
         } catch (Exception e) {
             return Flux.just("Sorry, an error occurred: sessionId is null");
         }
@@ -186,10 +195,10 @@ public class DBAgentServiceImpl implements DBAgentService {
             log.warn("Failed to generate auto summary", e);
         }
     }
-//    private void manageCheckpoints(RunnableConfig config) throws Exception {
-//        Collection<Checkpoint> checkpoints = baseCheckpointSaver.list(config);
-//        if (checkpoints.size() > 5) {
-//            baseCheckpointSaver.release(config);
-//        }
-//    }
+    //    private void manageCheckpoints(RunnableConfig config) throws Exception {
+    //        Collection<Checkpoint> checkpoints = baseCheckpointSaver.list(config);
+    //        if (checkpoints.size() > 5) {
+    //            baseCheckpointSaver.release(config);
+    //        }
+    //    }
 }

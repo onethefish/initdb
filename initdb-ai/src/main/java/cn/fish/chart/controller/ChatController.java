@@ -11,11 +11,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/chat")
-public class ChartController {
+public class ChatController {
 
     private final ChatSessionService chatSessionService;
 
-    public ChartController(ChatSessionService chatSessionService) {
+    public ChatController(ChatSessionService chatSessionService) {
         this.chatSessionService = chatSessionService;
     }
 
@@ -27,7 +27,7 @@ public class ChartController {
 
     @GetMapping("/query/list")
     public ResponseResult<List<ChatSession>> queryList() {
-        List<ChatSession> chatSessions = chatSessionService.queryList(null);
+        List<ChatSession> chatSessions = chatSessionService.queryList(new ChatSession());
         return ResponseResult.success(chatSessions);
     }
 

@@ -15,8 +15,10 @@
  */
 package cn.fish.initDB.service.impl;
 
-import cn.fish.initDB.entity.Table;
+import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.initDB.entity.ChatSession;
+import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.service.AgentAbstractTool;
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson2.JSON;
@@ -42,16 +44,19 @@ public class GetAllTablesTool extends AgentAbstractTool implements BiFunction<Ge
 
 
     private final DataBaseRepository dataBaseRepository;
+    private final ChatSessionRepository chatSessionRepository;
 
-    public GetAllTablesTool(DataBaseRepository dataBaseRepository) {
+    public GetAllTablesTool(DataBaseRepository dataBaseRepository, ChatSessionRepository chatSessionRepository) {
         this.dataBaseRepository = dataBaseRepository;
+        this.chatSessionRepository = chatSessionRepository;
     }
 
     @Override
     public String apply(Request request, ToolContext toolContext) {
         log.info("GetAllTablesTool::apply");
         String sessionId = getSessionId(toolContext);
-        List<Table> tables = dataBaseRepository.queryTableList(sessionId);
+        ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
+        List<Table> tables = dataBaseRepository.queryTableList(chatSession);
         if (CollUtil.isNotEmpty(tables)) {
             return JSON.toJSONString(tables, JSONWriter.Feature.IgnoreEmpty);
         }

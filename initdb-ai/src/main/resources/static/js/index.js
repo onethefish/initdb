@@ -4,11 +4,43 @@
 const Api = window.Api;
 
 // 用于存储所有会话的数组
-let sessions = JSON.parse(localStorage.getItem('dbSessions')) || [];
+// 初始化会话不再依赖本地缓存：改为从后端接口拉取
+let sessions = [];
 let currentSessionId = null;
 
 function saveSessions() {
   localStorage.setItem('dbSessions', JSON.stringify(sessions));
+}
+
+// 从后端拉取会话列表并初始化页面
+async function loadSessionsFromServer() {
+  try {
+    const serverSessions = await Api.get('/chat/query/list');
+
+    // 适配后端字段：{ sessionId, sessionName, username, password, url, ... }
+    sessions = (serverSessions || []).map(s => ({
+      id: s.sessionId,
+      name: s.sessionName,
+      config: {
+        host: s.host,
+        port: s.port,
+        url: s.url,
+        username: s.username,
+        password: s.password
+      },
+      messages: []
+    }));
+
+    renderSessionList();
+
+    // 如果有会话，默认加载第一个
+    if (sessions.length > 0 && !currentSessionId) {
+      switchSession(sessions[0].id);
+    }
+  } catch (error) {
+    console.error('Failed to load sessions:', error);
+    // 保持欢迎界面显示（不阻断页面功能）
+  }
 }
 
 // 渲染会话列表
@@ -38,7 +70,8 @@ async function deleteModal() {
   }
 
   sessions = [];
-  localStorage.clear();
+  // 只清理本应用的会话缓存
+  localStorage.removeItem('dbSessions');
   renderSessionList();
   document.getElementById('chatContainer').style.display = 'none';
   document.getElementById('welcomeScreen').style.display = 'flex';
@@ -196,11 +229,14 @@ async function sendMessage() {
     while (true) {
       const {done, value} = await reader.read();
       if (done) break;
+
+      // 后端会做 delta 处理，这里按增量进行累加显示
       fullResponse += decoder.decode(value, {stream: true});
       botMessageDiv.innerHTML = fullResponse;
       document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
     }
 
+    // 结束时 flush 一次（可能为空，保持兼容）
     fullResponse += decoder.decode();
 
     if (!fullResponse) {
@@ -232,13 +268,9 @@ function handleKeyPress(event) {
 }
 
 // 页面加载时初始化
-window.onload = function () {
-  renderSessionList();
-
-  // 如果有会话，则默认加载第一个
-  if (sessions.length > 0 && !currentSessionId) {
-    switchSession(sessions[0].id);
-  }
+window.onload = async function () {
+  // sessions 在 loadSessionsFromServer 内部填充
+  await loadSessionsFromServer();
   // 否则保持欢迎界面显示
 };
 

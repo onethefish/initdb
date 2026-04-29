@@ -15,7 +15,9 @@
  */
 package cn.fish.initDB.service.impl;
 
+import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.service.AgentAbstractTool;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
@@ -40,9 +42,11 @@ import java.util.function.BiFunction;
 public class GetTableDataTool extends AgentAbstractTool implements BiFunction<GetTableDataTool.Request, ToolContext, String> {
 
     private final DataBaseRepository dataBaseRepository;
+    private final ChatSessionRepository chatSessionRepository;
 
-    public GetTableDataTool(DataBaseRepository dataBaseRepository) {
+    public GetTableDataTool(DataBaseRepository dataBaseRepository, ChatSessionRepository chatSessionRepository) {
         this.dataBaseRepository = dataBaseRepository;
+        this.chatSessionRepository = chatSessionRepository;
     }
 
     @Value("${database-agent.max-results:10}")
@@ -52,9 +56,10 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
     public String apply(Request request, ToolContext toolContext) {
         log.info("GetTableDataTool::apply");
         String sessionId = getSessionId(toolContext);
+        ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
         String sql = addLimitIfNeeded(request.query);
         log.info("sql:{}", sql);
-        List<Map<String, Object>> maps = dataBaseRepository.queryTableData(sessionId, sql);
+        List<Map<String, Object>> maps = dataBaseRepository.queryTableData(chatSession, sql);
         String result = JSON.toJSONString(maps);
         log.info("result:{}", result);
         return result;

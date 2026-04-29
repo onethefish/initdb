@@ -89,13 +89,13 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public void deleteAll() {
-        List<ChatSession> chatSessions = chatSessionRepository.queryList(null);
-        for (ChatSession chatSession : chatSessions) {
-            try {
+        List<ChatSession> chatSessions = chatSessionRepository.queryList(new ChatSession());
+        try {
+            for (ChatSession chatSession : chatSessions) {
                 baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
-            } catch (Exception ignored) {
-
             }
+        } catch (Exception ignored) {
+
         }
         chatSessionRepository.remove(chatSessions);
         dataBaseRepository.removeAll();

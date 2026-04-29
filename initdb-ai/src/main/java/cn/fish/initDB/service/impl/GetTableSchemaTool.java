@@ -15,8 +15,10 @@
  */
 package cn.fish.initDB.service.impl;
 
-import cn.fish.initDB.entity.Table;
+import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.initDB.entity.ChatSession;
+import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.service.AgentAbstractTool;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
@@ -42,15 +44,18 @@ import java.util.function.BiFunction;
 public class GetTableSchemaTool extends AgentAbstractTool implements BiFunction<GetTableSchemaTool.Request, ToolContext, String> {
 
     private final DataBaseRepository dataBaseRepository;
+    private final ChatSessionRepository chatSessionRepository;
 
-    public GetTableSchemaTool(DataBaseRepository dataBaseRepository) {
+    public GetTableSchemaTool(DataBaseRepository dataBaseRepository, ChatSessionRepository chatSessionRepository) {
         this.dataBaseRepository = dataBaseRepository;
+        this.chatSessionRepository = chatSessionRepository;
     }
 
     @Override
     public String apply(Request request, ToolContext toolContext) {
         log.info("GetTableSchemaTool::apply");
         String sessionId = getSessionId(toolContext);
+        ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
         List<String> tableNames = Arrays.stream(request.tables().split(","))
                                         .map(String::trim).
                                         filter(trim -> !trim.isEmpty()).
@@ -61,7 +66,7 @@ public class GetTableSchemaTool extends AgentAbstractTool implements BiFunction<
         }
         List<Table> tables = new ArrayList<>();
         for (String tableName : tableNames) {
-            Table table = dataBaseRepository.queryTableSchema(sessionId, tableName);
+            Table table = dataBaseRepository.queryTableSchema(chatSession, tableName);
             if (table != null) {
                 tables.add(table);
             }

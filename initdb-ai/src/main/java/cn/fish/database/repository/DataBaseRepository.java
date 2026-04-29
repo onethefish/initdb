@@ -16,9 +16,9 @@ public interface DataBaseRepository {
 
     void removeAll();
 
-    List<Table> queryTableList(String sessionId);
+    List<Table> queryTableList(ChatSession chatSession);
 
-    Table queryTableSchema(String sessionId, String tableName);
+    Table queryTableSchema(ChatSession chatSession, String tableName);
 
-    List<Map<String, Object>> queryTableData(String sessionId, String sql);
+    List<Map<String, Object>> queryTableData(ChatSession chatSession, String sql);
 }

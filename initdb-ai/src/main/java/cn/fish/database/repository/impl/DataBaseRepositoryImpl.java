@@ -1,9 +1,9 @@
 package cn.fish.database.repository.impl;
 
+import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
-import cn.fish.database.repository.DataBaseRepository;
 import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -66,15 +66,20 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
 
     @Override
     public void add(ChatSession chatSession) {
-        HikariConfig hikariConfig = createHikariConfig(chatSession);
-        HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig);
+        HikariDataSource hikariDataSource = createDataSource(chatSession);
         DATA_SOURCE_CACHE.put(chatSession.getSessionId(), hikariDataSource);
+    }
+
+    @NotNull
+    private static HikariDataSource createDataSource(ChatSession chatSession) {
+        HikariConfig hikariConfig = createHikariConfig(chatSession);
+        return new HikariDataSource(hikariConfig);
     }
 
     @Override
     public void remove(ChatSession chatSession) {
         try {
-            DataSource dataSource = getDataSource(chatSession.getSessionId());
+            DataSource dataSource = getDataSource(chatSession);
             dataSourceClose(dataSource);
             DATA_SOURCE_CACHE.invalidate(chatSession.getSessionId());
         } catch (Exception ignored) {
@@ -98,9 +103,10 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     }
 
     @Override
-    public List<Table> queryTableList(String sessionId) {
+    public List<Table> queryTableList(ChatSession chatSession) {
+        String sessionId = chatSession.getSessionId();
         return ALL_TABLE_CACHE.get(sessionId, v -> {
-            DataSource dataSource = getDataSource(sessionId);
+            DataSource dataSource = getDataSource(chatSession);
             List<Table> tables = new ArrayList<>();
             try (Connection conn = dataSource.getConnection()) {
                 String catalog = conn.getCatalog();//目录名称，一般都为空
@@ -126,9 +132,10 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     }
 
     @Override
-    public Table queryTableSchema(String sessionId, String tableName) {
+    public Table queryTableSchema(ChatSession chatSession, String tableName) {
+        String sessionId = chatSession.getSessionId();
         Table result = TABLE_SCHEMA_CACHE.get(sessionId + tableName, v -> {
-            DataSource dataSource = getDataSource(sessionId);
+            DataSource dataSource = getDataSource(chatSession);
             try (Connection conn = dataSource.getConnection()) {
                 DatabaseMetaData databaseMetaData = conn.getMetaData();
                 String catalog = conn.getCatalog();
@@ -183,14 +190,15 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     }
 
     @Override
-    public List<Map<String, Object>> queryTableData(String sessionId, String sql) {
-        DataSource dataSource = getDataSource(sessionId);
+    public List<Map<String, Object>> queryTableData(ChatSession chatSession, String sql) {
+        DataSource dataSource = getDataSource(chatSession);
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
         return jdbcTemplate.queryForList(sql);
     }
 
-    private DataSource getDataSource(String sessionId) {
-        HikariDataSource result = DATA_SOURCE_CACHE.getIfPresent(sessionId);
+    private DataSource getDataSource(ChatSession chatSession) {
+        String sessionId = chatSession.getSessionId();
+        HikariDataSource result = DATA_SOURCE_CACHE.get(sessionId, v -> createDataSource(chatSession));
         if (result == null) {
             throw new IllegalArgumentException("sessionId=" + sessionId + " not exist");
         }
