@@ -3,6 +3,15 @@ server:
 spring:
   application:
     name: initDB-AI
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    url: ${MYSQL_URL:jdbc:postgresql://127.0.0.1:5432/init_db?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:init_db}
+    password: ${MYSQL_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 30000
   ai:
     openai:
       api-key: ${AI_OPENAI_API-KEY}
