@@ -1,7 +1,7 @@
-package cn.fish.chart.service.impl;
+package cn.fish.chart.repository.impl;
 
 import cn.fish.initDB.entity.ChatSession;
-import cn.fish.chart.service.ChatSessionRepository;
+import cn.fish.chart.repository.ChatSessionRepository;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.stereotype.Repository;

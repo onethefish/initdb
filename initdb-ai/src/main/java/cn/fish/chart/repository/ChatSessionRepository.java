@@ -1,4 +1,4 @@
-package cn.fish.chart.service;
+package cn.fish.chart.repository;
 
 import cn.fish.initDB.entity.ChatSession;
 
