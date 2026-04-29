@@ -5,6 +5,7 @@ import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 
 @RestController
@@ -24,6 +25,10 @@ public class DBAgentController {
         return ResponseResult.success(chat);
     }
 
+    @PostMapping("/chat/stream")
+    public Flux<String> chatStream(@RequestBody ChatRequest chatRequest) {
+        return dbAgentService.chatStream(chatRequest);
+    }
 
     @GetMapping("/chat")
     public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,

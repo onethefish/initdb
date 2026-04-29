@@ -12,13 +12,16 @@ import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import lombok.extern.slf4j.Slf4j;
 import org.springaicommunity.mcp.annotation.McpTool;
 import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.Collection;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -102,6 +105,45 @@ public class DBAgentServiceImpl implements DBAgentService {
             return new ChatResponse(response, sessionId);
         } catch (Exception e) {
             throw new CommonException("Sorry, an error occurred: sessionId is null");
+        }
+    }
+
+    @Override
+    public Flux<String> chatStream(ChatRequest chatRequest) {
+        String sessionId = chatRequest.getSessionId();
+        if (StrUtil.isEmpty(sessionId)) {
+            return Flux.just("Sorry, an error occurred: sessionId is null");
+        }
+        try {
+            RunnableConfig config = RunnableConfig.builder()
+                                                  .threadId(sessionId)
+                                                  .mergeReasoningContent(true)
+                                                  .build();
+            Collection<Checkpoint> list = baseCheckpointSaver.list(config);
+            // 最大会话缓存数
+            if (list.size() > 5) {
+                baseCheckpointSaver.release(config);
+            }
+            Flux<NodeOutput> stream = reactAgent.stream(chatRequest.getMessage(), config);
+            return stream
+                    .filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND()) // 过滤掉开始和结束事件
+                    .map(nodeOutput -> {
+                        if (nodeOutput instanceof StreamingOutput) {
+                            String chunk = ((StreamingOutput<?>) nodeOutput).chunk();
+                            return chunk != null ? chunk : "";
+                        }
+                        else {
+                            Map<String, Object> data = nodeOutput.state().data();
+                            if (data.containsKey("messages")) {
+                                Object messages = data.get("messages");
+                                return messages != null ? String.valueOf(messages) : "";
+                            }
+                            return "";
+                        }
+                    })
+                    .filter(org.springframework.util.StringUtils::hasText);
+        } catch (Exception e) {
+            return Flux.just("Sorry, an error occurred: sessionId is null");
         }
     }
 

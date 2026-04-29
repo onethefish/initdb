@@ -138,6 +138,7 @@ function addMessageToDOM(role, content) {
   chatMessagesElement.appendChild(messageDiv);
 
   chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
+  return messageDiv;
 }
 
 // 发送消息
@@ -166,19 +167,48 @@ async function sendMessage() {
   setSendButtonDisabled(true);
 
   try {
-    const data = await Api.post('/db/chat', {
-      message,
-      sessionId: currentSessionId,
-      db_config: sessions[sessionIndex].config
+    const response = await fetch('/db/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message,
+        sessionId: currentSessionId,
+        db_config: sessions[sessionIndex].config
+      })
     });
 
-    if (data && data.response) {
-      const botMsg = {role: 'bot', content: data.response};
-      sessions[sessionIndex].messages.push(botMsg);
-      addMessageToDOM('bot', data.response);
-    } else {
-      throw new Error('请求失败：返回数据不符合预期');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
     }
+
+    if (!response.body) {
+      throw new Error('请求失败：未获取到流式响应体');
+    }
+
+    const botMessageDiv = addMessageToDOM('bot', '');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let fullResponse = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      fullResponse += decoder.decode(value, {stream: true});
+      botMessageDiv.innerHTML = fullResponse;
+      document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+    }
+
+    fullResponse += decoder.decode();
+
+    if (!fullResponse) {
+      throw new Error('请求失败：返回内容为空');
+    }
+
+    const botMsg = {role: 'bot', content: fullResponse};
+    sessions[sessionIndex].messages.push(botMsg);
   } catch (error) {
     console.error('Error:', error);
     const errorMsg = {role: 'bot', content: `错误: ${error.message}`};
