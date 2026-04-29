@@ -1,13 +1,15 @@
 package cn.fish.chart.service.impl;
 
+import cn.fish.chart.service.ChatSessionService;
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatSession;
 import cn.fish.initDB.repository.ChatSessionRepository;
 import cn.fish.initDB.repository.DataBaseRepository;
-import cn.fish.chart.service.ChatSessionService;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.cloud.ai.graph.RunnableConfig;
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -23,13 +25,14 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     private final ChatSessionRepository chatSessionRepository;
     private final DataBaseRepository dataBaseRepository;
-    private final ChatModel chatModel;
     private final ChatClient chatClient;
+    private final BaseCheckpointSaver baseCheckpointSaver;
 
-    public ChatSessionServiceImpl(ChatSessionRepository chatSessionRepository, DataBaseRepository dataBaseRepository, ChatModel chatModel) {
+    public ChatSessionServiceImpl(ChatSessionRepository chatSessionRepository, DataBaseRepository dataBaseRepository, ChatModel chatModel,
+                                  BaseCheckpointSaver baseCheckpointSaver) {
         this.chatSessionRepository = chatSessionRepository;
         this.dataBaseRepository = dataBaseRepository;
-        this.chatModel = chatModel;
+        this.baseCheckpointSaver = baseCheckpointSaver;
         MessageWindowChatMemory messageWindowChatMemory = MessageWindowChatMemory.builder()
                                                                                  .maxMessages(10)
                                                                                  .build();
@@ -43,7 +46,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         String sessionId = chatRequest.getSessionId();
         if (StrUtil.isEmpty(sessionId)) {
             // 纯聊天 不需要id
-//            throw new CommonException("Sorry, an error occurred: sessionId is null");
+            //            throw new CommonException("Sorry, an error occurred: sessionId is null");
         }
         ChatClient.ChatClientRequestSpec clientRequestSpec = chatClient.prompt()
                                                                        .user(chatRequest.getMessage())
@@ -77,10 +80,22 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     public void delete(ChatSession chatSession) {
         chatSessionRepository.remove(chatSession);
         dataBaseRepository.remove(chatSession);
+        try {
+            baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
+        } catch (Exception ignored) {
+
+        }
     }
 
     @Override
     public void deleteAll() {
+        for (ChatSession chatSession : chatSessionRepository.queryList(null)) {
+            try {
+                baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
+            } catch (Exception ignored) {
+
+            }
+        }
         chatSessionRepository.removeAll();
         dataBaseRepository.removeAll();
     }

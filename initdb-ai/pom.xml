@@ -21,7 +21,10 @@
             <groupId>cn.fish.cloud</groupId>
             <artifactId>serva-common</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>cn.fish.cloud</groupId>
+            <artifactId>serva-starter-mybatis</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
