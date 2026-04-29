@@ -1,11 +1,11 @@
 package cn.fish.chart.service.impl;
 
+import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.chart.service.ChatSessionService;
 import cn.fish.cloud.serva.web.exception.CommonException;
+import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatSession;
-import cn.fish.chart.repository.ChatSessionRepository;
-import cn.fish.database.repository.DataBaseRepository;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
@@ -89,14 +89,15 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public void deleteAll() {
-        for (ChatSession chatSession : chatSessionRepository.queryList(null)) {
+        List<ChatSession> chatSessions = chatSessionRepository.queryList(null);
+        for (ChatSession chatSession : chatSessions) {
             try {
                 baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
             } catch (Exception ignored) {
 
             }
         }
-        chatSessionRepository.removeAll();
+        chatSessionRepository.remove(chatSessions);
         dataBaseRepository.removeAll();
     }
 }

@@ -1,10 +1,11 @@
 package cn.fish.chart.repository;
 
 import cn.fish.initDB.entity.ChatSession;
+import com.baomidou.mybatisplus.extension.repository.IRepository;
 
 import java.util.List;
 
-public interface ChatSessionRepository {
+public interface ChatSessionRepository extends IRepository<ChatSession> {
 
     ChatSession queryUnique(String sessionId);
 
@@ -14,5 +15,5 @@ public interface ChatSessionRepository {
 
     void remove(ChatSession chatSession);
 
-    void removeAll();
+    void remove(List<ChatSession> chatSessions);
 }
