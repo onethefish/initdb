@@ -23,7 +23,7 @@ import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.Collection;
-import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -139,25 +139,14 @@ public class DBAgentServiceImpl implements DBAgentService {
                     .doOnComplete(() -> autoSummarizeIfNeeded(config))
                     .filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND()) // 过滤掉开始和结束事件
                     .map(nodeOutput -> {
-                        if (nodeOutput instanceof StreamingOutput streamingOutput) {
+                        if (nodeOutput instanceof StreamingOutput<?> streamingOutput) {
                             // 翻倍输出问题处理
                             if (streamingOutput.getOutputType().equals(OutputType.AGENT_MODEL_FINISHED)) {
                                 return "";
                             }
-                            String chunk = streamingOutput.chunk();
-                            if (chunk != null) {
-                                return chunk;
-                            }
-                            return "";
+                            return Objects.requireNonNullElse(streamingOutput.message().getText(), "");
                         }
-                        else {
-                            Map<String, Object> data = nodeOutput.state().data();
-                            if (data.containsKey("messages")) {
-                                Object messages = data.get("messages");
-                                return messages != null ? String.valueOf(messages) : "";
-                            }
-                            return "";
-                        }
+                        return "";
                     })
                     .filter(StringUtils::hasText);
         } catch (Exception e) {

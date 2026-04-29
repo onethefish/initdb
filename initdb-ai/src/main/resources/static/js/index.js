@@ -51,10 +51,59 @@ function renderSessionList() {
   sessions.forEach(session => {
     const div = document.createElement('div');
     div.className = `session-item ${session.id === currentSessionId ? 'active' : ''}`;
-    div.textContent = session.name;
     div.onclick = () => switchSession(session.id);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'session-name';
+    nameSpan.textContent = session.name;
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'session-delete-btn';
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '🗑';
+    deleteBtn.title = '删除当前会话';
+    deleteBtn.onclick = async (event) => {
+      event.stopPropagation();
+      await deleteSession(session.id);
+    };
+
+    div.appendChild(nameSpan);
+    div.appendChild(deleteBtn);
     sessionListElement.appendChild(div);
   });
+}
+
+async function deleteSession(sessionId) {
+  if (!sessionId) return;
+
+  try {
+    await Api.del('/chat/delete', {
+      body: {sessionId}
+    });
+  } catch (error) {
+    console.error('Delete session error:', error);
+    alert(error.message || '删除会话失败');
+    return;
+  }
+
+  const deletedIndex = sessions.findIndex(s => s.id === sessionId);
+  if (deletedIndex === -1) return;
+
+  sessions.splice(deletedIndex, 1);
+
+  if (currentSessionId === sessionId) {
+    currentSessionId = null;
+    const nextSession = sessions[deletedIndex] || sessions[deletedIndex - 1];
+    if (nextSession) {
+      switchSession(nextSession.id);
+      return;
+    }
+
+    document.getElementById('chatContainer').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = 'flex';
+  }
+
+  renderSessionList();
 }
 
 // 打开模态框

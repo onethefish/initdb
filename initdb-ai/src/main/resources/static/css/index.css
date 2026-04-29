@@ -110,6 +110,36 @@ body {
     align-items: center;
 }
 
+.session-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.session-delete-btn {
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #ef4444;
+    border-radius: 6px;
+    background-color: #ef4444;
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.session-delete-btn:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
 .session-item:hover {
     background-color: #f0f2f5;
 }
