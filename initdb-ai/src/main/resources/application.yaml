@@ -3,6 +3,16 @@ server:
 spring:
   application:
     name: initDB-AI
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/initdb_ai?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      pool-name: InitDBAIHikariPool
   ai:
     openai:
       api-key: ${AI_OPENAI_API-KEY}
@@ -31,6 +41,12 @@ spring:
             service-register: false
   thymeleaf:
     cache: false
+  sql:
+    init:
+      mode: always
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 logging:
   level:
     cn.fish: DEBUG

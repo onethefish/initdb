@@ -1,65 +1,65 @@
 package cn.fish.initDB.repository.impl;
 
 import cn.fish.initDB.entity.ChatSession;
+import cn.fish.initDB.mapper.ChatSessionMapper;
 import cn.fish.initDB.repository.ChatSessionRepository;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Repository
 public class ChatSessionRepositoryImpl implements ChatSessionRepository {
 
-
-    private static final Cache<String, ChatSession> CHART_SESSION = Caffeine.newBuilder()
-                                                                            .maximumSize(128) // 最大支持128个会话
-                                                                            .build();
-
+    private final ChatSessionMapper chatSessionMapper;
     private final BaseCheckpointSaver baseCheckpointSaver;
 
-    public ChatSessionRepositoryImpl(BaseCheckpointSaver baseCheckpointSaver) {
+    public ChatSessionRepositoryImpl(ChatSessionMapper chatSessionMapper, BaseCheckpointSaver baseCheckpointSaver) {
+        this.chatSessionMapper = chatSessionMapper;
         this.baseCheckpointSaver = baseCheckpointSaver;
     }
 
     @Override
     public ChatSession queryUnique(String sessionId) {
-        return CHART_SESSION.getIfPresent(sessionId);
+        return chatSessionMapper.selectById(sessionId);
     }
 
     @Override
     public List<ChatSession> queryList(ChatSession chatSession) {
-        // todo
-        return new ArrayList<>(CHART_SESSION.asMap().values());
+        LambdaQueryWrapper<ChatSession> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(ChatSession::getSessionId);
+        return chatSessionMapper.selectList(queryWrapper);
     }
 
     @Override
     public void add(ChatSession chatSession) {
-        CHART_SESSION.put(chatSession.getSessionId(), chatSession);
+        chatSessionMapper.insertOrUpdate(chatSession);
     }
 
     @Override
     public void remove(ChatSession chatSession) {
-        CHART_SESSION.invalidate(chatSession.getSessionId());
+        chatSessionMapper.deleteById(chatSession.getSessionId());
         try {
             baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
-        } catch (Exception ignored) {
-
+        } catch (Exception e) {
+            log.debug("Failed to release checkpoint for session: {}", chatSession.getSessionId(), e);
         }
     }
 
     @Override
     public void removeAll() {
-        CHART_SESSION.asMap().forEach((key, value) -> {
+        List<ChatSession> sessions = queryList(null);
+        chatSessionMapper.delete(new LambdaQueryWrapper<>());
+        for (ChatSession session : sessions) {
             try {
-                baseCheckpointSaver.release(RunnableConfig.builder().threadId(key).build());
-            } catch (Exception ignored) {
-
+                baseCheckpointSaver.release(RunnableConfig.builder().threadId(session.getSessionId()).build());
+            } catch (Exception e) {
+                log.debug("Failed to release checkpoint for session: {}", session.getSessionId(), e);
             }
-        });
-        CHART_SESSION.invalidateAll();
+        }
     }
 }

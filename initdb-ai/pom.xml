@@ -12,6 +12,7 @@
     <artifactId>initdb-ai</artifactId>
 
 
+
     <dependencies>
         <dependency>
             <groupId>cn.fish.cloud</groupId>
@@ -100,6 +101,13 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.9</version>
         </dependency>
     </dependencies>
 
