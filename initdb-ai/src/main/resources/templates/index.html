@@ -8,54 +8,112 @@
 </head>
 <body>
 
-<!-- 左侧栏 -->
-<div class="sidebar">
-  <div class="header">
-    <img alt="Logo"
-         src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgdmlld0JveD0iMCAwIDE0IDE0Ij4KICA8Y2lyY2xlIGN4PSI3IiBjeT0iNyIgcj0iNyIgZmlsbD0iIzQwOUVGRiIgLz4KICA8cGF0aCBkPSJNOSA1aC0uN2MtLjYuMS0xIC42LTEgLjdzLS40IDEtLjcgMS4zbDEuMiAxLjJjLjMuMy43LjcuNyAxLjF2LjdjMCAuNDEuMzMuNzUuNzUuNzVoMS41YS43NS43NSAwIDAgMCAuNzUtLjc1di0xLjVhLjc1Ljc1IDAgMCAwLS43NS0uNzVjMC0uNC0uNC0uOC0uNy0xLjFsLTEuMi0xLjJjLS4zLS4zLS43LS43LTEtLjcuMS0uNC0uNi0uOC0xLjEtLjh6IiBmaWxsPSJ3aGl0ZSIgLz4KPC9zdmc+" style="width: 24px; height: 24px;">
-    <h1>智能数据库助手</h1>
-  </div>
-  <button class="create-chat-btn" onclick="createModal()">创建新对话</button>
-  <button class="delete-chat-btn" onclick="deleteModal()">删除所有对话</button>
-  <div class="session-list" id="sessionList">
-  </div>
-</div>
-
 <!-- 主内容区 -->
 <div class="main-content">
-  <!-- 欢迎界面 (默认显示) -->
-  <div class="welcome-screen" id="welcomeScreen">
-    <h2>你好！我是智能数据库助手</h2>
-    <p>我可以通过自然语言查询你的数据库信息。开始之前，请先创建一个到数据库的新对话。</p>
-    <button class="create-chat-btn" onclick="createModal()" style="max-width: 200px;">创建第一个对话</button>
+  <div class="top-tabs">
+    <button class="top-tab active" id="datasourceTabBtn" onclick="switchMainTab('datasource')" type="button">数据源管理</button>
+    <button class="top-tab" id="chatTabBtn" onclick="switchMainTab('chat')" type="button">智能对话</button>
+    <div class="top-tabs-brand">
+      <img alt="Logo"
+           src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgdmlld0JveD0iMCAwIDE0IDE0Ij4KICA8Y2lyY2xlIGN4PSI3IiBjeT0iNyIgcj0iNyIgZmlsbD0iIzQwOUVGRiIgLz4KICA8cGF0aCBkPSJNOSA1aC0uN2MtLjYuMS0xIC42LTEgLjdzLS40IDEtLjcgMS4zbDEuMiAxLjJjLjMuMy43LjcuNyAxLjF2LjdjMCAuNDEuMzMuNzUuNzUuNzVoMS41YS43NS43NSAwIDAgMCAuNzUtLjc1di0xLjVhLjc1Ljc1IDAgMCAwLS43NS0uNzVjMC0uNC0uNC0uOC0uNy0xLjFsLTEuMi0xLjJjLS4zLS4zLS43LS43LTEtLjcuMS0uNC0uNi0uOC0xLjEtLjh6IiBmaWxsPSJ3aGl0ZSIgLz4KPC9zdmc+" style="width: 22px; height: 22px;">
+      <span>智能数据库助手</span>
+    </div>
   </div>
 
-  <!-- 聊天容器 (默认隐藏) -->
-  <div class="chat-container" id="chatContainer">
-    <div class="chat-header" id="currentSessionHeader">
-      <!-- 当前会话名将在此处动态更新 -->
-    </div>
-    <div class="chat-messages" id="chatMessages">
-      <!-- 消息将通过JavaScript动态添加 -->
-    </div>
-    <div class="input-area">
-      <input disabled id="userInput" onkeypress="handleKeyPress(event)" placeholder="请输入你的问题..." type="text">
-
-      <!-- 文件上传相关元素 -->
-      <input accept=".txt" id="fileInput" onchange="handleFileSelect(this)" style="display: none;" type="file"/>
-
-      <div class="file-upload-group">
-        <button aria-label="选择文件" class="btn-upload" id="uploadFileBtn" onclick="triggerFileInput()" title="选择文件"></button>
-        <button aria-label="上传并处理" class="btn-send-file" disabled id="uploadFileSendBtn" onclick="uploadSelectedFile()" style="display: none;" title="上传并处理"></button>
-        <ul class="file-list" id="fileList">
-          <li class="file-list-item">
-            <span class="file-list-item-text" id="fileNameText"></span>
-          </li>
-        </ul>
+  <div class="page-panel page-panel-active" id="datasourcePage">
+    <div class="datasource-toolbar">
+      <input id="dsFilterName" placeholder="数据源名称" type="text">
+      <input id="dsFilterType" placeholder="数据库类型" type="text">
+      <input id="dsFilterHost" placeholder="主机地址" type="text">
+      <select id="dsFilterStatus">
+        <option value="">状态(全部)</option>
+        <option value="1">启用</option>
+        <option value="0">禁用</option>
+      </select>
+      <div class="datasource-toolbar-actions">
+        <button class="btn btn-primary" onclick="queryDatasourcePage()" type="button">查询</button>
+        <button class="btn btn-secondary" onclick="resetDatasourceFilters()" type="button">重置</button>
+        <button class="btn btn-primary" onclick="openDatasourceModal()" type="button">新增数据源</button>
       </div>
-      <!-- /文件上传相关元素 -->
+    </div>
 
-      <button disabled id="sendMessageBtn" onclick="sendMessage()">发送</button>
+    <div class="datasource-table-wrapper">
+      <table class="datasource-table">
+        <thead>
+        <tr>
+          <th><input id="selectAllDatasource" onchange="toggleSelectAllDatasource(this)" type="checkbox"></th>
+          <th>名称</th>
+          <th>类型</th>
+          <th>主机:端口</th>
+          <th>数据库名</th>
+          <th>用户名</th>
+          <th>状态</th>
+          <th>测试状态</th>
+          <th>描述</th>
+          <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="datasourceTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="datasource-footer">
+      <button class="btn btn-danger" onclick="deleteSelectedDatasource()" type="button">批量删除</button>
+      <div class="datasource-pagination">
+        <button onclick="changeDatasourcePage(-1)" type="button">上一页</button>
+        <span id="datasourcePageInfo">第 1 页</span>
+        <button onclick="changeDatasourcePage(1)" type="button">下一页</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-panel" id="chatPage">
+    <div class="chat-layout">
+      <div class="chat-left-panel">
+        <div class="chat-actions">
+          <button class="create-chat-btn" onclick="createModal()" type="button">创建新对话</button>
+          <button class="delete-chat-btn" onclick="deleteModal()" type="button">删除所有对话</button>
+        </div>
+        <div class="session-list chat-session-list" id="sessionList"></div>
+      </div>
+
+      <div class="chat-main-panel">
+        <!-- 欢迎界面 (默认显示) -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <h2>你好！我是智能数据库助手</h2>
+          <p>我可以通过自然语言查询你的数据库信息。开始之前，请先创建一个到数据库的新对话。</p>
+          <button class="create-chat-btn" onclick="createModal()" style="max-width: 200px;">创建第一个对话</button>
+        </div>
+
+        <!-- 聊天容器 (默认隐藏) -->
+        <div class="chat-container" id="chatContainer">
+          <div class="chat-header" id="currentSessionHeader">
+            <!-- 当前会话名将在此处动态更新 -->
+          </div>
+          <div class="chat-messages" id="chatMessages">
+            <!-- 消息将通过JavaScript动态添加 -->
+          </div>
+          <div class="input-area">
+            <input disabled id="userInput" onkeypress="handleKeyPress(event)" placeholder="请输入你的问题..." type="text">
+
+            <!-- 文件上传相关元素 -->
+            <input accept=".txt" id="fileInput" onchange="handleFileSelect(this)" style="display: none;" type="file"/>
+
+            <div class="file-upload-group">
+              <button aria-label="选择文件" class="btn-upload" id="uploadFileBtn" onclick="triggerFileInput()" title="选择文件"></button>
+              <button aria-label="上传并处理" class="btn-send-file" disabled id="uploadFileSendBtn" onclick="uploadSelectedFile()" style="display: none;" title="上传并处理"></button>
+              <ul class="file-list" id="fileList">
+                <li class="file-list-item">
+                  <span class="file-list-item-text" id="fileNameText"></span>
+                </li>
+              </ul>
+            </div>
+            <!-- /文件上传相关元素 -->
+
+            <button disabled id="sendMessageBtn" onclick="sendMessage()">发送</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -91,6 +149,64 @@
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closeModal()">取消</button>
       <button class="btn btn-primary" onclick="createNewSession()">创建</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="datasourceModal">
+  <div class="modal-content datasource-modal-content">
+    <h2 id="datasourceModalTitle">新增数据源</h2>
+    <div class="form-group">
+      <label for="dsName">名称</label>
+      <input id="dsName" required type="text">
+    </div>
+    <div class="form-group">
+      <label for="dsType">类型</label>
+      <input id="dsType" required type="text">
+    </div>
+    <div class="form-group datasource-inline-group">
+      <div>
+        <label for="dsHost">主机</label>
+        <input id="dsHost" required type="text">
+      </div>
+      <div>
+        <label for="dsPort">端口</label>
+        <input id="dsPort" required type="text">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="dsDatabaseName">数据库名</label>
+      <input id="dsDatabaseName" type="text">
+    </div>
+    <div class="form-group datasource-inline-group">
+      <div>
+        <label for="dsUsername">用户名</label>
+        <input id="dsUsername" type="text">
+      </div>
+      <div>
+        <label for="dsPassword">密码</label>
+        <input id="dsPassword" type="password">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="dsConnectionUrl">连接URL</label>
+      <input id="dsConnectionUrl" type="text">
+    </div>
+    <div class="form-group">
+      <label for="dsStatus">状态</label>
+      <select id="dsStatus">
+        <option value="1">启用</option>
+        <option value="0">禁用</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="dsDescription">描述</label>
+      <input id="dsDescription" type="text">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeDatasourceModal()" type="button">取消</button>
+      <button class="btn btn-primary" onclick="testDatasourceConnection()" type="button">测试连接</button>
+      <button class="btn btn-primary" onclick="submitDatasourceForm()" type="button">保存</button>
     </div>
   </div>
 </div>
