@@ -15,7 +15,7 @@
  */
 package cn.fish.initDB.service.impl;
 
-import cn.fish.initDB.repository.VectorStoreRepository;
+import cn.fish.knowledge.repository.VectorStoreRepository;
 import cn.fish.initDB.service.AgentAbstractTool;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,6 +26,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -51,10 +52,12 @@ public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunct
         int topK = request.topK() != null ? request.topK() : DEFAULT_TOP_K;
 
         FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
+        Filter.Expression expression = filterExpressionBuilder.eq("sessionId", sessionId)
+                                                              .build();
         SearchRequest searchRequest = SearchRequest.builder()
                                                    .query(request.query())
                                                    .topK(topK)
-                                                   .filterExpression(filterExpressionBuilder.eq("sessionId", sessionId).build())
+                                                   .filterExpression(expression)
                                                    .build();
         // 2. 执行相似性搜索
         return vectorStoreRepository.queryList(searchRequest);

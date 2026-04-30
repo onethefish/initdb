@@ -1,4 +1,4 @@
-package cn.fish.initDB.repository;
+package cn.fish.knowledge.repository;
 
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;

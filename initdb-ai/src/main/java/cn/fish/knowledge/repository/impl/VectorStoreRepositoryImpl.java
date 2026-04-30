@@ -1,6 +1,6 @@
-package cn.fish.initDB.repository.impl;
+package cn.fish.knowledge.repository.impl;
 
-import cn.fish.initDB.repository.VectorStoreRepository;
+import cn.fish.knowledge.repository.VectorStoreRepository;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -20,9 +20,7 @@ public class VectorStoreRepositoryImpl implements VectorStoreRepository {
 
     @Override
     public void add(List<Document> documents) {
-        TokenTextSplitter splitter = new TokenTextSplitter();
-        List<Document> splitDocuments = splitter.apply(documents);
-        vectorStore.add(splitDocuments);
+        vectorStore.add(documents);
     }
 
     @Override
