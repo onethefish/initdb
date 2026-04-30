@@ -2,7 +2,7 @@ package cn.fish.knowledge.service.impl;
 
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.cloud.serva.web.exception.CommonException;
-import cn.fish.initDB.entity.ChatSession;
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.knowledge.repository.VectorStoreRepository;
 import cn.fish.knowledge.service.DocumentService;
 import cn.fish.knowledge.splitter.ParagraphTextSplitter;

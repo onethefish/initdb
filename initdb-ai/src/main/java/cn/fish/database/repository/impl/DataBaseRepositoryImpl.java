@@ -1,7 +1,7 @@
 package cn.fish.database.repository.impl;
 
 import cn.fish.database.repository.DataBaseRepository;
-import cn.fish.initDB.entity.ChatSession;
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
 import cn.hutool.core.util.StrUtil;

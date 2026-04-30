@@ -1,6 +1,6 @@
 package cn.fish.database.repository;
 
-import cn.fish.initDB.entity.ChatSession;
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 
 import java.util.List;

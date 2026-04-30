@@ -1,5 +1,6 @@
 package cn.fish.initDB.controller;
 
+import cn.fish.cloud.serva.web.controller.BaseController;
 import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
@@ -10,7 +11,7 @@ import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/db")
-public class DBAgentController {
+public class DBAgentController extends BaseController {
 
     private final DBAgentService dbAgentService;
 
@@ -22,7 +23,7 @@ public class DBAgentController {
     @PostMapping("/chat")
     public ResponseResult<ChatResponse> chat(@RequestBody ChatRequest chatRequest) {
         ChatResponse chat = dbAgentService.chat(chatRequest);
-        return ResponseResult.success(chat);
+        return result(chat);
     }
 
     @PostMapping("/chat/stream")
@@ -34,7 +35,7 @@ public class DBAgentController {
     public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,
                                                 @RequestParam(value = "sessionId", required = false) String sessionId) {
         ChatResponse chat = dbAgentService.chat(new ChatRequest(message, sessionId));
-        return ResponseResult.success(chat);
+        return result(chat);
     }
 
 

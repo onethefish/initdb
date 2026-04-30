@@ -1,4 +1,4 @@
-package cn.fish.initDB.entity;
+package cn.fish.chart.entity;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;

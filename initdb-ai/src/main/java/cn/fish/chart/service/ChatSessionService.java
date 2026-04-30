@@ -1,7 +1,7 @@
 package cn.fish.chart.service;
 
 import cn.fish.initDB.entity.ChatRequest;
-import cn.fish.initDB.entity.ChatSession;
+import cn.fish.chart.entity.ChatSession;
 import reactor.core.publisher.Flux;
 
 import java.util.List;

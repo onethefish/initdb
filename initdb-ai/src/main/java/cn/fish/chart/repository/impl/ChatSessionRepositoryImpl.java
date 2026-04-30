@@ -2,7 +2,7 @@ package cn.fish.chart.repository.impl;
 
 import cn.fish.chart.mapper.ChatSessionMapper;
 import cn.fish.chart.repository.ChatSessionRepository;
-import cn.fish.initDB.entity.ChatSession;
+import cn.fish.chart.entity.ChatSession;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.repository.CrudRepository;
 import com.github.benmanes.caffeine.cache.Cache;

@@ -1,6 +1,6 @@
 package cn.fish.chart.repository;
 
-import cn.fish.initDB.entity.ChatSession;
+import cn.fish.chart.entity.ChatSession;
 import com.baomidou.mybatisplus.extension.repository.IRepository;
 
 import java.util.List;

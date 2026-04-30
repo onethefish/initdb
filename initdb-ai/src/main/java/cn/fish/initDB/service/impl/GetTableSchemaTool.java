@@ -17,7 +17,7 @@ package cn.fish.initDB.service.impl;
 
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.repository.DataBaseRepository;
-import cn.fish.initDB.entity.ChatSession;
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.service.AgentAbstractTool;
 import com.alibaba.fastjson2.JSON;
