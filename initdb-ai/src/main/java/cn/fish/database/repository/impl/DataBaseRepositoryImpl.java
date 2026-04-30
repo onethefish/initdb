@@ -39,16 +39,6 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                                                                            .expireAfterWrite(1, TimeUnit.MINUTES)
                                                                            .build();
 
-    @Override
-    public void test(ChatSession chatSession) {
-        HikariConfig hikariConfig = createHikariConfig(chatSession);
-        try (HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig)) {
-            boolean running = hikariDataSource.isRunning();
-        } finally {
-
-        }
-    }
-
     @NotNull
     private static HikariConfig createHikariConfig(ChatSession chatSession) {
         HikariConfig hikariConfig = new HikariConfig();
@@ -64,16 +54,32 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
         return hikariConfig;
     }
 
-    @Override
-    public void add(ChatSession chatSession) {
-        HikariDataSource hikariDataSource = createDataSource(chatSession);
-        DATA_SOURCE_CACHE.put(chatSession.getSessionId(), hikariDataSource);
-    }
-
     @NotNull
     private static HikariDataSource createDataSource(ChatSession chatSession) {
         HikariConfig hikariConfig = createHikariConfig(chatSession);
         return new HikariDataSource(hikariConfig);
+    }
+
+    private static void dataSourceClose(DataSource dataSource) {
+        if (dataSource instanceof HikariDataSource hikariDataSource) {
+            hikariDataSource.close();
+        }
+    }
+
+    @Override
+    public void test(ChatSession chatSession) {
+        HikariConfig hikariConfig = createHikariConfig(chatSession);
+        try (HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig)) {
+            boolean running = hikariDataSource.isRunning();
+        } finally {
+
+        }
+    }
+
+    @Override
+    public void add(ChatSession chatSession) {
+        HikariDataSource hikariDataSource = createDataSource(chatSession);
+        DATA_SOURCE_CACHE.put(chatSession.getSessionId(), hikariDataSource);
     }
 
     @Override
@@ -87,19 +93,12 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
         }
     }
 
-
     @Override
     public void removeAll() {
         DATA_SOURCE_CACHE.asMap().forEach((key, value) -> {
             dataSourceClose(value);
         });
         DATA_SOURCE_CACHE.invalidateAll();
-    }
-
-    private static void dataSourceClose(DataSource dataSource) {
-        if (dataSource instanceof HikariDataSource hikariDataSource) {
-            hikariDataSource.close();
-        }
     }
 
     @Override

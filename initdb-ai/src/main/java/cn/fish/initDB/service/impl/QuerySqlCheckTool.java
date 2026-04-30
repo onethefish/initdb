@@ -34,8 +34,6 @@ import java.util.function.BiFunction;
 public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, ToolContext, String> {
 
 
-    private final ChatModel chatModel;
-
     private static final String CHECK_PROMPT_TEMPLATE = """
             你是一个SQL查询验证器。请检查以下SQL查询语句查询是否存在常见错误：
             
@@ -59,6 +57,7 @@ public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, 
             
             请保持回复简洁。
             """;
+    private final ChatModel chatModel;
 
     public QuerySqlCheckTool(ChatModel chatModel) {
         this.chatModel = chatModel;

@@ -2,17 +2,17 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <title>智能数据库助手</title>
-  <link rel="stylesheet" href="/css/index.css">
+  <link href="/css/index.css" rel="stylesheet">
 </head>
 <body>
 
 <!-- 左侧栏 -->
 <div class="sidebar">
   <div class="header">
-    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgdmlld0JveD0iMCAwIDE0IDE0Ij4KICA8Y2lyY2xlIGN4PSI3IiBjeT0iNyIgcj0iNyIgZmlsbD0iIzQwOUVGRiIgLz4KICA8cGF0aCBkPSJNOSA1aC0uN2MtLjYuMS0xIC42LTEgLjdzLS40IDEtLjcgMS4zbDEuMiAxLjJjLjMuMy43LjcuNyAxLjF2LjdjMCAuNDEuMzMuNzUuNzUuNzVoMS41YS43NS43NSAwIDAgMCAuNzUtLjc1di0xLjVhLjc1Ljc1IDAgMCAwLS43NS0uNzVjMC0uNC0uNC0uOC0uNy0xLjFsLTEuMi0xLjJjLS4zLS4zLS43LS43LTEtLjcuMS0uNC0uNi0uOC0xLjEtLjh6IiBmaWxsPSJ3aGl0ZSIgLz4KPC9zdmc+"
-         alt="Logo" style="width: 24px; height: 24px;">
+    <img alt="Logo"
+         src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgdmlld0JveD0iMCAwIDE0IDE0Ij4KICA8Y2lyY2xlIGN4PSI3IiBjeT0iNyIgcj0iNyIgZmlsbD0iIzQwOUVGRiIgLz4KICA8cGF0aCBkPSJNOSA1aC0uN2MtLjYuMS0xIC42LTEgLjdzLS40IDEtLjcgMS4zbDEuMiAxLjJjLjMuMy43LjcuNyAxLjF2LjdjMCAuNDEuMzMuNzUuNzUuNzVoMS41YS43NS43NSAwIDAgMCAuNzUtLjc1di0xLjVhLjc1Ljc1IDAgMCAwLS43NS0uNzVjMC0uNC0uNC0uOC0uNy0xLjFsLTEuMi0xLjJjLS4zLS4zLS43LS43LTEtLjcuMS0uNC0uNi0uOC0xLjEtLjh6IiBmaWxsPSJ3aGl0ZSIgLz4KPC9zdmc+" style="width: 24px; height: 24px;">
     <h1>智能数据库助手</h1>
   </div>
   <button class="create-chat-btn" onclick="createModal()">创建新对话</button>
@@ -39,34 +39,34 @@
       <!-- 消息将通过JavaScript动态添加 -->
     </div>
     <div class="input-area">
-      <input type="text" id="userInput" placeholder="请输入你的问题..." onkeypress="handleKeyPress(event)" disabled>
+      <input disabled id="userInput" onkeypress="handleKeyPress(event)" placeholder="请输入你的问题..." type="text">
 
       <!-- 文件上传相关元素 -->
-      <input type="file" id="fileInput" style="display: none;" accept=".txt" onchange="handleFileSelect(this)"/>
+      <input accept=".txt" id="fileInput" onchange="handleFileSelect(this)" style="display: none;" type="file"/>
 
       <div class="file-upload-group">
-        <button id="uploadFileBtn" class="btn-upload" onclick="triggerFileInput()" aria-label="选择文件" title="选择文件"></button>
-        <button id="uploadFileSendBtn" class="btn-send-file" style="display: none;" onclick="uploadSelectedFile()" disabled aria-label="上传并处理" title="上传并处理"></button>
-        <ul id="fileList" class="file-list">
+        <button aria-label="选择文件" class="btn-upload" id="uploadFileBtn" onclick="triggerFileInput()" title="选择文件"></button>
+        <button aria-label="上传并处理" class="btn-send-file" disabled id="uploadFileSendBtn" onclick="uploadSelectedFile()" style="display: none;" title="上传并处理"></button>
+        <ul class="file-list" id="fileList">
           <li class="file-list-item">
-            <span id="fileNameText" class="file-list-item-text"></span>
+            <span class="file-list-item-text" id="fileNameText"></span>
           </li>
         </ul>
       </div>
       <!-- /文件上传相关元素 -->
 
-      <button id="sendMessageBtn" onclick="sendMessage()" disabled>发送</button>
+      <button disabled id="sendMessageBtn" onclick="sendMessage()">发送</button>
     </div>
   </div>
 </div>
 
 <!-- 创建对话模态框 -->
-<div id="sessionModal" class="modal">
+<div class="modal" id="sessionModal">
   <div class="modal-content">
     <h2>创建新对话</h2>
     <div class="form-group">
       <label for="sessionName">对话名称</label>
-      <input type="text" id="sessionName" required value="新的对话">
+      <input id="sessionName" required type="text" value="新的对话">
     </div>
     <!--    <div class="form-group">-->
     <!--      <label for="host">主机地址</label>-->
@@ -78,15 +78,15 @@
     <!--    </div>-->
     <div class="form-group">
       <label for="url">url</label>
-      <input type="text" id="url" required value="jdbc:h2:C:\Users\57172\github\initdb\initdb-ai\db\initdb">
+      <input id="url" required type="text" value="jdbc:h2:C:\Users\57172\github\initdb\initdb-ai\db\initdb">
     </div>
     <div class="form-group">
       <label for="username">用户名</label>
-      <input type="text" id="username" required>
+      <input id="username" required type="text">
     </div>
     <div class="form-group">
       <label for="password">密码</label>
-      <input type="password" id="password" required>
+      <input id="password" required type="password">
     </div>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closeModal()">取消</button>
@@ -95,7 +95,7 @@
   </div>
 </div>
 
-<script src="/js/api.js" defer></script>
-<script src="/js/index.js" defer></script>
+<script defer src="/js/api.js"></script>
+<script defer src="/js/index.js"></script>
 </body>
 </html>

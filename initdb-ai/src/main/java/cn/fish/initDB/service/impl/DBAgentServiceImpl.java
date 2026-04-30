@@ -29,9 +29,6 @@ import java.util.Objects;
 @Service
 public class DBAgentServiceImpl implements DBAgentService {
 
-    private final ReactAgent dbAgent;
-    private final ReactAgent summaryAgent;
-    private final BaseCheckpointSaver baseCheckpointSaver;
     private static final String DESCRIPTION = "数据库智能助手，支持查询表结构、执行SQL查询、分析数据功能";
     private static final String SYSTEM_PROMPT = """
              你是中文数据库助手。
@@ -61,7 +58,6 @@ public class DBAgentServiceImpl implements DBAgentService {
              - 执行前必验证SQL
              - 工具返回空结果时必须如实告知，不得自行编造数据
             """;
-
     private static final String SUMMARY_PROMPT = """
             你是对话总结助手。将以下对话历史总结为简洁的要点:
             - 用户的核心需求
@@ -73,6 +69,9 @@ public class DBAgentServiceImpl implements DBAgentService {
             - 控制在100字以内
             - 保留关键技术细节
             """;
+    private final ReactAgent dbAgent;
+    private final ReactAgent summaryAgent;
+    private final BaseCheckpointSaver baseCheckpointSaver;
 
     public DBAgentServiceImpl(BaseCheckpointSaver baseCheckpointSaver, ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                               GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool,

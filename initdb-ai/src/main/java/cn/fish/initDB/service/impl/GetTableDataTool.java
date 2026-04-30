@@ -43,14 +43,13 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
 
     private final DataBaseRepository dataBaseRepository;
     private final ChatSessionRepository chatSessionRepository;
+    @Value("${database-agent.max-results:10}")
+    private int maxResults;
 
     public GetTableDataTool(DataBaseRepository dataBaseRepository, ChatSessionRepository chatSessionRepository) {
         this.dataBaseRepository = dataBaseRepository;
         this.chatSessionRepository = chatSessionRepository;
     }
-
-    @Value("${database-agent.max-results:10}")
-    private int maxResults;
 
     @Override
     public String apply(Request request, ToolContext toolContext) {
