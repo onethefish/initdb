@@ -1,4 +1,4 @@
-package cn.fish.initDB.config;
+package cn.fish.config;
 
 import cn.fish.initDB.savers.ChatMemorySaver;
 import org.springframework.ai.embedding.EmbeddingModel;
