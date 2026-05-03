@@ -1,5 +1,6 @@
 package cn.fish.chart.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -49,5 +50,11 @@ public class ChatSession {
      * 数据库密码
      */
     private String password;
+
+    /**
+     * 创建会话时选择的数据源 ID（不入库，仅用于 /chat/create 请求体）
+     */
+    @TableField(exist = false)
+    private String datasourceId;
 
 }

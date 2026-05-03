@@ -27,7 +27,7 @@ public class AgentDatasource {
     private String name;
 
     /**
-     * 数据库类型（如：MySQL、PostgresSQL、Oracle等）
+     * 数据库类型（如：MySQL、PostgresSQL）
      */
     private String type;
 
@@ -62,12 +62,12 @@ public class AgentDatasource {
     private String connectionUrl;
 
     /**
-     * 数据源状态（如：启用、禁用等）
+     * 数据源状态（如：启用、禁用）1、0
      */
     private Integer status;
 
     /**
-     * 连接测试状态（如：成功、失败等）
+     * 连接测试状态（如：成功、失败）1、0
      */
     private Integer testStatus;
 

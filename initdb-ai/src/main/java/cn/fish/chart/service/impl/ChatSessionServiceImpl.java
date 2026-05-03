@@ -1,11 +1,13 @@
 package cn.fish.chart.service.impl;
 
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.chart.service.ChatSessionService;
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.datasource.entity.AgentDatasource;
+import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.fish.initDB.entity.ChatRequest;
-import cn.fish.chart.entity.ChatSession;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
@@ -25,13 +27,16 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     private final ChatSessionRepository chatSessionRepository;
     private final DataBaseRepository dataBaseRepository;
+    private final AgentDatasourceRepository agentDatasourceRepository;
     private final ChatClient chatClient;
     private final BaseCheckpointSaver baseCheckpointSaver;
 
-    public ChatSessionServiceImpl(ChatSessionRepository chatSessionRepository, DataBaseRepository dataBaseRepository, ChatModel chatModel,
+    public ChatSessionServiceImpl(ChatSessionRepository chatSessionRepository, DataBaseRepository dataBaseRepository,
+                                  AgentDatasourceRepository agentDatasourceRepository, ChatModel chatModel,
                                   BaseCheckpointSaver baseCheckpointSaver) {
         this.chatSessionRepository = chatSessionRepository;
         this.dataBaseRepository = dataBaseRepository;
+        this.agentDatasourceRepository = agentDatasourceRepository;
         this.baseCheckpointSaver = baseCheckpointSaver;
         MessageWindowChatMemory messageWindowChatMemory = MessageWindowChatMemory.builder()
                                                                                  .maxMessages(10)
@@ -58,9 +63,26 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public ChatSession add(ChatSession chatSession) {
-        // 测试连接是否可用
-        //        dataBaseRepository.test(chatSession);
-        // 保存连接信息
+        if (StrUtil.isBlank(chatSession.getDatasourceId())) {
+            throw new CommonException("请选择数据源");
+        }
+        AgentDatasource ds = agentDatasourceRepository.getById(chatSession.getDatasourceId());
+        if (ds == null) {
+            throw new CommonException("数据源不存在");
+        }
+        if (!Integer.valueOf(1).equals(ds.getStatus()) || !Integer.valueOf(1).equals(ds.getTestStatus())) {
+            throw new CommonException("仅可选择已启用且连接测试成功的数据源，请先在数据源管理中配置并测试");
+        }
+        if (StrUtil.isBlank(ds.getConnectionUrl()) || StrUtil.isBlank(ds.getUsername())) {
+            throw new CommonException("数据源连接信息不完整");
+        }
+        chatSession.setHost(ds.getHost());
+        chatSession.setPort(ds.getPort());
+        chatSession.setUrl(ds.getConnectionUrl());
+        chatSession.setUsername(ds.getUsername());
+        chatSession.setPassword(ds.getPassword());
+        chatSession.setDatasourceId(null);
+
         chatSession.setSessionId(IdUtil.simpleUUID());
         try {
             dataBaseRepository.add(chatSession);

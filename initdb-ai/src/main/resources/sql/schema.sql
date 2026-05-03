@@ -23,7 +23,7 @@ CREATE TABLE agent_datasource
 (
     id            VARCHAR(32) PRIMARY KEY, -- 数据源ID（主键）
     name          VARCHAR(255),             -- 数据源名称
-    type          VARCHAR(8),              -- 数据库类型（如：MySQL、PostgresSQL、Oracle等）
+    type          VARCHAR(32),              -- 数据库类型（如：MySQL、PostgresSQL等）
     host          VARCHAR(16),             -- 数据库主机地址
     port          VARCHAR(8),                  -- 数据库端口号
     database_name VARCHAR(255),             -- 数据库名称
@@ -38,7 +38,7 @@ CREATE TABLE agent_datasource
 COMMENT ON TABLE agent_datasource IS 'Agent数据源配置表';
 COMMENT ON COLUMN agent_datasource.id IS '数据源ID（主键）';
 COMMENT ON COLUMN agent_datasource.name IS '数据源名称';
-COMMENT ON COLUMN agent_datasource.type IS '数据库类型（如：MySQL、PostgresSQL、Oracle等）';
+COMMENT ON COLUMN agent_datasource.type IS '数据库类型（如：MySQL、PostgresSQL等）';
 COMMENT ON COLUMN agent_datasource.host IS '数据库主机地址';
 COMMENT ON COLUMN agent_datasource.port IS '数据库端口号';
 COMMENT ON COLUMN agent_datasource.database_name IS '数据库名称';

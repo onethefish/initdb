@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>智能对话 — 智能数据库助手</title>
+  <link href="/css/chat-app.css" rel="stylesheet">
+</head>
+<body>
+<div class="main-content">
+  <div th:replace="~{fragments/nav :: appNav('chat')}"></div>
+  <div th:replace="~{fragments/chat-content :: chatPage}"></div>
+</div>
+<div th:replace="~{fragments/chat-content :: sessionModal}"></div>
+<script defer src="/js/api.js"></script>
+<script defer src="/js/utils.js"></script>
+<script defer src="/js/chat.js"></script>
+<script defer src="/js/chat-page.js"></script>
+</body>
+</html>

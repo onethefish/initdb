@@ -8,7 +8,7 @@ import java.util.Map;
 
 public interface DataBaseRepository {
 
-    void test(ChatSession chatSession);
+    void test(String url, String username, String password);
 
     void add(ChatSession chatSession);
 

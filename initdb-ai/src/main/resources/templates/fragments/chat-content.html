@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="page-panel page-panel-active" id="chatPage" th:fragment="chatPage">
+  <div class="chat-layout">
+    <div class="chat-left-panel">
+      <div class="chat-actions">
+        <button class="create-chat-btn" onclick="createModal()" type="button">创建新对话</button>
+        <button class="delete-chat-btn" onclick="deleteModal()" type="button">删除所有对话</button>
+      </div>
+      <div class="session-list chat-session-list" id="sessionList"></div>
+    </div>
+    <div class="chat-main-panel">
+      <div class="welcome-screen" id="welcomeScreen">
+        <h2>你好！我是智能数据库助手</h2>
+        <p>我可以通过自然语言查询你的数据库信息。请先在「数据源管理」中维护并测试数据源，再在此创建对话并选择要使用的数据源。</p>
+        <button class="create-chat-btn welcome-create-btn" onclick="createModal()" type="button">创建第一个对话</button>
+      </div>
+      <div class="chat-container" id="chatContainer">
+        <div class="chat-header" id="currentSessionHeader"></div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="input-area">
+          <input disabled id="userInput" onkeypress="handleKeyPress(event)" placeholder="请输入你的问题..." type="text">
+          <input accept=".txt" class="file-input-hidden" id="fileInput" onchange="handleFileSelect(this)" type="file">
+          <div class="file-upload-group">
+            <button aria-label="选择文件" class="btn-upload" id="uploadFileBtn" onclick="triggerFileInput()" title="选择文件" type="button"></button>
+            <button aria-label="上传并处理" class="btn-send-file btn-send-file--hidden" disabled id="uploadFileSendBtn" onclick="uploadSelectedFile()" title="上传并处理" type="button"></button>
+            <ul class="file-list" id="fileList">
+              <li class="file-list-item">
+                <span class="file-list-item-text" id="fileNameText"></span>
+              </li>
+            </ul>
+          </div>
+          <button disabled id="sendMessageBtn" onclick="sendMessage()" type="button">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="sessionModal" th:fragment="sessionModal">
+  <div class="modal-content">
+    <h2>创建新对话</h2>
+    <div class="form-group">
+      <label for="sessionName">对话名称</label>
+      <input id="sessionName" required type="text" value="新的对话">
+    </div>
+    <div class="form-group">
+      <label for="chatDatasourceSelect">数据源</label>
+      <select id="chatDatasourceSelect" required>
+        <option value="">加载中…</option>
+      </select>
+      <p class="form-hint" id="chatDatasourceHint">仅显示「数据源管理」中已启用且连接测试成功的数据源。若无选项，请先到数据源管理页维护并测试连接。</p>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeModal()" type="button">取消</button>
+      <button class="btn btn-primary" onclick="createNewSession()" type="button">创建</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

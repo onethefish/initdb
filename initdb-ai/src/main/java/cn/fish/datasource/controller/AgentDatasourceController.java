@@ -3,6 +3,7 @@ package cn.fish.datasource.controller;
 import cn.fish.cloud.serva.web.controller.BaseController;
 import cn.fish.cloud.serva.web.controller.RequestUtil;
 import cn.fish.cloud.serva.web.response.ResponseResult;
+import cn.fish.datasource.dto.AgentDatasourceChatOption;
 import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.service.AgentDatasourceService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -35,9 +36,8 @@ public class AgentDatasourceController extends BaseController {
     }
 
     @PostMapping("/test")
-    public ResponseResult<Void> test(@RequestBody AgentDatasource agentDatasource) {
-        agentDatasourceService.test(agentDatasource);
-        return result();
+    public ResponseResult<AgentDatasource> test(@RequestBody AgentDatasource agentDatasource) {
+        return result(agentDatasourceService.test(agentDatasource));
     }
 
     @PostMapping("/add")

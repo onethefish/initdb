@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="top-tabs" th:fragment="appNav (activeTab)">
+  <a th:class="${activeTab == 'datasource'} ? 'top-tab active' : 'top-tab'" th:href="@{/datasource}">数据源管理</a>
+  <a th:class="${activeTab == 'chat'} ? 'top-tab active' : 'top-tab'" th:href="@{/chat}">智能对话</a>
+  <div class="top-tabs-brand">
+    <img alt="Logo" class="brand-logo" th:src="@{/images/logo.svg}">
+    <span>智能数据库助手</span>
+  </div>
+</div>
+</body>
+</html>

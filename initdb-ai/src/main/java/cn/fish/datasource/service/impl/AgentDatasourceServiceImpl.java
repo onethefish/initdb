@@ -1,14 +1,17 @@
 package cn.fish.datasource.service.impl;
 
 import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.datasource.dto.AgentDatasourceChatOption;
 import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.fish.datasource.service.AgentDatasourceService;
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -28,8 +31,14 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
     }
 
     @Override
-    public void test(AgentDatasource agentDatasource) {
-        // todo
+    public AgentDatasource test(AgentDatasource agentDatasource) {
+        dataBaseRepository.test(agentDatasource.getConnectionUrl(), agentDatasource.getUsername(), agentDatasource.getPassword());
+        agentDatasource.setTestStatus(1);
+        AgentDatasource byId = agentDatasourceRepository.getById(agentDatasource.getId());
+        if (ObjectUtil.isNotEmpty(byId)) {
+            agentDatasourceRepository.updateById(agentDatasource);
+        }
+        return agentDatasource;
     }
 
     @Override

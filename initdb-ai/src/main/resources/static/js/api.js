@@ -44,12 +44,23 @@
         return !!body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, 'code');
     }
 
+    function pickPayload(body) {
+        if (body == null || typeof body !== 'object') return body;
+        if (Object.prototype.hasOwnProperty.call(body, 'data') && body.data !== undefined) {
+            return body.data;
+        }
+        if (Object.prototype.hasOwnProperty.call(body, 'result') && body.result !== undefined) {
+            return body.result;
+        }
+        return undefined;
+    }
+
     function normalizeUnifiedResponse(body) {
         const code = body.code;
-        const ok = String(code) === '200';
+        const ok = String(code) === '200' || code === 200;
         const message = body.message || '';
         const traceId = body.traceId || '';
-        return {ok, code, message, traceId, data: body.data};
+        return {ok, code, message, traceId, data: pickPayload(body)};
     }
 
     function buildBusinessError(unified) {
@@ -64,7 +75,12 @@
             if (!unified.ok) {
                 throw buildBusinessError(unified);
             }
-            return unified.data;
+            const payload = unified.data;
+            const pageParam = parsedBody.pageParam;
+            if (pageParam != null && typeof pageParam === 'object' && Array.isArray(payload)) {
+                return {records: payload, pageParam};
+            }
+            return payload;
         }
 
         if (!response.ok) {

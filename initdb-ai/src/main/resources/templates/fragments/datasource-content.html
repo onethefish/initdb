@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div class="page-panel page-panel-active" id="datasourcePage" th:fragment="datasourcePage">
+  <div class="datasource-toolbar">
+    <input id="dsFilterName" placeholder="数据源名称" type="text">
+    <select id="dsFilterType" title="数据库类型">
+      <option value="">类型(全部)</option>
+      <option value="MySQL">MySQL</option>
+      <option value="PostgresSQL">PostgresSQL</option>
+    </select>
+    <input id="dsFilterHost" placeholder="主机地址" type="text">
+    <select id="dsFilterStatus">
+      <option value="">状态(全部)</option>
+      <option value="1">启用</option>
+      <option value="0">禁用</option>
+    </select>
+    <div class="datasource-toolbar-actions">
+      <button class="btn btn-primary" onclick="queryDatasourcePage()" type="button">查询</button>
+      <button class="btn btn-secondary" onclick="resetDatasourceFilters()" type="button">重置</button>
+      <button class="btn btn-primary" onclick="openDatasourceModal()" type="button">新增数据源</button>
+    </div>
+  </div>
+  <div class="datasource-table-wrapper">
+    <table class="datasource-table">
+      <thead>
+      <tr>
+        <th><input id="selectAllDatasource" onchange="toggleSelectAllDatasource(this)" type="checkbox"></th>
+        <th>名称</th>
+        <th>类型</th>
+        <th>主机:端口</th>
+        <th>数据库名</th>
+        <th>用户名</th>
+        <th>状态</th>
+        <th>测试状态</th>
+        <th>描述</th>
+        <th>操作</th>
+      </tr>
+      </thead>
+      <tbody id="datasourceTableBody"></tbody>
+    </table>
+  </div>
+  <div class="datasource-footer">
+    <button class="btn btn-danger" onclick="deleteSelectedDatasource()" type="button">批量删除</button>
+    <div class="datasource-pagination">
+      <button onclick="changeDatasourcePage(-1)" type="button">上一页</button>
+      <span id="datasourcePageInfo">第 1 页</span>
+      <button onclick="changeDatasourcePage(1)" type="button">下一页</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="datasourceModal" th:fragment="datasourceModal">
+  <div class="modal-content datasource-modal-content">
+    <h2 id="datasourceModalTitle">新增数据源</h2>
+    <div class="form-group">
+      <label for="dsName">名称</label>
+      <input id="dsName" required type="text">
+    </div>
+    <div class="form-group">
+      <label for="dsType">类型</label>
+      <select id="dsType" required>
+        <option value="">请选择类型</option>
+        <option value="MySQL">MySQL</option>
+        <option value="PostgresSQL">PostgresSQL</option>
+      </select>
+    </div>
+    <div class="form-group datasource-inline-group">
+      <div>
+        <label for="dsHost">主机</label>
+        <input id="dsHost" required type="text">
+      </div>
+      <div>
+        <label for="dsPort">端口</label>
+        <input id="dsPort" required type="text">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="dsDatabaseName">数据库名</label>
+      <input id="dsDatabaseName" type="text">
+    </div>
+    <div class="form-group datasource-inline-group">
+      <div>
+        <label for="dsUsername">用户名</label>
+        <input id="dsUsername" type="text">
+      </div>
+      <div>
+        <label for="dsPassword">密码</label>
+        <input id="dsPassword" type="password">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="dsConnectionUrl">连接URL</label>
+      <input id="dsConnectionUrl" type="text">
+    </div>
+    <div class="form-group">
+      <label for="dsStatus">状态</label>
+      <select id="dsStatus">
+        <option value="1">启用</option>
+        <option value="0">禁用</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="dsDescription">描述</label>
+      <input id="dsDescription" type="text">
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeDatasourceModal()" type="button">取消</button>
+      <button class="btn btn-primary" onclick="testDatasourceConnection()" type="button">测试连接</button>
+      <button class="btn btn-primary" onclick="submitDatasourceForm()" type="button">保存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

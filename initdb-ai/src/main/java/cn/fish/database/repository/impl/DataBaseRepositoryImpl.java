@@ -1,7 +1,7 @@
 package cn.fish.database.repository.impl;
 
-import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.chart.entity.ChatSession;
+import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
 import cn.hutool.core.util.StrUtil;
@@ -40,14 +40,14 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                                                                            .build();
 
     @NotNull
-    private static HikariConfig createHikariConfig(ChatSession chatSession) {
+    private static HikariConfig createHikariConfig(String url, String username, String password) {
         HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl(chatSession.getUrl());
-        if (StrUtil.isNotBlank(chatSession.getUsername())) {
-            hikariConfig.setUsername(chatSession.getUsername());
+        hikariConfig.setJdbcUrl(url);
+        if (StrUtil.isNotBlank(username)) {
+            hikariConfig.setUsername(username);
         }
-        if (StrUtil.isNotBlank(chatSession.getPassword())) {
-            hikariConfig.setPassword(chatSession.getPassword());
+        if (StrUtil.isNotBlank(password)) {
+            hikariConfig.setPassword(password);
         }
         hikariConfig.setMaximumPoolSize(5);
         hikariConfig.setMinimumIdle(1);
@@ -56,7 +56,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
 
     @NotNull
     private static HikariDataSource createDataSource(ChatSession chatSession) {
-        HikariConfig hikariConfig = createHikariConfig(chatSession);
+        HikariConfig hikariConfig = createHikariConfig(chatSession.getUrl(), chatSession.getUsername(), chatSession.getPassword());
         return new HikariDataSource(hikariConfig);
     }
 
@@ -67,12 +67,11 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     }
 
     @Override
-    public void test(ChatSession chatSession) {
-        HikariConfig hikariConfig = createHikariConfig(chatSession);
+    public void test(String url, String username, String password) {
+        HikariConfig hikariConfig = createHikariConfig(url, username, password);
         try (HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig)) {
             boolean running = hikariDataSource.isRunning();
         } finally {
-
         }
     }
 

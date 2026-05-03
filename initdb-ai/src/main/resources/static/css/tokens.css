@@ -1,0 +1,12 @@
+:root {
+    --color-primary: #409eff;
+    --color-primary-hover: #3a8ee6;
+    --color-danger: #dc3545;
+    --color-danger-hover: #bd2130;
+    --color-text-main: #333;
+    --color-text-secondary: #666;
+    --color-border-light: #eee;
+    --color-panel-bg: #fff;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+}
