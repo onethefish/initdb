@@ -1,7 +1,6 @@
 package cn.fish.datasource.service.impl;
 
 import cn.fish.database.repository.DataBaseRepository;
-import cn.fish.datasource.dto.AgentDatasourceChatOption;
 import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.fish.datasource.service.AgentDatasourceService;
@@ -11,7 +10,6 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor

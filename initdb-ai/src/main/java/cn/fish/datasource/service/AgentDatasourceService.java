@@ -1,6 +1,5 @@
 package cn.fish.datasource.service;
 
-import cn.fish.datasource.dto.AgentDatasourceChatOption;
 import cn.fish.datasource.entity.AgentDatasource;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
