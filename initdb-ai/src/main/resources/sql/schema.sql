@@ -2,6 +2,9 @@ CREATE TABLE chat_session
 (
     session_id   VARCHAR(32) PRIMARY KEY, -- 会话ID
     session_name VARCHAR(255),             -- 会话名称
+    type          VARCHAR(32),              -- 数据库类型（如：mysql、postgresql等）
+    database_name VARCHAR(255),             -- 数据库名称
+    schema       VARCHAR(255),             -- schema
     host         VARCHAR(16),             -- 数据库主机地址
     port         VARCHAR(8),              -- 数据库端口
     url          VARCHAR(1024),             -- 数据库连接URL
@@ -12,6 +15,9 @@ CREATE TABLE chat_session
 COMMENT ON TABLE chat_session IS '聊天会话表';
 COMMENT ON COLUMN chat_session.session_id IS '会话ID';
 COMMENT ON COLUMN chat_session.session_name IS '会话名称';
+COMMENT ON COLUMN chat_session.type IS '数据库类型（如：mysql、postgresql等）';
+COMMENT ON COLUMN chat_session.database_name IS '数据库名称';
+COMMENT ON COLUMN chat_session.schema IS 'schema';
 COMMENT ON COLUMN chat_session.host IS '数据库主机地址';
 COMMENT ON COLUMN chat_session.port IS '数据库端口';
 COMMENT ON COLUMN chat_session.url IS '数据库连接URL';
@@ -23,9 +29,9 @@ CREATE TABLE agent_datasource
 (
     id            VARCHAR(32) PRIMARY KEY, -- 数据源ID（主键）
     name          VARCHAR(255),             -- 数据源名称
-    type          VARCHAR(32),              -- 数据库类型（如：MySQL、PostgresSQL等）
-    host          VARCHAR(16),             -- 数据库主机地址
-    port          VARCHAR(8),                  -- 数据库端口号
+    type          VARCHAR(32),              -- 数据库类型（如：mysql、postgresql等）
+    host          VARCHAR(8),             -- 数据库主机地址
+    port          VARCHAR(8),              -- 数据库端口号
     database_name VARCHAR(255),             -- 数据库名称
     username      VARCHAR(255),             -- 数据库用户名
     password      VARCHAR(255),             -- 数据库密码
@@ -38,7 +44,7 @@ CREATE TABLE agent_datasource
 COMMENT ON TABLE agent_datasource IS 'Agent数据源配置表';
 COMMENT ON COLUMN agent_datasource.id IS '数据源ID（主键）';
 COMMENT ON COLUMN agent_datasource.name IS '数据源名称';
-COMMENT ON COLUMN agent_datasource.type IS '数据库类型（如：MySQL、PostgresSQL等）';
+COMMENT ON COLUMN agent_datasource.type IS '数据库类型（如：mysql、postgresql等）';
 COMMENT ON COLUMN agent_datasource.host IS '数据库主机地址';
 COMMENT ON COLUMN agent_datasource.port IS '数据库端口号';
 COMMENT ON COLUMN agent_datasource.database_name IS '数据库名称';

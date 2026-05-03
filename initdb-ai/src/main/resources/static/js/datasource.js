@@ -16,22 +16,32 @@ const selectedDatasourceIds = new Set();
 function normalizeTypeSelectValue(stored) {
     if (stored == null || String(stored).trim() === '') return '';
     const s = String(stored).trim().toLowerCase();
-    if (s === 'mysql' || s.includes('mysql')) return 'MySQL';
-    if (s.includes('postgres')) return 'PostgresSQL';
+    if (s === 'mysql' || s.includes('mysql')) return 'mysql';
+    if (s.includes('postgres')) return 'postgresql';
     return '';
 }
 
+/** 列表展示用：与下拉选项文案一致 */
+function formatDbTypeLabel(type) {
+    const raw = type != null ? String(type).trim() : '';
+    if (!raw) return '';
+    const n = normalizeTypeSelectValue(raw);
+    if (n === 'mysql') return 'MySQL';
+    if (n === 'postgresql') return 'PostgreSQL';
+    return raw;
+}
+
 function buildSuggestedJdbcUrl(type, host, port, databaseName) {
-    const t = (type || '').trim();
+    const t = (type || '').trim().toLowerCase();
     const h = (host || '').trim();
     const p = (port || '').trim();
     const db = (databaseName || '').trim();
     if (!t || !h || !p) return '';
 
-    if (t === 'MySQL') {
+    if (t === 'mysql') {
         return db ? `jdbc:mysql://${h}:${p}/${db}` : `jdbc:mysql://${h}:${p}/`;
     }
-    if (t === 'PostgresSQL') {
+    if (t === 'postgresql') {
         return db ? `jdbc:postgresql://${h}:${p}/${db}` : `jdbc:postgresql://${h}:${p}/`;
     }
     return '';
@@ -110,7 +120,7 @@ function renderDatasourceTable() {
         tr.innerHTML = `
             <td><input data-id="${ds.id}" type="checkbox" onchange="toggleDatasourceSelection('${ds.id}', this.checked)"></td>
             <td>${escapeHtml(ds.name)}</td>
-            <td>${escapeHtml(ds.type)}</td>
+            <td>${escapeHtml(formatDbTypeLabel(ds.type))}</td>
             <td>${escapeHtml(ds.host)}:${escapeHtml(ds.port)}</td>
             <td>${escapeHtml(ds.databaseName)}</td>
             <td>${escapeHtml(ds.username)}</td>

@@ -33,7 +33,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                                                                                      .build();
 
     private static final Cache<String, List<Table>> ALL_TABLE_CACHE = Caffeine.newBuilder()
-                                                                              .maximumSize(128) // 最大支持128个会话
+                                                                              .expireAfterWrite(1, TimeUnit.MINUTES)
                                                                               .build();
 
     private static final Cache<String, Table> TABLE_SCHEMA_CACHE = Caffeine.newBuilder()
@@ -113,7 +113,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                 String catalog = conn.getCatalog();//目录名称，一般都为空
                 //schema = "%";//数据库名，对于mysql来说用通配符
                 DatabaseMetaData dbmd = conn.getMetaData();
-                String schema = dbmd.getUserName();//数据库名称
+                String schema = chatSession.getSchema();//数据库名称
                 // 表第一个字段为表名，第二个为表注释
                 ResultSet tablesResultSet = dbmd.getTables(catalog, schema, "%", new String[]{"TABLE"});
                 while (tablesResultSet.next()) {
@@ -140,18 +140,19 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
             try (Connection conn = dataSource.getConnection()) {
                 DatabaseMetaData databaseMetaData = conn.getMetaData();
                 String catalog = conn.getCatalog();
+                String schema = chatSession.getSchema();
                 //            ArrayList<Table> resultList = new ArrayList();
                 Table table = new Table();
                 table.setTableName(tableName);
                 // 获取主键
-                ResultSet metaDataPrimaryKeys = databaseMetaData.getPrimaryKeys(catalog, conn.getMetaData().getUserName(), tableName);
+                ResultSet metaDataPrimaryKeys = databaseMetaData.getPrimaryKeys(catalog,schema, tableName);
                 while (metaDataPrimaryKeys.next()) {
                     String column_name = metaDataPrimaryKeys.getString("COLUMN_NAME");
                     Integer key_seq = metaDataPrimaryKeys.getInt("KEY_SEQ");
                     table.addPrimaryKeysMap(key_seq, column_name);
                 }
                 // 获取索引
-                ResultSet indexInfos = databaseMetaData.getIndexInfo(catalog, conn.getMetaData().getUserName(), tableName, false, true);
+                ResultSet indexInfos = databaseMetaData.getIndexInfo(catalog, schema, tableName, false, true);
                 int key_seq = 1;
                 while (indexInfos.next()) {
                     String index_name = indexInfos.getString("INDEX_NAME");
@@ -164,7 +165,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                 }
                 table.indexMapSort();
                 // 获取表字段
-                ResultSet columns = databaseMetaData.getColumns(catalog, conn.getMetaData().getUserName(), tableName, "%");
+                ResultSet columns = databaseMetaData.getColumns(catalog, schema, tableName, "%");
                 while (columns.next()) {
                     TableColumn tableColumn = new TableColumn();
                     String column_name = columns.getString("COLUMN_NAME");

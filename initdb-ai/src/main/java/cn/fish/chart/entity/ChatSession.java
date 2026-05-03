@@ -20,12 +20,14 @@ public class ChatSession {
      */
     @TableId
     private String sessionId;
-
     /**
      * 会话名称
      */
     private String sessionName;
-
+    /**
+     * 数据库类型（如：mysql、postgresql）
+     */
+    private String type;
     /**
      * 数据库主机地址
      */
@@ -50,11 +52,19 @@ public class ChatSession {
      * 数据库密码
      */
     private String password;
-
+    /**
+     * 数据库名称
+     */
+    private String databaseName;
+    /**
+     * schema
+     */
+    private String schema;
     /**
      * 创建会话时选择的数据源 ID（不入库，仅用于 /chat/create 请求体）
      */
     @TableField(exist = false)
     private String datasourceId;
+
 
 }

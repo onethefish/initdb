@@ -27,7 +27,7 @@ public class AgentDatasource {
     private String name;
 
     /**
-     * 数据库类型（如：MySQL、PostgresSQL）
+     * 数据库类型（如：mysql、postgresql）
      */
     private String type;
 

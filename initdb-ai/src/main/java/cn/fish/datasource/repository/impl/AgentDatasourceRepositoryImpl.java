@@ -22,6 +22,7 @@ public class AgentDatasourceRepositoryImpl extends CrudRepository<AgentDatasourc
         queryWrapper.like(StrUtil.isNotBlank(agentDatasource.getHost()), AgentDatasource::getHost, agentDatasource.getHost());
         queryWrapper.eq(ObjectUtil.isNotEmpty(agentDatasource.getTestStatus()), AgentDatasource::getTestStatus, agentDatasource.getTestStatus());
         queryWrapper.eq(ObjectUtil.isNotEmpty(agentDatasource.getStatus()), AgentDatasource::getStatus, agentDatasource.getStatus());
+        queryWrapper.eq(StrUtil.isNotBlank(agentDatasource.getType()), AgentDatasource::getType, agentDatasource.getType());
         return page(page, queryWrapper);
     }
 }

@@ -12,6 +12,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
+import com.baomidou.mybatisplus.annotation.DbType;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -81,6 +82,13 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         chatSession.setUrl(ds.getConnectionUrl());
         chatSession.setUsername(ds.getUsername());
         chatSession.setPassword(ds.getPassword());
+        chatSession.setType(ds.getType());
+        chatSession.setDatabaseName(ds.getDatabaseName());
+        chatSession.setSchema(ds.getDatabaseName());
+        // todo 这个数据库特殊
+        if (DbType.POSTGRE_SQL.getDb().equals(ds.getType())) {
+            chatSession.setSchema("public");
+        }
         chatSession.setDatasourceId(null);
 
         chatSession.setSessionId(IdUtil.simpleUUID());
