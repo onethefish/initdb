@@ -5,13 +5,42 @@ let sessions = [];
 let currentSessionId = null;
 let sessionNameSuffixCounter = 1;
 
+const DB_SESSIONS_STORAGE_KEY = 'dbSessions';
+
+function readPersistedState() {
+    try {
+        const raw = localStorage.getItem(DB_SESSIONS_STORAGE_KEY);
+        if (!raw) {
+            return {sessions: [], currentSessionId: null};
+        }
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            return {sessions: parsed, currentSessionId: null};
+        }
+        return {
+            sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+            currentSessionId: parsed.currentSessionId || null
+        };
+    } catch (e) {
+        console.warn('readPersistedState failed', e);
+        return {sessions: [], currentSessionId: null};
+    }
+}
+
 function saveSessions() {
-    localStorage.setItem('dbSessions', JSON.stringify(sessions));
+    localStorage.setItem(
+        DB_SESSIONS_STORAGE_KEY,
+        JSON.stringify({sessions, currentSessionId})
+    );
 }
 
 async function loadSessionsFromServer() {
     try {
         const serverSessions = await Api.get('/chat/query/list');
+        const {sessions: persistedSessions, currentSessionId: persistedCurrentId} = readPersistedState();
+        const messagesBySessionId = new Map(
+            (persistedSessions || []).map(ps => [ps.id, Array.isArray(ps.messages) ? ps.messages : []])
+        );
 
         sessions = (serverSessions || []).map(s => ({
             id: s.sessionId,
@@ -23,14 +52,22 @@ async function loadSessionsFromServer() {
                 username: s.username,
                 password: s.password
             },
-            messages: []
+            messages: messagesBySessionId.get(s.sessionId) || []
         }));
 
         renderSessionList();
 
-        if (sessions.length > 0 && !currentSessionId) {
-            switchSession(sessions[0].id);
+        if (sessions.length === 0) {
+            currentSessionId = null;
+            saveSessions();
+            return;
         }
+
+        const preferredId =
+            persistedCurrentId && sessions.some(s => s.id === persistedCurrentId)
+                ? persistedCurrentId
+                : sessions[0].id;
+        switchSession(preferredId);
     } catch (error) {
         console.error('Failed to load sessions:', error);
         notifyErrorUnlessShown(error, '加载会话列表失败');
@@ -97,6 +134,7 @@ async function deleteSession(sessionId) {
     }
 
     renderSessionList();
+    saveSessions();
 }
 
 async function loadChatDatasourceOptions() {
@@ -159,7 +197,8 @@ async function deleteModal() {
     }
 
     sessions = [];
-    localStorage.removeItem('dbSessions');
+    currentSessionId = null;
+    localStorage.removeItem(DB_SESSIONS_STORAGE_KEY);
     renderSessionList();
     document.getElementById('chatContainer').style.display = 'none';
     document.getElementById('welcomeScreen').style.display = 'flex';
@@ -235,6 +274,7 @@ function switchSession(sessionId) {
     }
 
     renderSessionList();
+    saveSessions();
 }
 
 function renderChatMessages(messages) {
@@ -303,24 +343,45 @@ async function sendMessage() {
         }
 
         const botMessageDiv = addMessageToDOM('bot', '');
+        const chatMessagesEl = document.getElementById('chatMessages');
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let fullResponse = '';
+        let streamRafId = null;
+
+        const flushStreamToDom = () => {
+            streamRafId = null;
+            botMessageDiv.textContent = fullResponse;
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        };
+
+        const scheduleStreamFlush = () => {
+            if (streamRafId === null) {
+                streamRafId = requestAnimationFrame(flushStreamToDom);
+            }
+        };
 
         while (true) {
             const {done, value} = await reader.read();
             if (done) break;
 
             fullResponse += decoder.decode(value, {stream: true});
-            botMessageDiv.innerHTML = fullResponse;
-            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+            scheduleStreamFlush();
         }
 
         fullResponse += decoder.decode();
 
+        if (streamRafId !== null) {
+            cancelAnimationFrame(streamRafId);
+            streamRafId = null;
+        }
+
         if (!fullResponse) {
             throw new Error('请求失败：返回内容为空');
         }
+
+        botMessageDiv.textContent = fullResponse;
+        chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
         const botMsg = {role: 'bot', content: fullResponse};
         sessions[sessionIndex].messages.push(botMsg);
