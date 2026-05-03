@@ -1,4 +1,4 @@
-/* global Api, normalizePagePayload */
+/* global Api, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog */
 'use strict';
 
 let sessions = [];
@@ -33,6 +33,7 @@ async function loadSessionsFromServer() {
         }
     } catch (error) {
         console.error('Failed to load sessions:', error);
+        notifyErrorUnlessShown(error, '加载会话列表失败');
     }
 }
 
@@ -74,7 +75,7 @@ async function deleteSession(sessionId) {
         });
     } catch (error) {
         console.error('Delete session error:', error);
-        alert(error.message || '删除会话失败');
+        notifyErrorUnlessShown(error, '删除会话失败');
         return;
     }
 
@@ -138,7 +139,7 @@ async function loadChatDatasourceOptions() {
     } catch (error) {
         console.error('Load chat datasource options:', error);
         select.innerHTML = '<option value="">加载失败</option>';
-        alert(error.message || '加载数据源列表失败');
+        notifyErrorUnlessShown(error, '加载数据源列表失败');
     } finally {
         select.disabled = false;
     }
@@ -153,7 +154,8 @@ async function deleteModal() {
     try {
         await Api.del('/chat/delete/all');
     } catch (error) {
-        console.log(error);
+        console.error('Delete all sessions error:', error);
+        notifyErrorUnlessShown(error, '删除全部对话失败');
     }
 
     sessions = [];
@@ -178,7 +180,7 @@ async function createNewSession() {
     const datasourceId = (document.getElementById('chatDatasourceSelect').value || '').trim();
 
     if (!datasourceId) {
-        alert('请选择数据源');
+        showErrorDialog({title: '提示', message: '请选择数据源'});
         return;
     }
 
@@ -209,7 +211,7 @@ async function createNewSession() {
         closeModal();
     } catch (error) {
         console.error('Connection error:', error);
-        alert(error.message || '创建会话时候发送未知错误！');
+        notifyErrorUnlessShown(error, '创建会话失败');
     }
 }
 
@@ -264,7 +266,7 @@ async function sendMessage() {
     if (!message) return;
 
     if (!currentSessionId) {
-        alert('请先创建并选择一个对话');
+        showErrorDialog({title: '提示', message: '请先创建并选择一个对话'});
         return;
     }
 
@@ -367,7 +369,7 @@ function handleFileSelect(fileInput) {
     }
 
     if (files.length > 1) {
-        alert('每次只能上传一个文件，请重新选择。');
+        showErrorDialog({title: '提示', message: '每次只能上传一个文件，请重新选择。'});
         resetFileSelectionUI();
         return;
     }
@@ -379,7 +381,7 @@ function handleFileSelect(fileInput) {
     }
 
     if (file.type !== 'text/plain') {
-        alert('不支持的文件类型。请上传 .txt 文件。');
+        showErrorDialog({title: '提示', message: '不支持的文件类型。请上传 .txt 文件。'});
         resetFileSelectionUI();
         return;
     }
@@ -406,7 +408,7 @@ async function uploadSelectedFile() {
 
     const userInput = document.getElementById('userInput');
     if (userInput.disabled) {
-        alert('请先开启一个会话后再上传文件。');
+        showErrorDialog({title: '提示', message: '请先开启一个会话后再上传文件。'});
         uploadFileSendBtn.disabled = false;
         uploadFileSendBtn.classList.remove('uploading');
         uploadFileSendBtn.setAttribute('aria-label', '上传并处理');
@@ -422,6 +424,7 @@ async function uploadSelectedFile() {
         console.log('文件上传成功:', result);
     } catch (error) {
         console.error('文件上传失败:', error);
+        notifyErrorUnlessShown(error, '文件上传失败');
     } finally {
         resetFileSelectionUI();
     }

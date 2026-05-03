@@ -1,4 +1,4 @@
-/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload */
+/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog */
 'use strict';
 
 let datasourceList = [];
@@ -146,7 +146,7 @@ async function queryDatasourcePage() {
         renderDatasourceTable();
     } catch (error) {
         console.error('Query datasource page error:', error);
-        alert(error.message || '查询数据源失败');
+        notifyErrorUnlessShown(error, '查询数据源失败');
     }
 }
 
@@ -246,7 +246,7 @@ async function openDatasourceModal(id) {
         document.getElementById('datasourceModal').style.display = 'flex';
     } catch (error) {
         console.error('Query datasource unique error:', error);
-        alert(error.message || '加载数据源详情失败');
+        notifyErrorUnlessShown(error, '加载数据源详情失败');
     }
 }
 
@@ -263,7 +263,7 @@ async function submitDatasourceForm() {
     }
     const body = collectDatasourceForm();
     if (!body.name || !body.type || !body.host || !body.port) {
-        alert('名称、类型、主机、端口为必填项');
+        showErrorDialog({title: '提示', message: '名称、类型、主机、端口为必填项'});
         return;
     }
     try {
@@ -273,7 +273,7 @@ async function submitDatasourceForm() {
         await queryDatasourcePage();
     } catch (error) {
         console.error('Save datasource error:', error);
-        alert(error.message || '保存数据源失败');
+        notifyErrorUnlessShown(error, '保存数据源失败');
     }
 }
 
@@ -283,7 +283,7 @@ async function testDatasourceConnection() {
     }
     const body = collectDatasourceForm();
     if (!body.connectionUrl?.trim()) {
-        alert('请先填写连接 URL');
+        showErrorDialog({title: '提示', message: '请先填写连接 URL'});
         return;
     }
     try {
@@ -297,7 +297,7 @@ async function testDatasourceConnection() {
     } catch (error) {
         console.error('Test datasource connection error:', error);
         datasourceModalTestStatus = 0;
-        alert(error.message || '连接测试失败');
+        notifyErrorUnlessShown(error, '连接测试失败');
     }
 }
 
@@ -312,7 +312,7 @@ async function testDatasourceRow(id) {
         await queryDatasourcePage();
     } catch (error) {
         console.error('Test datasource row error:', error);
-        alert(error.message || '连接测试失败');
+        notifyErrorUnlessShown(error, '连接测试失败');
     }
 }
 
@@ -323,13 +323,13 @@ async function deleteDatasource(id) {
         await queryDatasourcePage();
     } catch (error) {
         console.error('Delete datasource error:', error);
-        alert(error.message || '删除数据源失败');
+        notifyErrorUnlessShown(error, '删除数据源失败');
     }
 }
 
 async function deleteSelectedDatasource() {
     if (!selectedDatasourceIds.size) {
-        alert('请先选择要删除的数据源');
+        showErrorDialog({title: '提示', message: '请先选择要删除的数据源'});
         return;
     }
     if (!confirm(`确认删除选中的 ${selectedDatasourceIds.size} 条数据源吗？`)) return;
@@ -340,7 +340,7 @@ async function deleteSelectedDatasource() {
         await queryDatasourcePage();
     } catch (error) {
         console.error('Delete datasource batch error:', error);
-        alert(error.message || '批量删除失败');
+        notifyErrorUnlessShown(error, '批量删除失败');
     }
 }
 

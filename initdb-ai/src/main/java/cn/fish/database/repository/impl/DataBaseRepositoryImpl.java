@@ -1,6 +1,7 @@
 package cn.fish.database.repository.impl;
 
 import cn.fish.chart.entity.ChatSession;
+import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
@@ -71,6 +72,8 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
         HikariConfig hikariConfig = createHikariConfig(url, username, password);
         try (HikariDataSource hikariDataSource = new HikariDataSource(hikariConfig)) {
             boolean running = hikariDataSource.isRunning();
+        } catch (Exception e) {
+            throw new CommonException("数据库连接失败" + e.getMessage(), e);
         } finally {
         }
     }

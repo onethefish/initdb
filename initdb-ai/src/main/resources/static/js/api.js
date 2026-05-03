@@ -73,7 +73,20 @@
         if (isUnifiedResponse(parsedBody)) {
             const unified = normalizeUnifiedResponse(parsedBody);
             if (!unified.ok) {
-                throw buildBusinessError(unified);
+                const msg = (unified.message && String(unified.message).trim())
+                    ? String(unified.message)
+                    : `业务异常（错误码 ${unified.code}）`;
+                if (typeof global.showErrorDialog === 'function') {
+                    global.showErrorDialog({
+                        title: '请求失败',
+                        message: msg,
+                        code: unified.code,
+                        traceId: unified.traceId || ''
+                    });
+                }
+                const err = buildBusinessError(unified);
+                err.apiErrorDialogShown = true;
+                throw err;
             }
             const payload = unified.data;
             const pageParam = parsedBody.pageParam;
@@ -84,7 +97,22 @@
         }
 
         if (!response.ok) {
-            throw buildHttpError(response, parsedBody);
+            let userMessage = `请求失败（HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}）`;
+            if (parsedBody && typeof parsedBody === 'object' && !Array.isArray(parsedBody) && parsedBody.message) {
+                userMessage = String(parsedBody.message);
+            } else if (typeof parsedBody === 'string' && parsedBody.trim()) {
+                userMessage = parsedBody.trim().slice(0, 800);
+            }
+            if (typeof global.showErrorDialog === 'function') {
+                global.showErrorDialog({
+                    title: '请求失败',
+                    message: userMessage,
+                    code: response.status
+                });
+            }
+            const err = buildHttpError(response, parsedBody);
+            err.apiErrorDialogShown = true;
+            throw err;
         }
 
         return parsedBody;

@@ -61,3 +61,85 @@ function normalizePagePayload(raw) {
 
     return {records, total, current, size};
 }
+
+function ensureGlobalErrorModal() {
+    if (document.getElementById('globalErrorModal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'globalErrorModal';
+    modal.className = 'modal global-error-modal';
+    modal.setAttribute('role', 'alertdialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.innerHTML = `
+<div class="modal-content error-dialog-content">
+  <h2 id="globalErrorTitle">错误</h2>
+  <p id="globalErrorMessage" class="error-dialog-message"></p>
+  <div id="globalErrorMeta" class="error-dialog-meta" hidden></div>
+  <div class="modal-buttons">
+    <button type="button" class="btn btn-primary" id="globalErrorOk">确定</button>
+  </div>
+</div>`;
+    document.body.appendChild(modal);
+
+    const close = () => {
+        modal.style.display = 'none';
+    };
+    document.getElementById('globalErrorOk').addEventListener('click', close);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) close();
+    });
+}
+
+/**
+ * 统一错误 / 提示弹窗（与业务表单 modal 样式一致）。
+ * @param {{ title?: string, message: string, code?: string|number, traceId?: string }} opts
+ */
+function showErrorDialog(opts) {
+    const o = opts || {};
+    const message = (o.message != null && String(o.message).trim() !== '')
+        ? String(o.message)
+        : '操作失败';
+    ensureGlobalErrorModal();
+    const modal = document.getElementById('globalErrorModal');
+    const titleEl = document.getElementById('globalErrorTitle');
+    const msgEl = document.getElementById('globalErrorMessage');
+    const metaEl = document.getElementById('globalErrorMeta');
+
+    titleEl.textContent = o.title || '错误';
+    msgEl.textContent = message;
+
+    const parts = [];
+    if (o.code !== undefined && o.code !== null && String(o.code).trim() !== '') {
+        parts.push(`错误码：${o.code}`);
+    }
+    if (o.traceId) {
+        parts.push(`traceId：${o.traceId}`);
+    }
+    if (parts.length) {
+        metaEl.textContent = parts.join('　');
+        metaEl.hidden = false;
+    } else {
+        metaEl.textContent = '';
+        metaEl.hidden = true;
+    }
+
+    modal.style.display = 'flex';
+
+    const okBtn = document.getElementById('globalErrorOk');
+    if (okBtn) {
+        setTimeout(() => okBtn.focus(), 0);
+    }
+}
+
+/**
+ * Api 层已对统一错误弹窗时不再重复提示。
+ */
+function notifyErrorUnlessShown(error, fallbackMessage) {
+    if (error && error.apiErrorDialogShown) return;
+    const msg = (error && error.message) || fallbackMessage || '操作失败';
+    if (typeof showErrorDialog === 'function') {
+        showErrorDialog({title: '错误', message: msg});
+    } else {
+        window.alert(msg);
+    }
+}
