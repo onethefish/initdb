@@ -6,7 +6,7 @@ CREATE TABLE chat_session
     database_name varchar(255)  not null comment '数据库名称',
     schema_name   varchar(255)  not null comment 'schema',
     host          varchar(16)   not null comment '数据库主机地址',
-    port          varchar(8)    not null comment '数据库端口',
+    port          varchar(10)    not null comment '数据库端口',
     url           varchar(1024) not null comment '数据库连接URL',
     username      varchar(255)  not null comment '数据库用户名',
     password      varchar(255)  not null comment '数据库密码',
