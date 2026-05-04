@@ -129,7 +129,22 @@ public class DBAgentServiceImpl implements DBAgentService {
                         }
                         return "";
                     })
-                    .filter(StringUtils::hasText);
+                    .filter(StringUtils::hasText)
+                    .switchIfEmpty(Flux.defer(() -> {
+                        log.warn("chatStream emitted no text for sessionId={}, model may have returned empty tokens", sessionId);
+                        return Flux.just("未收到模型的文本输出，请重试。若多次出现，请检查模型 API、配额及网络；"
+                                + "若刚做过对话压缩，可新建会话再试。");
+                    }))
+                    .onErrorResume(e -> {
+                        if (e instanceof IllegalStateException && e.getMessage() != null
+                                && e.getMessage().contains("Empty flux detected")) {
+                            log.warn("LLM stream empty for sessionId={}: {}", sessionId, e.getMessage());
+                            return Flux.just("模型流式通道无有效内容（API 无结果、内容审核或上下文异常等）。请稍后重试，或新建会话。"
+                                    + " 详情：" + e.getMessage());
+                        }
+                        log.error("chatStream failed sessionId={}", sessionId, e);
+                        return Flux.just("对话生成失败: " + e.getMessage());
+                    });
         } catch (Exception e) {
             return Flux.just("Sorry, an error occurred: sessionId is null");
         }

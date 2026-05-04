@@ -1,4 +1,4 @@
-/* global Api, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog */
+/* global Api, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, escapeHtml, marked */
 'use strict';
 
 let sessions = [];
@@ -288,11 +288,27 @@ function renderChatMessages(messages) {
     chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
 }
 
+function parseBotMarkdown(md) {
+    const raw = String(md ?? '');
+    if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+        try {
+            return marked.parse(raw, {breaks: true});
+        } catch (e) {
+            console.warn('Markdown parse failed', e);
+        }
+    }
+    return `<pre class="bot-md-fallback">${escapeHtml(raw)}</pre>`;
+}
+
 function addMessageToDOM(role, content) {
     const chatMessagesElement = document.getElementById('chatMessages');
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}-message`;
-    messageDiv.innerHTML = content;
+    if (role === 'user') {
+        messageDiv.innerHTML = escapeHtml(content);
+    } else {
+        messageDiv.innerHTML = parseBotMarkdown(content);
+    }
     chatMessagesElement.appendChild(messageDiv);
 
     chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
@@ -351,7 +367,7 @@ async function sendMessage() {
 
         const flushStreamToDom = () => {
             streamRafId = null;
-            botMessageDiv.textContent = fullResponse;
+            botMessageDiv.innerHTML = parseBotMarkdown(fullResponse);
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
         };
 
@@ -380,7 +396,7 @@ async function sendMessage() {
             throw new Error('请求失败：返回内容为空');
         }
 
-        botMessageDiv.textContent = fullResponse;
+        botMessageDiv.innerHTML = parseBotMarkdown(fullResponse);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
         const botMsg = {role: 'bot', content: fullResponse};
