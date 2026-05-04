@@ -3,14 +3,13 @@ package cn.fish.initDB.service.impl;
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
+import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.initDB.util.NodeOutputUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
-import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
@@ -18,11 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springaicommunity.mcp.annotation.McpTool;
 import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
-import java.util.Collection;
 import java.util.Objects;
 
 @Slf4j
@@ -51,32 +50,20 @@ public class DBAgentServiceImpl implements DBAgentService {
              3. 编写SQL
              4. sql_check - 验证SQL
              5. get_table_data - 执行查询
-             6. 用中文回答
+             6. 用Markdown表格格式回答，必须包含表头和数据行
             
              注意：
              - 简单查询（只问表名/表结构）不需要走完整流程
              - 执行前必验证SQL
              - 工具返回空结果时必须如实告知，不得自行编造数据
             """;
-    private static final String SUMMARY_PROMPT = """
-            你是对话总结助手。将以下对话历史总结为简洁的要点:
-            - 用户的核心需求
-            - 涉及的关键表和字段
-            - 重要的SQL查询或结论
-            
-            要求:
-            - 用中文总结
-            - 控制在100字以内
-            - 保留关键技术细节
-            """;
     private final ReactAgent dbAgent;
-    private final ReactAgent summaryAgent;
-    private final BaseCheckpointSaver baseCheckpointSaver;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public DBAgentServiceImpl(BaseCheckpointSaver baseCheckpointSaver, ChatModel chatModel, GetAllTablesTool getAllTablesTool,
+    public DBAgentServiceImpl(ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                               GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool,
-                              KnowledgeRetrievalTool knowledgeRetrievalTool, MemorySaver memorySaver) {
-        this.baseCheckpointSaver = baseCheckpointSaver;
+                              KnowledgeRetrievalTool knowledgeRetrievalTool, MemorySaver memorySaver, ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.dbAgent = ReactAgent.builder()
                                  .name("数据库智能体")          // 名称
                                  .systemPrompt(SYSTEM_PROMPT) //提示词
@@ -94,12 +81,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                                  )
                                  .build();
 
-        this.summaryAgent = ReactAgent.builder()
-                                      .name("对话总结助手")
-                                      .systemPrompt(SUMMARY_PROMPT)
-                                      .model(chatModel)
-                                      .enableLogging(false)
-                                      .build();
+
     }
 
     @Override
@@ -114,7 +96,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                                                   .mergeReasoningContent(true)
                                                   .build();
             NodeOutput result = dbAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
-            autoSummarizeIfNeeded(config);
+            eventPublisher.publishEvent(new ChartAutoSummarizeEvent(this, config));
             String response = NodeOutputUtil.extractResponse(result);
             return new ChatResponse(response, sessionId);
         } catch (Exception e) {
@@ -135,7 +117,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                                                   .build();
             Flux<NodeOutput> stream = dbAgent.stream(chatRequest.getMessage(), config);
             return stream
-                    .doOnComplete(() -> autoSummarizeIfNeeded(config))
+                    .doOnComplete(() -> eventPublisher.publishEvent(new ChartAutoSummarizeEvent(this, config)))
                     .filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND()) // 过滤掉开始和结束事件
                     .map(nodeOutput -> {
                         if (nodeOutput instanceof StreamingOutput<?> streamingOutput) {
@@ -160,33 +142,4 @@ public class DBAgentServiceImpl implements DBAgentService {
         return chat(new ChatRequest(message, sessionId)).getResponse();
     }
 
-
-    private void autoSummarizeIfNeeded(RunnableConfig config) {
-        try {
-            Collection<Checkpoint> checkpoints = baseCheckpointSaver.list(config);
-            if (checkpoints.size() >= 4) {
-                StringBuilder conversationHistory = new StringBuilder();
-                checkpoints.forEach(checkpoint -> {
-                    checkpoint.getState().forEach((key, value) -> {
-                        if ("messages".equals(key) && value != null) {
-                            conversationHistory.append(value.toString()).append("\n");
-                        }
-                    });
-                });
-
-                if (!conversationHistory.isEmpty()) {
-                    summaryAgent.invoke(conversationHistory.toString(), config);
-                    log.info("Auto summary generated for session: {}", config.threadId().orElse("unknown"));
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to generate auto summary", e);
-        }
-    }
-    //    private void manageCheckpoints(RunnableConfig config) throws Exception {
-    //        Collection<Checkpoint> checkpoints = baseCheckpointSaver.list(config);
-    //        if (checkpoints.size() > 5) {
-    //            baseCheckpointSaver.release(config);
-    //        }
-    //    }
 }
