@@ -33,19 +33,19 @@ public class ChatSession {
     /**
      * 数据库主机地址
      */
-    @TableField("db_host")
+    @TableField("host")
     private String host;
 
     /**
      * 数据库端口
      */
-    @TableField("db_port")
+    @TableField("port")
     private String port;
 
     /**
      * 数据库连接URL
      */
-    @TableField("db_url")
+    @TableField("url")
     private String url;
 
     /**
