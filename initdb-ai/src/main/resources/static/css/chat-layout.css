@@ -92,15 +92,37 @@
     white-space: pre-line;
 }
 
-/* 助手气泡：不压扁表格列宽；超出 .message 限宽时出现横向滚动条（宽度由 .message max-width 约束） */
+/* 宽度随内容收缩（不超过 .message 的 max-width）；高度随内容，不设 min-height 避免空泡被撑死 */
 .bot-message {
     align-self: flex-start;
+    width: max-content;
+    max-width: 90%;
     background-color: #f0f0f0;
     border-bottom-left-radius: 2px;
     white-space: normal;
     min-width: 0;
-    min-height: max(6.5rem, 120px);
+    overflow: visible;
+}
+
+.bot-message-body {
+    max-width: 100%;
     overflow-x: auto;
+    overflow-y: visible;
+}
+
+/* 流式阶段：不完整 Markdown 不用 marked，避免 DOM 错乱、视觉重叠 */
+.bot-message-body .bot-stream-plain {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    line-height: inherit;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    background: transparent;
+    border: none;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .bot-message table {
@@ -161,4 +183,7 @@
 .bot-message .bot-md-fallback {
     margin: 0;
     white-space: pre-wrap;
+    overflow-x: auto;
+    max-width: 100%;
+    box-sizing: border-box;
 }

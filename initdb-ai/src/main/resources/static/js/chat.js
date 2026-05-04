@@ -300,6 +300,16 @@ function parseBotMarkdown(md) {
     return `<pre class="bot-md-fallback">${escapeHtml(raw)}</pre>`;
 }
 
+function setBotMessageHtml(messageDiv, md) {
+    messageDiv.innerHTML = `<div class="bot-message-body">${parseBotMarkdown(md)}</div>`;
+}
+
+/** 流式输出用纯文本，避免不完整 Markdown 反复 marked 导致重叠/错乱；结束后再 setBotMessageHtml */
+function setBotMessageStreamingPlain(messageDiv, plain) {
+    messageDiv.innerHTML =
+        `<div class="bot-message-body"><pre class="bot-stream-plain">${escapeHtml(plain)}</pre></div>`;
+}
+
 function addMessageToDOM(role, content) {
     const chatMessagesElement = document.getElementById('chatMessages');
     const messageDiv = document.createElement('div');
@@ -307,7 +317,7 @@ function addMessageToDOM(role, content) {
     if (role === 'user') {
         messageDiv.innerHTML = escapeHtml(content);
     } else {
-        messageDiv.innerHTML = parseBotMarkdown(content);
+        setBotMessageHtml(messageDiv, content);
     }
     chatMessagesElement.appendChild(messageDiv);
 
@@ -367,7 +377,7 @@ async function sendMessage() {
 
         const flushStreamToDom = () => {
             streamRafId = null;
-            botMessageDiv.innerHTML = parseBotMarkdown(fullResponse);
+            setBotMessageStreamingPlain(botMessageDiv, fullResponse);
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
         };
 
@@ -396,7 +406,7 @@ async function sendMessage() {
             throw new Error('请求失败：返回内容为空');
         }
 
-        botMessageDiv.innerHTML = parseBotMarkdown(fullResponse);
+        setBotMessageHtml(botMessageDiv, fullResponse);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
         const botMsg = {role: 'bot', content: fullResponse};
