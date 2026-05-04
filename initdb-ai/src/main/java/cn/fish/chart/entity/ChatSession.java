@@ -28,7 +28,7 @@ public class ChatSession {
     /**
      * 数据库类型（如：mysql、postgresql）
      */
-    @TableField("db_type")
+    @TableField("type")
     private String type;
     /**
      * 数据库主机地址
