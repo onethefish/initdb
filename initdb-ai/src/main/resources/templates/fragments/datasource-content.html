@@ -50,54 +50,6 @@
   </div>
 </div>
 
-<!-- 知识文档管理弹窗 -->
-<div class="modal" id="knowledgeDocModal" th:fragment="knowledgeDocModal">
-  <div class="modal-content knowledge-doc-modal-content">
-    <div class="modal-header">
-      <h2>管理数据库知识文档</h2>
-      <button class="modal-close-btn" onclick="closeKnowledgeDocModal()" type="button">×</button>
-    </div>
-    <div class="knowledge-doc-toolbar">
-      <input id="kdFilterName" placeholder="文档名称" type="text">
-      <select id="kdFilterCategory" title="文档分类">
-        <option value="">分类(全部)</option>
-        <option value="design">数据库设计文档</option>
-        <option value="ops">数据库运维文档</option>
-        <option value="other">其他文档</option>
-      </select>
-      <button class="btn btn-primary btn-xs" onclick="addKnowledgeDocWithFilter()" type="button">添加</button>
-      <button class="btn btn-primary btn-xs" onclick="filterKnowledgeDocs()" type="button">查询</button>
-      <button class="btn btn-secondary btn-xs" onclick="resetKnowledgeDocFilters()" type="button">重置</button>
-    </div>
-    <div class="knowledge-doc-categories">
-      <div class="knowledge-doc-category" data-category="design">
-        <div class="category-header">
-          <span class="category-title">数据库设计文档</span>
-        </div>
-        <div class="category-content" id="designDocsList">
-          <!-- 文档列表将动态加载 -->
-        </div>
-      </div>
-      <div class="knowledge-doc-category" data-category="ops">
-        <div class="category-header">
-          <span class="category-title">数据库运维文档</span>
-        </div>
-        <div class="category-content" id="opsDocsList">
-          <!-- 文档列表将动态加载 -->
-        </div>
-      </div>
-      <div class="knowledge-doc-category" data-category="other">
-        <div class="category-header">
-          <span class="category-title">其他文档</span>
-        </div>
-        <div class="category-content" id="otherDocsList">
-          <!-- 文档列表将动态加载 -->
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="modal" id="datasourceModal" th:fragment="datasourceModal">
   <div class="modal-content datasource-modal-content">
     <h2 id="datasourceModalTitle">新增数据源</h2>
