@@ -132,6 +132,7 @@ function renderDatasourceTable() {
                   <button type="button" onclick="testDatasourceRow('${ds.id}')">测试</button>
                   <button type="button" onclick="openDatasourceModal('${ds.id}')">编辑</button>
                   <button type="button" onclick="deleteDatasource('${ds.id}')">删除</button>
+                  <button type="button" onclick="openKnowledgeDocModal('${ds.id}')">管理知识文档</button>
                 </div>
             </td>
         `;
@@ -355,3 +356,111 @@ async function deleteSelectedDatasource() {
 }
 
 bindDatasourceUrlAutoSync();
+
+/* ========== 知识文档管理 ========== */
+let currentKnowledgeDocDatasourceId = null;
+let knowledgeDocList = [];
+
+async function openKnowledgeDocModal(datasourceId) {
+    currentKnowledgeDocDatasourceId = datasourceId;
+    document.getElementById('knowledgeDocModal').style.display = 'flex';
+    resetKnowledgeDocFilters();
+    await loadKnowledgeDocs();
+}
+
+function closeKnowledgeDocModal() {
+    currentKnowledgeDocDatasourceId = null;
+    document.getElementById('knowledgeDocModal').style.display = 'none';
+}
+
+async function loadKnowledgeDocs() {
+    if (!currentKnowledgeDocDatasourceId) return;
+    // 模拟假数据
+    knowledgeDocList = [
+        {id: '1', name: '用户表设计文档.pdf', category: 'design'},
+        {id: '2', name: '订单表结构说明.docx', category: 'design'},
+        {id: '3', name: '数据库备份策略.md', category: 'ops'},
+        {id: '4', name: '性能优化指南.pdf', category: 'ops'},
+        {id: '5', name: '数据字典.xlsx', category: 'other'},
+    ];
+    renderKnowledgeDocs(knowledgeDocList);
+}
+
+function getKnowledgeDocFilters() {
+    return {
+        name: document.getElementById('kdFilterName').value.trim().toLowerCase(),
+        category: document.getElementById('kdFilterCategory').value.trim()
+    };
+}
+
+function filterKnowledgeDocs() {
+    const filters = getKnowledgeDocFilters();
+    const filtered = knowledgeDocList.filter(doc => {
+        const nameMatch = !filters.name || doc.name.toLowerCase().includes(filters.name);
+        const catMatch = !filters.category || doc.category === filters.category;
+        return nameMatch && catMatch;
+    });
+    renderKnowledgeDocs(filtered, filters.category);
+}
+
+function resetKnowledgeDocFilters() {
+    document.getElementById('kdFilterName').value = '';
+    document.getElementById('kdFilterCategory').value = '';
+}
+
+function renderKnowledgeDocs(docs, filterCategory = '') {
+    const categories = {design: [], ops: [], other: []};
+    (docs || []).forEach(doc => {
+        const cat = doc.category || 'other';
+        if (categories[cat]) categories[cat].push(doc);
+        else categories.other.push(doc);
+    });
+
+    ['design', 'ops', 'other'].forEach(cat => {
+        const container = document.getElementById(cat + 'DocsList');
+        const categoryDiv = container?.closest('.knowledge-doc-category');
+        if (!container) return;
+
+        // 根据分类过滤显示/隐藏整个分类区域
+        if (filterCategory && cat !== filterCategory) {
+            if (categoryDiv) categoryDiv.classList.add('hidden');
+            return;
+        }
+        if (categoryDiv) categoryDiv.classList.remove('hidden');
+
+        if (!categories[cat].length) {
+            container.innerHTML = '<div class="empty-doc-hint">暂无文档</div>';
+            return;
+        }
+        container.innerHTML = categories[cat].map(doc => `
+            <div class="doc-item">
+                <span class="doc-name">${escapeHtml(doc.name)}</span>
+                <div class="doc-actions">
+                    <button type="button" onclick="viewKnowledgeDoc('${doc.id}')">查看</button>
+                    <button type="button" onclick="deleteKnowledgeDoc('${doc.id}')">删除</button>
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+function addKnowledgeDoc(category) {
+    if (!currentKnowledgeDocDatasourceId) return;
+    alert('添加文档功能待实现，分类: ' + category);
+}
+
+function addKnowledgeDocWithFilter() {
+    const category = document.getElementById('kdFilterCategory').value.trim() || 'other';
+    addKnowledgeDoc(category);
+}
+
+async function viewKnowledgeDoc(docId) {
+    alert('查看文档: ' + docId);
+}
+
+async function deleteKnowledgeDoc(docId) {
+    if (!confirm('确认删除该文档吗？')) return;
+    knowledgeDocList = knowledgeDocList.filter(d => d.id !== docId);
+    filterKnowledgeDocs();
+    alert('删除成功（模拟）');
+}
