@@ -67,8 +67,8 @@ public class ChatSession {
     /**
      * schema
      */
-    @TableField("schema_name")
-    private String schemaName;
+    @TableField("schema")
+    private String schema;
     /**
      * 创建会话时选择的数据源 ID（不入库，仅用于 /chat/create 请求体）
      */

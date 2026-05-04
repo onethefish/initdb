@@ -113,7 +113,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
                 String catalog = conn.getCatalog();//目录名称，一般都为空
                 //schema = "%";//数据库名，对于mysql来说用通配符
                 DatabaseMetaData dbmd = conn.getMetaData();
-                String schema = chatSession.getSchemaName();//数据库名称
+                String schema = chatSession.getSchema();//数据库名称
                 // 表第一个字段为表名，第二个为表注释
                 ResultSet tablesResultSet = dbmd.getTables(catalog, schema, "%", new String[]{"TABLE"});
                 while (tablesResultSet.next()) {
@@ -140,7 +140,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
             try (Connection conn = dataSource.getConnection()) {
                 DatabaseMetaData databaseMetaData = conn.getMetaData();
                 String catalog = conn.getCatalog();
-                String schema = chatSession.getSchemaName();
+                String schema = chatSession.getSchema();
                 //            ArrayList<Table> resultList = new ArrayList();
                 Table table = new Table();
                 table.setTableName(tableName);
