@@ -1,56 +1,34 @@
 CREATE TABLE chat_session
 (
-    session_id   VARCHAR(32) PRIMARY KEY, -- 会话ID
-    session_name VARCHAR(255),             -- 会话名称
-    type          VARCHAR(32),              -- 数据库类型（如：mysql、postgresql等）
-    database_name VARCHAR(255),             -- 数据库名称
-    schema       VARCHAR(255),             -- schema
-    host         VARCHAR(16),             -- 数据库主机地址
-    port         VARCHAR(8),              -- 数据库端口
-    url          VARCHAR(1024),             -- 数据库连接URL
-    username     VARCHAR(255),             -- 数据库用户名
-    password     VARCHAR(255)              -- 数据库密码
-);
-
-COMMENT ON TABLE chat_session IS '聊天会话表';
-COMMENT ON COLUMN chat_session.session_id IS '会话ID';
-COMMENT ON COLUMN chat_session.session_name IS '会话名称';
-COMMENT ON COLUMN chat_session.type IS '数据库类型（如：mysql、postgresql等）';
-COMMENT ON COLUMN chat_session.database_name IS '数据库名称';
-COMMENT ON COLUMN chat_session.schema IS 'schema';
-COMMENT ON COLUMN chat_session.host IS '数据库主机地址';
-COMMENT ON COLUMN chat_session.port IS '数据库端口';
-COMMENT ON COLUMN chat_session.url IS '数据库连接URL';
-COMMENT ON COLUMN chat_session.username IS '数据库用户名';
-COMMENT ON COLUMN chat_session.password IS '数据库密码';
+    session_id    varchar(32)   not null comment '会话ID',
+    session_name  varchar(255)  not null comment '会话名称',
+    type          varchar(32)   not null comment '数据库类型（如：mysql、postgresql等）',
+    database_name varchar(255)  not null comment '数据库名称',
+    schema_name   varchar(255)  not null comment 'schema',
+    host          varchar(16)   not null comment '数据库主机地址',
+    port          varchar(8)    not null comment '数据库端口',
+    url           varchar(1024) not null comment '数据库连接URL',
+    username      varchar(255)  not null comment '数据库用户名',
+    password      varchar(255)  not null comment '数据库密码',
+    primary key (session_id)
+) comment '会话记录表';
 
 
-CREATE TABLE agent_datasource
+create table agent_datasource
 (
-    id            VARCHAR(32) PRIMARY KEY, -- 数据源ID（主键）
-    name          VARCHAR(255),             -- 数据源名称
-    type          VARCHAR(32),              -- 数据库类型（如：mysql、postgresql等）
-    host          VARCHAR(8),             -- 数据库主机地址
-    port          VARCHAR(8),              -- 数据库端口号
-    database_name VARCHAR(255),             -- 数据库名称
-    username      VARCHAR(255),             -- 数据库用户名
-    password      VARCHAR(255),             -- 数据库密码
-    connection_url VARCHAR(1024),            -- 数据库连接URL
-    status        INTEGER,                  -- 数据源状态（如：启用、禁用等）
-    test_status   INTEGER,                  -- 连接测试状态（如：成功、失败等）
-    description   TEXT                      -- 数据源描述信息
-);
-
-COMMENT ON TABLE agent_datasource IS 'Agent数据源配置表';
-COMMENT ON COLUMN agent_datasource.id IS '数据源ID（主键）';
-COMMENT ON COLUMN agent_datasource.name IS '数据源名称';
-COMMENT ON COLUMN agent_datasource.type IS '数据库类型（如：mysql、postgresql等）';
-COMMENT ON COLUMN agent_datasource.host IS '数据库主机地址';
-COMMENT ON COLUMN agent_datasource.port IS '数据库端口号';
-COMMENT ON COLUMN agent_datasource.database_name IS '数据库名称';
-COMMENT ON COLUMN agent_datasource.username IS '数据库用户名';
-COMMENT ON COLUMN agent_datasource.password IS '数据库密码';
-COMMENT ON COLUMN agent_datasource.connection_url IS '数据库连接URL';
-COMMENT ON COLUMN agent_datasource.status IS '数据源状态（如：启用、禁用等）';
-COMMENT ON COLUMN agent_datasource.test_status IS '连接测试状态（如：成功、失败等）';
-COMMENT ON COLUMN agent_datasource.description IS '数据源描述信息';
+    id             varchar(32)                             not null comment '数据源ID',
+    name           varchar(255)  default ''                not null comment '数据源名称',
+    type           varchar(32)   default ''                not null comment '数据库类型（如：mysql、postgresql等）',
+    host           varchar(8)    default ''                not null comment '数据库主机地址',
+    port           varchar(8)    default ''                not null comment '数据库端口号',
+    database_name  varchar(255)  default ''                not null comment '数据库名称',
+    username       varchar(255)  default ''                not null comment '数据库用户名',
+    password       varchar(255)  default ''                not null comment '数据库密码',
+    connection_url varchar(1024) default ''                not null comment '数据库连接URL',
+    status         tinyint       default 0                 not null comment '数据源状态 0:禁用 1:启用',
+    test_status    tinyint       default 0                 not null comment '连接测试状态 0:未测试 1:成功 2:失败',
+    description    text                                    null comment '数据源描述信息',
+    create_time    datetime      default CURRENT_TIMESTAMP not null comment '创建时间',
+    update_time    datetime      default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    primary key (id)
+) comment 'Agent数据源配置表';

@@ -84,10 +84,10 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         chatSession.setPassword(ds.getPassword());
         chatSession.setType(ds.getType());
         chatSession.setDatabaseName(ds.getDatabaseName());
-        chatSession.setSchema(ds.getDatabaseName());
+        chatSession.setSchemaName(ds.getDatabaseName());
         // todo 这个数据库特殊
         if (DbType.POSTGRE_SQL.getDb().equals(ds.getType())) {
-            chatSession.setSchema("public");
+            chatSession.setSchemaName("public");
         }
         chatSession.setDatasourceId(null);
 
