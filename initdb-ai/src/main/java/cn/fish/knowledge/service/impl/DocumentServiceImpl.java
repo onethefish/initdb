@@ -1,8 +1,9 @@
 package cn.fish.knowledge.service.impl;
 
-import cn.fish.chart.repository.ChatSessionRepository;
-import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.chart.entity.ChatSession;
+import cn.fish.chart.repository.ChatSessionRepository;
+import cn.fish.cloud.serva.file.operate.ServaFile;
+import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.knowledge.repository.VectorStoreRepository;
 import cn.fish.knowledge.service.DocumentService;
 import cn.fish.knowledge.splitter.ParagraphTextSplitter;
@@ -13,26 +14,38 @@ import org.springframework.ai.transformer.splitter.TextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 
 @Service
 public class DocumentServiceImpl implements DocumentService {
 
-    @Autowired
-    private VectorStoreRepository vectorStoreRepository;
-    @Autowired
-    private ChatSessionRepository chatSessionRepository;
+    private final VectorStoreRepository vectorStoreRepository;
+    private final ChatSessionRepository chatSessionRepository;
+    private final ServaFile servaFile;
+
+    public DocumentServiceImpl(VectorStoreRepository vectorStoreRepository, ChatSessionRepository chatSessionRepository, ServaFile servaFile) {
+        this.vectorStoreRepository = vectorStoreRepository;
+        this.chatSessionRepository = chatSessionRepository;
+        this.servaFile = servaFile;
+    }
 
     @Override
     public void importTxtDocument(String sessionId, MultipartFile file) {
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
         if (ObjUtil.isEmpty(chatSession)) {
             throw new CommonException("Sorry, an error occurred: chatSession is null");
+        }
+        // todo
+        try {
+            String fileId = servaFile.upload(file.getInputStream());
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         List<Document> splitDocuments = getAndSplitDocument(file);
         addMetadata(sessionId, splitDocuments);
