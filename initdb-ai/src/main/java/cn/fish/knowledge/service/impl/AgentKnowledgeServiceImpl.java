@@ -48,7 +48,7 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
             knowledge.complete();
 
         } catch (Exception e) {
-            log.error("上传向量失败", e);
+            log.error("上传向量失败: {}", e.getMessage(), e);
             knowledge.fail(e.getMessage());
         } finally {
             // 更新状态
