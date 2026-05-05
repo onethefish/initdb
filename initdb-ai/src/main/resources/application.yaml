@@ -6,15 +6,15 @@ spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     url: ${MYSQL_URL:jdbc:postgresql://127.0.0.1:5432/init_db?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
-    username: ${MYSQL_USERNAME:init_db}
-    password: ${MYSQL_PASSWORD:postgres}
+    username: ${MYSQL_USERNAME:ken}
+    password: ${MYSQL_PASSWORD:}
     hikari:
       maximum-pool-size: 5
       minimum-idle: 1
       idle-timeout: 30000
   ai:
     openai:
-      api-key: ${AI_OPENAI_API-KEY}
+      api-key: ${AI_OPENAI_API-KEY:sk-72c8dd568bcb46b1bff0051f616fc99d}
       base-url: "https://dashscope.aliyuncs.com/compatible-mode"
       chat:
         options:
