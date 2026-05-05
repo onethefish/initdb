@@ -1,5 +1,6 @@
 package cn.fish.initDB.event;
 
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
@@ -14,11 +15,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -41,7 +38,7 @@ public class ChartEventListener {
             - 用户的核心需求
             - 涉及的关键表和字段
             - 重要的SQL查询或结论
-
+            
             要求:
             - 用中文总结
             - 控制在100字以内
@@ -82,7 +79,13 @@ public class ChartEventListener {
                 if (messages.size() < COMPRESS_MIN_MESSAGES) {
                     return;
                 }
-                int split = messages.size() - KEEP_RECENT_MESSAGES;
+                int split = resolveCompressSplitIndex(messages, KEEP_RECENT_MESSAGES);
+                if (split < 1) {
+                    log.info(
+                            "Skip compress: no tool-safe split (would orphan ToolResponse or truncate tool round), thread={}",
+                            threadId);
+                    return;
+                }
                 List<Message> head = messages.subList(0, split);
                 List<Message> tail = new ArrayList<>(messages.subList(split, messages.size()));
 
@@ -92,7 +95,7 @@ public class ChartEventListener {
                 }
                 String fullPrompt = SUMMARY_PROMPT + "\n\n---对话记录---\n" + historyBlock;
                 String summary = chatModel.call(new Prompt(fullPrompt)).getResult().getOutput().getText();
-                if (summary == null || summary.isBlank()) {
+                if (StrUtil.isEmpty(summary)) {
                     log.warn("Auto summary empty, skip checkpoint update");
                     return;
                 }
@@ -106,23 +109,23 @@ public class ChartEventListener {
                             threadId);
                     return;
                 }
-
+                String trimSummary = summary.trim();
                 List<Message> compressed = new ArrayList<>();
                 compressed.add(
                         new UserMessage(
                                 "以下为此前多轮对话的压缩摘要，请在回答时保留其中涉及的业务与库表信息：\n\n"
-                                        + summary.trim()));
+                                        + trimSummary));
                 compressed.addAll(tail);
 
                 Map<String, Object> newState = new HashMap<>(again.get().getState());
                 newState.put("messages", compressed);
 
                 Checkpoint updated = Checkpoint.builder()
-                        .id(again.get().getId())
-                        .state(newState)
-                        .nodeId(again.get().getNodeId())
-                        .nextNodeId(again.get().getNextNodeId())
-                        .build();
+                                               .id(again.get().getId())
+                                               .state(newState)
+                                               .nodeId(again.get().getNodeId())
+                                               .nextNodeId(again.get().getNextNodeId())
+                                               .build();
 
                 RunnableConfig putConfig = RunnableConfig.builder(config).checkPointId(again.get().getId()).build();
                 baseCheckpointSaver.put(putConfig, updated);
@@ -131,6 +134,9 @@ public class ChartEventListener {
                         threadId,
                         messages.size(),
                         compressed.size());
+                if (log.isDebugEnabled()) {
+                    log.debug(trimSummary);
+                }
             } catch (Exception e) {
                 log.warn("Failed to auto summarize / compress checkpoint", e);
             }
@@ -168,5 +174,60 @@ public class ChartEventListener {
             return "工具: " + trm.getResponses();
         }
         return m.getClass().getSimpleName() + ": " + m;
+    }
+
+    /**
+     * 在「保留最近 keepRecent 条」基础上向左扩展切分点，避免：
+     * <ul>
+     *   <li>后缀以 {@link ToolResponseMessage} 开头（工具结果失去对应的 assistant tool_calls）；</li>
+     *   <li>后缀内某条带 tool_calls 的 {@link AssistantMessage} 所需的 tool response 被切到 head 中。</li>
+     * </ul>
+     * 否则会话在压缩后发给模型时容易整流为空，触发 graph 中 {@code Empty flux detected for key 'messages'}。
+     */
+    private static int resolveCompressSplitIndex(List<Message> messages, int keepRecent) {
+        int n = messages.size();
+        int split = n - keepRecent;
+        if (split < 1) {
+            return -1;
+        }
+        while (split >= 1 && !isToolSafeMessageSuffix(messages, split)) {
+            split--;
+        }
+        return split >= 1 ? split : -1;
+    }
+
+    private static boolean isToolSafeMessageSuffix(List<Message> messages, int split) {
+        if (split < 0 || split >= messages.size()) {
+            return false;
+        }
+        if (messages.get(split) instanceof ToolResponseMessage) {
+            return false;
+        }
+        for (int i = split; i < messages.size(); i++) {
+            if (!(messages.get(i) instanceof AssistantMessage am) || !am.hasToolCalls()) {
+                continue;
+            }
+            Set<String> pending = new HashSet<>();
+            for (AssistantMessage.ToolCall tc : am.getToolCalls()) {
+                pending.add(tc.id());
+            }
+            int j = i + 1;
+            while (!pending.isEmpty() && j < messages.size()) {
+                Message step = messages.get(j);
+                if (step instanceof ToolResponseMessage trm) {
+                    for (ToolResponseMessage.ToolResponse resp : trm.getResponses()) {
+                        pending.remove(resp.id());
+                    }
+                    j++;
+                }
+                else {
+                    return false;
+                }
+            }
+            if (!pending.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

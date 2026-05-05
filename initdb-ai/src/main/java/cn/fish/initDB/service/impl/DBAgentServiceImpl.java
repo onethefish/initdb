@@ -40,9 +40,9 @@ public class DBAgentServiceImpl implements DBAgentService {
              5. 每个工具在一次对话中最多调用一次
             
             响应策略：
-             - 用户问"有哪些表/列出表/列出所有表" → 调用get_all_tables后直接返回结果，不要继续其他步骤
-             - 用户问"表结构/字段信息" → 调用get_table_schema后直接返回结果
-             - 用户要查具体数据 → 按工作流程执行
+             - 用户问"有哪些表/列出表/列出所有表" → 调用get_all_tables后直接返回结果，用Markdown表格格式回答，不要继续其他步骤
+             - 用户问"表结构/字段信息" → 调用get_table_schema后直接返回结果，用Markdown表格格式回答
+             - 用户要查具体数据 → 按查数据完整流程执行
             
              查数据完整流程（仅在用户明确要求查数据时执行）：
              1. get_all_tables - 获取所有表
