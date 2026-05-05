@@ -6,6 +6,7 @@ import cn.fish.knowledge.entity.AgentKnowledge;
 import cn.fish.knowledge.repository.AgentKnowledgeRepository;
 import cn.fish.knowledge.repository.VectorStoreRepository;
 import cn.fish.knowledge.service.AgentKnowledgeService;
+import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -33,6 +34,9 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
     }
 
     private void uploadVector(AgentKnowledge knowledge) {
+        if (ObjUtil.equals(knowledge.getKnowledgeInfo().getIsRecall(), 0)) {
+            return;
+        }
         knowledge.uploading();
         try {
             File file = servaFile.getFile(knowledge.getKnowledgeInfo().getFileId());

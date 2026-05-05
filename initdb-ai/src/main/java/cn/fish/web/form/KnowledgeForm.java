@@ -44,6 +44,12 @@ public class KnowledgeForm {
 
 
     /**
+     * 业务状态：1=召回（该知识参与向量检索，会被AI助手检索到）, 0=非召回（该知识不参与检索，仅存档）
+     */
+    private Integer isRecall;
+
+
+    /**
      * 分块策略类型
      *
      * @see SplitterType

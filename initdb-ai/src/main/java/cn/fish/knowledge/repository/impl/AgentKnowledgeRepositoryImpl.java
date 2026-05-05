@@ -2,8 +2,10 @@ package cn.fish.knowledge.repository.impl;
 
 import cn.fish.knowledge.dul.AgentKnowledgePo;
 import cn.fish.knowledge.entity.AgentKnowledge;
+import cn.fish.knowledge.info.KnowledgeInfo;
 import cn.fish.knowledge.mapper.AgentKnowledgeMapper;
 import cn.fish.knowledge.repository.AgentKnowledgeRepository;
+import cn.hutool.core.util.ObjUtil;
 import com.baomidou.mybatisplus.extension.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +20,10 @@ public class AgentKnowledgeRepositoryImpl extends CrudRepository<AgentKnowledgeM
         knowledge.setKnowledgeId(po.getId());
     }
 
-    private static AgentKnowledgePo convert(AgentKnowledge knowledge) {
+    private AgentKnowledgePo convert(AgentKnowledge knowledge) {
         AgentKnowledgePo po = new AgentKnowledgePo();
         po.setId(knowledge.getKnowledgeId())
+            .setEmbeddingStatus(knowledge.getEmbeddingStatus())
             .setDatasourceId(knowledge.getKnowledgeInfo().getDatasourceId())
             .setTitle(knowledge.getKnowledgeInfo().getTitle())
             .setType(knowledge.getKnowledgeInfo().getType())
@@ -35,6 +38,30 @@ public class AgentKnowledgeRepositoryImpl extends CrudRepository<AgentKnowledgeM
             .setSplitterType(knowledge.getKnowledgeInfo().getSplitterType())
         ;
         return po;
+    }
+
+    private AgentKnowledge assemble(AgentKnowledgePo po) {
+        if (ObjUtil.isNull(po)) {
+            return null;
+        }
+        AgentKnowledge knowledge = new AgentKnowledge();
+        knowledge.setKnowledgeId(po.getId())
+            .setEmbeddingStatus(po.getEmbeddingStatus())
+            .setKnowledgeInfo(new KnowledgeInfo()
+                .setDatasourceId(po.getDatasourceId())
+                .setTitle(po.getTitle())
+                .setType(po.getType())
+                .setQuestion(po.getQuestion())
+                .setContent(po.getContent())
+                .setIsRecall(po.getIsRecall())
+                .setEmbeddingStatus(po.getEmbeddingStatus())
+                .setErrorMsg(po.getErrorMsg())
+                .setFileId(po.getFileId())
+                .setFileSize(po.getFileSize())
+                .setFileType(po.getFileType())
+                .setSplitterType(po.getSplitterType())
+            );
+        return knowledge;
     }
 
     @Override

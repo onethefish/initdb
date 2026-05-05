@@ -22,11 +22,6 @@ public class AgentKnowledge {
 
 
     /**
-     * 业务状态：1=召回（该知识参与向量检索，会被AI助手检索到）, 0=非召回（该知识不参与检索，仅存档）
-     */
-    private Integer isRecall;
-
-    /**
      * 向量化状态
      *
      * @see EmbeddingStatus
@@ -40,10 +35,6 @@ public class AgentKnowledge {
      */
     private KnowledgeInfo knowledgeInfo;
 
-    public void init() {
-        this.isRecall = 1;
-        this.embeddingStatus = EmbeddingStatus.PENDING.getValue();
-    }
 
     public void uploading() {
         this.embeddingStatus = EmbeddingStatus.PROCESSING.getValue();
@@ -57,5 +48,14 @@ public class AgentKnowledge {
 
     public void complete() {
         this.embeddingStatus = EmbeddingStatus.COMPLETED.getValue();
+    }
+
+    public void init() {
+        if (knowledgeInfo.getIsRecall() == 1) {
+            this.embeddingStatus = EmbeddingStatus.PENDING.getValue();
+        } else {
+            this.embeddingStatus = EmbeddingStatus.COMPLETED.getValue();
+        }
+
     }
 }

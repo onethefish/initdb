@@ -59,6 +59,7 @@ public class AgentKnowledgeController extends BaseController {
         }
         bo
             .setDatasourceId(form.getDatasourceId())
+            .setIsRecall(form.getIsRecall())
             .setTitle(form.getTitle())
             .setType(form.getType())
             .setQuestion(form.getQuestion())
