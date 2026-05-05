@@ -70,4 +70,10 @@ public class AgentKnowledgeRepositoryImpl extends CrudRepository<AgentKnowledgeM
         AgentKnowledgePo po = convert(knowledge);
         updateById(po);
     }
+
+    @Override
+    public AgentKnowledge findById(String knowledgeId) {
+        AgentKnowledgePo po = getById(knowledgeId);
+        return assemble(po);
+    }
 }

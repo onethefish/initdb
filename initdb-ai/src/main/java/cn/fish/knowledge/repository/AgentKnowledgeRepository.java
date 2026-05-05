@@ -16,4 +16,12 @@ public interface AgentKnowledgeRepository extends IRepository<AgentKnowledgePo> 
      * @param knowledge knowledge
      */
     void updateKnowledge(AgentKnowledge knowledge);
+
+
+    /**
+     * 根据id查询知识
+     * @param knowledgeId knowledgeId
+     * @return AgentKnowledge
+     */
+    AgentKnowledge findById(String knowledgeId);
 }

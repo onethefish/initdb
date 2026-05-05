@@ -1,5 +1,6 @@
-package cn.fish.initDB.event;
+package cn.fish.initDB.event.listen;
 
+import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
@@ -38,7 +39,7 @@ public class ChartEventListener {
             - 用户的核心需求
             - 涉及的关键表和字段
             - 重要的SQL查询或结论
-            
+
             要求:
             - 用中文总结
             - 控制在100字以内
