@@ -125,7 +125,6 @@ public class ChartEventListener {
                         .build();
 
                 RunnableConfig putConfig = RunnableConfig.builder(config).checkPointId(again.get().getId()).build();
-                baseCheckpointSaver.release(config);
                 baseCheckpointSaver.put(putConfig, updated);
                 log.info(
                         "Auto summary applied: thread={}, messages {} -> {}",

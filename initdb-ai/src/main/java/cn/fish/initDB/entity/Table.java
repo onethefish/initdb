@@ -2,12 +2,14 @@ package cn.fish.initDB.entity;
 
 import com.alibaba.fastjson2.JSONArray;
 import lombok.Data;
+import lombok.Setter;
 
 import java.util.*;
 
 @Data
 public class Table {
 
+    @Setter
     private String tableName;
     private String remarks;
     private Map<Integer, String> primaryKeysMap = new TreeMap<>(Integer::compareTo);
@@ -39,10 +41,6 @@ public class Table {
             joiner.add(columnCode + ":" + remarks);
         }
         return joiner;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName.toUpperCase();
     }
 
     public void addTableColumnMap(String columnName, TableColumn tableColumn) {
