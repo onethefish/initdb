@@ -50,7 +50,6 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
         } catch (Exception e) {
             log.error("上传向量失败", e);
             knowledge.fail(e.getMessage());
-            throw new RuntimeException(e);
         } finally {
             // 更新状态
             agentKnowledgeRepository.updateKnowledge(knowledge);
