@@ -6,6 +6,7 @@ import cn.fish.knowledge.enums.KnowledgeType;
 import cn.fish.knowledge.enums.SplitterType;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -14,6 +15,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
+@TableName("agent_knowledge")
 public class AgentKnowledge extends DbBase {
 
 
@@ -35,6 +37,7 @@ public class AgentKnowledge extends DbBase {
 
     /**
      * 知识类型
+     *
      * @see KnowledgeType
      */
     private String type;
@@ -56,6 +59,7 @@ public class AgentKnowledge extends DbBase {
 
     /**
      * 向量化状态
+     *
      * @see EmbeddingStatus
      */
     private Integer embeddingStatus;
@@ -82,6 +86,7 @@ public class AgentKnowledge extends DbBase {
 
     /**
      * 分块策略类型
+     *
      * @see SplitterType
      */
     private String splitterType;

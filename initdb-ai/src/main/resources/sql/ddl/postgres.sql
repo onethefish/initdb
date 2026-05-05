@@ -30,8 +30,8 @@ comment on column agent_datasource.description is '数据源描述信息';
 
 create table chat_session
 (
-    session_id   varchar(32) not null primary key,
-    session_name varchar(255),
+    session_id    varchar(32) not null primary key,
+    session_name  varchar(255),
     datasource_id varchar(32)
 );
 
@@ -40,3 +40,34 @@ comment on column chat_session.session_id is '会话ID';
 comment on column chat_session.session_name is '会话名称';
 comment on column chat_session.datasource_id is '创建会话时选的数据源ID';
 
+CREATE TABLE agent_knowledge
+(
+    id               VARCHAR(32) PRIMARY KEY,
+    datasource_id    VARCHAR(32),
+    title            VARCHAR(500),
+    type             VARCHAR(20),
+    question         TEXT,
+    content          TEXT,
+    is_recall        INTEGER,
+    embedding_status INTEGER,
+    error_msg        TEXT,
+    file_id          VARCHAR(64),
+    file_size        BIGINT,
+    file_type        VARCHAR(50),
+    splitter_type    VARCHAR(20)
+);
+
+COMMENT ON TABLE agent_knowledge IS '智能体知识表';
+COMMENT ON COLUMN agent_knowledge.id IS '知识ID（主键）';
+COMMENT ON COLUMN agent_knowledge.datasource_id IS '数据源ID';
+COMMENT ON COLUMN agent_knowledge.title IS '文档标题';
+COMMENT ON COLUMN agent_knowledge.type IS '知识类型：DOCUMENT/QA/FAQ';
+COMMENT ON COLUMN agent_knowledge.question IS '问题内容（FAQ/QA类型时使用）';
+COMMENT ON COLUMN agent_knowledge.content IS '答案内容（QA/FAQ类型时使用）';
+COMMENT ON COLUMN agent_knowledge.is_recall IS '业务状态：1=召回, 0=非召回';
+COMMENT ON COLUMN agent_knowledge.embedding_status IS '向量化状态：0=待处理, 1=处理中, 2=已完成, 3=失败';
+COMMENT ON COLUMN agent_knowledge.error_msg IS '错误信息（操作失败时记录）';
+COMMENT ON COLUMN agent_knowledge.file_id IS '文件ID';
+COMMENT ON COLUMN agent_knowledge.file_size IS '文件大小（字节）';
+COMMENT ON COLUMN agent_knowledge.file_type IS '文件类型';
+COMMENT ON COLUMN agent_knowledge.splitter_type IS '分块策略类型：token/recursive/sentence/paragraph/semantic';

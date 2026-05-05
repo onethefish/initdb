@@ -20,3 +20,20 @@ CREATE TABLE chat_session
     session_name  VARCHAR(255) COMMENT '会话名称',
     datasource_id VARCHAR(32) COMMENT '创建会话时选的数据源ID'
 ) COMMENT = '聊天会话表';
+
+CREATE TABLE agent_knowledge
+(
+    id               VARCHAR(32) PRIMARY KEY COMMENT '知识ID（主键）',
+    datasource_id    VARCHAR(32) COMMENT '数据源ID',
+    title            VARCHAR(500) COMMENT '文档标题',
+    type             VARCHAR(20) COMMENT '知识类型：DOCUMENT/QA/FAQ',
+    question         TEXT COMMENT '问题内容（FAQ/QA类型时使用）',
+    content          TEXT COMMENT '答案内容（QA/FAQ类型时使用）',
+    is_recall        INTEGER COMMENT '业务状态：1=召回, 0=非召回',
+    embedding_status INTEGER COMMENT '向量化状态：0=待处理, 1=处理中, 2=已完成, 3=失败',
+    error_msg        TEXT COMMENT '错误信息（操作失败时记录）',
+    file_id          VARCHAR(64) COMMENT '文件ID',
+    file_size        BIGINT COMMENT '文件大小（字节）',
+    file_type        VARCHAR(50) COMMENT '文件类型',
+    splitter_type    VARCHAR(20) COMMENT '分块策略类型：token/recursive/sentence/paragraph/semantic'
+) COMMENT ='智能体知识表';
