@@ -1,15 +1,15 @@
 package cn.fish.chart.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
+import cn.fish.common.entity.DbBase;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Setter
-@Getter
+@Data
 @TableName("chat_session")
-public class ChatSession {
+@EqualsAndHashCode(callSuper = true)
+public class ChatSession extends DbBase {
 
     /**
      * 会话ID

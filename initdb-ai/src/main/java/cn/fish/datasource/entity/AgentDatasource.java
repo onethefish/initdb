@@ -1,19 +1,15 @@
 package cn.fish.datasource.entity;
 
+import cn.fish.common.entity.DbBase;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 @TableName("agent_datasource")
-public class AgentDatasource {
+@EqualsAndHashCode(callSuper = true)
+public class AgentDatasource extends DbBase {
 
     /**
      * 数据源ID（主键）

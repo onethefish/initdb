@@ -7,7 +7,6 @@ import java.util.List;
 
 public interface AgentDatasourceService {
 
-
     AgentDatasource queryUnique(AgentDatasource agentDatasource);
 
     Page<AgentDatasource> queryPage(AgentDatasource agentDatasource, Page<AgentDatasource> page);
