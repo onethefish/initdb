@@ -17,7 +17,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -41,7 +41,7 @@ public class AgentKnowledgeListener {
         try {
             File file = servaFile.getFile(knowledge.getKnowledgeInfo().getFileId());
             List<Document> splitDocuments = splitDocumentByType(file, knowledge.getKnowledgeInfo().getSplitterType());
-            addMetadata(LocalDate.now(), splitDocuments);
+            addMetadata(System.currentTimeMillis(), splitDocuments);
             vectorStoreRepository.add(splitDocuments);
             knowledge.complete();
 
@@ -57,26 +57,20 @@ public class AgentKnowledgeListener {
     private List<Document> splitDocumentByType(File file, String splitterType) {
         // 1. 将 java.io.File 包装为 Spring Resource
         FileSystemResource fileResource = new FileSystemResource(file);
-
         // 2. 使用 Tika 文档读取器（自动识别所有文件格式）
         TikaDocumentReader documentReader = new TikaDocumentReader(fileResource);
         List<Document> documents = documentReader.read();
-        // 	TOKEN("token"), RECURSIVE("recursive"), SENTENCE("sentence"), PARAGRAPH("paragraph"), SEMANTIC("semantic");
-        switch (splitterType) {
-            case "token":
-                return documentSplitter.tokenBasedSplit(documents);
-            case "recursive":
-                return documentSplitter.tokenBasedSplit(documents);
-            case "semantic":
-                return documentSplitter.semanticSplit(documents);
-            default:
-                return documentSplitter.tokenBasedSplit(documents);
-        }
+        return switch (splitterType) {
+            case "token" -> documentSplitter.tokenBasedSplit(documents);
+            case "recursive", "sentence", "paragraph" -> documentSplitter.splitDocument(documents);
+            case "semantic" -> documentSplitter.semanticSplit(documents);
+            default -> new ArrayList<>();
+        };
     }
 
-    private static void addMetadata(LocalDate sessionId, List<Document> splitDocuments) {
+    private static void addMetadata(Long timestamp, List<Document> splitDocuments) {
         for (Document document : splitDocuments) {
-            document.getMetadata().put("split_date", sessionId);
+            document.getMetadata().put("split_date", timestamp);
         }
     }
 
