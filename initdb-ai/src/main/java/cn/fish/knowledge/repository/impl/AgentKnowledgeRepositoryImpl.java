@@ -20,7 +20,7 @@ public class AgentKnowledgeRepositoryImpl extends CrudRepository<AgentKnowledgeM
 
     private static AgentKnowledgePo convert(AgentKnowledge knowledge) {
         AgentKnowledgePo po = new AgentKnowledgePo();
-        po
+        po.setId(knowledge.getKnowledgeId())
             .setDatasourceId(knowledge.getKnowledgeInfo().getDatasourceId())
             .setTitle(knowledge.getKnowledgeInfo().getTitle())
             .setType(knowledge.getKnowledgeInfo().getType())
