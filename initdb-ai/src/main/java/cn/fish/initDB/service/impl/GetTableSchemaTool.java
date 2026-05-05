@@ -16,7 +16,7 @@
 package cn.fish.initDB.service.impl;
 
 import cn.fish.chart.repository.ChatSessionRepository;
-import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.database.service.DataBaseService;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.service.AgentAbstractTool;
@@ -43,11 +43,11 @@ import java.util.function.BiFunction;
 @Component
 public class GetTableSchemaTool extends AgentAbstractTool implements BiFunction<GetTableSchemaTool.Request, ToolContext, String> {
 
-    private final DataBaseRepository dataBaseRepository;
+    private final DataBaseService dataBaseService;
     private final ChatSessionRepository chatSessionRepository;
 
-    public GetTableSchemaTool(DataBaseRepository dataBaseRepository, ChatSessionRepository chatSessionRepository) {
-        this.dataBaseRepository = dataBaseRepository;
+    public GetTableSchemaTool(DataBaseService dataBaseService, ChatSessionRepository chatSessionRepository) {
+        this.dataBaseService = dataBaseService;
         this.chatSessionRepository = chatSessionRepository;
     }
 
@@ -66,7 +66,7 @@ public class GetTableSchemaTool extends AgentAbstractTool implements BiFunction<
         }
         List<Table> tables = new ArrayList<>();
         for (String tableName : tableNames) {
-            Table table = dataBaseRepository.queryTableSchema(chatSession, tableName);
+            Table table = dataBaseService.queryTableSchema(chatSession, tableName);
             if (table != null) {
                 tables.add(table);
             }

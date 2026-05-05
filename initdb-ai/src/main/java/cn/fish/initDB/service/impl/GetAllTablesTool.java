@@ -16,7 +16,7 @@
 package cn.fish.initDB.service.impl;
 
 import cn.fish.chart.repository.ChatSessionRepository;
-import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.database.service.DataBaseService;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.service.AgentAbstractTool;
@@ -43,11 +43,11 @@ import java.util.function.BiFunction;
 public class GetAllTablesTool extends AgentAbstractTool implements BiFunction<GetAllTablesTool.Request, ToolContext, String> {
 
 
-    private final DataBaseRepository dataBaseRepository;
+    private final DataBaseService dataBaseService;
     private final ChatSessionRepository chatSessionRepository;
 
-    public GetAllTablesTool(DataBaseRepository dataBaseRepository, ChatSessionRepository chatSessionRepository) {
-        this.dataBaseRepository = dataBaseRepository;
+    public GetAllTablesTool(DataBaseService dataBaseService, ChatSessionRepository chatSessionRepository) {
+        this.dataBaseService = dataBaseService;
         this.chatSessionRepository = chatSessionRepository;
     }
 
@@ -56,7 +56,7 @@ public class GetAllTablesTool extends AgentAbstractTool implements BiFunction<Ge
         log.info("GetAllTablesTool::apply");
         String sessionId = getSessionId(toolContext);
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
-        List<Table> tables = dataBaseRepository.queryTableList(chatSession);
+        List<Table> tables = dataBaseService.queryTableList(chatSession);
         if (CollUtil.isNotEmpty(tables)) {
             return JSON.toJSONString(tables, JSONWriter.Feature.IgnoreEmpty);
         }

@@ -12,7 +12,6 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
-import com.baomidou.mybatisplus.annotation.DbType;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -64,6 +63,13 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public ChatSession add(ChatSession chatSession) {
+        chatSession.setSessionId(IdUtil.simpleUUID());
+        validateDataSource(chatSession);
+        chatSessionRepository.add(chatSession);
+        return chatSession;
+    }
+
+    private void validateDataSource(ChatSession chatSession) {
         if (StrUtil.isBlank(chatSession.getDatasourceId())) {
             throw new CommonException("请选择数据源");
         }
@@ -77,28 +83,12 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         if (StrUtil.isBlank(ds.getConnectionUrl()) || StrUtil.isBlank(ds.getUsername())) {
             throw new CommonException("数据源连接信息不完整");
         }
-        chatSession.setHost(ds.getHost());
-        chatSession.setPort(ds.getPort());
-        chatSession.setUrl(ds.getConnectionUrl());
-        chatSession.setUsername(ds.getUsername());
-        chatSession.setPassword(ds.getPassword());
-        chatSession.setType(ds.getType());
-        chatSession.setDatabaseName(ds.getDatabaseName());
-        chatSession.setSchema(ds.getDatabaseName());
-        // todo 这个数据库特殊
-        if (DbType.POSTGRE_SQL.getDb().equals(ds.getType())) {
-            chatSession.setSchema("public");
-        }
-        chatSession.setDatasourceId(null);
-
-        chatSession.setSessionId(IdUtil.simpleUUID());
         try {
-            dataBaseRepository.add(chatSession);
+            dataBaseRepository.add(chatSession.getSessionId(), ds.getConnectionUrl(), ds.getUsername(), ds.getPassword());
         } catch (Exception e) {
             throw new CommonException("数据库连接异常请检查参数", e);
         }
-        chatSessionRepository.add(chatSession);
-        return chatSession;
+
     }
 
     @Override
@@ -109,7 +99,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Override
     public void delete(ChatSession chatSession) {
         chatSessionRepository.remove(chatSession);
-        dataBaseRepository.remove(chatSession);
+        dataBaseRepository.remove(chatSession.getSessionId());
         try {
             baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
         } catch (Exception ignored) {

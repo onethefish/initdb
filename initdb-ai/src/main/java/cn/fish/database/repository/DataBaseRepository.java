@@ -1,24 +1,16 @@
 package cn.fish.database.repository;
 
-import cn.fish.chart.entity.ChatSession;
-import cn.fish.initDB.entity.Table;
-
-import java.util.List;
-import java.util.Map;
+import com.zaxxer.hikari.HikariDataSource;
 
 public interface DataBaseRepository {
 
     void test(String url, String username, String password);
 
-    void add(ChatSession chatSession);
+    HikariDataSource get(String id);
 
-    void remove(ChatSession chatSession);
+    HikariDataSource add(String id, String url, String username, String password);
+
+    void remove(String id);
 
     void removeAll();
-
-    List<Table> queryTableList(ChatSession chatSession);
-
-    Table queryTableSchema(ChatSession chatSession, String tableName);
-
-    List<Map<String, Object>> queryTableData(ChatSession chatSession, String sql);
 }
