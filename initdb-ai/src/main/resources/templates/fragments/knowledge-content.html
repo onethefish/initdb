@@ -38,6 +38,7 @@
       <div class="datasource-toolbar-actions">
         <button class="btn btn-toolbar btn-toolbar--query" onclick="queryKnowledgePage()" type="button">查询</button>
         <button class="btn btn-toolbar btn-toolbar--reset" onclick="resetKnowledgeFilters()" type="button">重置</button>
+        <button class="btn btn-toolbar" onclick="openVectorSearchModal()" type="button">向量检索</button>
         <button class="btn btn-toolbar btn-toolbar--create" onclick="openKnowledgeModal()" type="button">新增</button>
       </div>
     </div>
@@ -110,6 +111,34 @@
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closeKnowledgeModal()" type="button">取消</button>
       <button class="btn btn-primary" onclick="submitKnowledgeModal()" type="button">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="vectorSearchModal" th:fragment="vectorSearchModal">
+  <div class="modal-content knowledge-modal-content vector-search-modal">
+    <h2>向量检索</h2>
+    <p class="form-hint">在当前数据源已向量化的知识片段中，按语义查找与描述最相近的内容。</p>
+    <div class="form-group">
+      <label for="kbVectorQuery">检索描述</label>
+      <textarea id="kbVectorQuery" placeholder="输入问题或关键词…" rows="4"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="kbVectorType">知识类型（可选）</label>
+      <select id="kbVectorType">
+        <option value="">全部类型</option>
+        <option value="DOCUMENT">文档</option>
+        <option value="QA">问答</option>
+        <option value="FAQ">常见问题</option>
+      </select>
+    </div>
+    <div class="form-group" id="vectorSearchResultsGroup" hidden>
+      <label>检索结果</label>
+      <div class="vector-search-results" id="vectorSearchResults"></div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeVectorSearchModal()" type="button">关闭</button>
+      <button class="btn btn-primary" onclick="submitVectorSearch()" type="button">检索</button>
     </div>
   </div>
 </div>

@@ -235,6 +235,99 @@ function closeKnowledgeModal() {
     document.getElementById('knowledgeModal').style.display = 'none';
 }
 
+function resetVectorSearchModal() {
+    const q = document.getElementById('kbVectorQuery');
+    const t = document.getElementById('kbVectorType');
+    const group = document.getElementById('vectorSearchResultsGroup');
+    const box = document.getElementById('vectorSearchResults');
+    if (q) q.value = '';
+    if (t) t.value = '';
+    if (group) group.hidden = true;
+    if (box) box.innerHTML = '';
+}
+
+function openVectorSearchModal() {
+    if (!contextDatasourceId) {
+        showErrorDialog({title: '提示', message: '请先进入某一数据源的知识库页签'});
+        return;
+    }
+    const modal = document.getElementById('vectorSearchModal');
+    if (!modal) return;
+    resetVectorSearchModal();
+    const typeEl = document.getElementById('kbVectorType');
+    const filterType = document.getElementById('kbFilterType');
+    if (typeEl && filterType && filterType.value) {
+        typeEl.value = filterType.value;
+    }
+    modal.style.display = 'flex';
+}
+
+function closeVectorSearchModal() {
+    const modal = document.getElementById('vectorSearchModal');
+    if (modal) modal.style.display = 'none';
+    resetVectorSearchModal();
+}
+
+function pickVectorDocumentText(doc) {
+    if (!doc || typeof doc !== 'object') return '';
+    if (typeof doc.text === 'string') return doc.text;
+    if (doc.text != null) return String(doc.text);
+    return '';
+}
+
+function renderVectorSearchResults(list) {
+    const group = document.getElementById('vectorSearchResultsGroup');
+    const box = document.getElementById('vectorSearchResults');
+    if (!group || !box) return;
+    const docs = Array.isArray(list) ? list : [];
+    group.hidden = false;
+    if (!docs.length) {
+        box.innerHTML = '<p class="empty-hint">未找到相近的向量片段（请确认内容已向量化完成）。</p>';
+        return;
+    }
+    box.innerHTML = docs.map((doc, idx) => {
+        const text = escapeHtml(pickVectorDocumentText(doc));
+        const meta = doc.metadata && typeof doc.metadata === 'object'
+            ? escapeHtml(JSON.stringify(doc.metadata, null, 2))
+            : '—';
+        const idHint = doc.id != null ? escapeHtml(String(doc.id)) : String(idx + 1);
+        return `<div class="vector-search-result-item">
+            <div class="vector-doc-text">${text || '（无文本）'}</div>
+            <div class="vector-doc-meta">片段 ID：<code>${idHint}</code></div>
+            <pre class="vector-doc-meta-json"><code>${meta}</code></pre>
+        </div>`;
+    }).join('');
+}
+
+async function submitVectorSearch() {
+    if (!contextDatasourceId) {
+        showErrorDialog({title: '提示', message: '缺少数据源上下文'});
+        return;
+    }
+    const query = document.getElementById('kbVectorQuery').value.trim();
+    if (!query) {
+        showErrorDialog({title: '提示', message: '请填写检索描述'});
+        return;
+    }
+    const type = document.getElementById('kbVectorType').value.trim();
+    const params = {
+        datasourceId: contextDatasourceId,
+        query
+    };
+    if (type) params.type = type;
+    if (selectedKnowledgeIds.size === 1) {
+        const onlyId = Array.from(selectedKnowledgeIds)[0];
+        if (onlyId) params.id = onlyId;
+    }
+    try {
+        const raw = await Api.get('/agentVector/query/list', params);
+        renderVectorSearchResults(raw);
+    } catch (error) {
+        console.error('Vector search error:', error);
+        notifyErrorUnlessShown(error, '向量检索失败');
+    }
+}
+
 async function submitKnowledgeModal() {
     const title = document.getElementById('kbModalTitle').value.trim();
     if (!title) {

@@ -49,27 +49,31 @@ public class AgentKnowledgeListener {
         AgentKnowledge current = agentKnowledgeRepository.getById(id);
         try {
             updateStatus(current, EmbeddingStatus.PROCESSING, null);
-            // 不同的类型有不同得到处理方法
-            String type = current.getType();
-            // 问答、常见类型
-            if (KnowledgeType.QA.getCode().equals(type) || KnowledgeType.FAQ.getCode().equals(type)) {
-                // todo 增加提示词 转换为文档
-
-            }
-            // 文件
-            else if (KnowledgeType.DOCUMENT.getCode().equals(type)) {
-                Resource resource = servaFile.getFileResource(current.getFileId());
-                // 使用TikaDocumentReader读取文件
-                TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(resource);
-                List<Document> documents = tikaDocumentReader.read();
-                TextSplitter splitter = textSplitterFactory.getSplitter(current.getSplitterType());
-                List<Document> result = DocumentConverter.convertAgentKnowledgeDocumentsWithMetadata(splitter.split(documents), current);
-                vectorStoreRepository.add(result);
-            }
+            addVectorStore(current);
             updateStatus(current, EmbeddingStatus.COMPLETED, null);
 
         } catch (RuntimeException e) {
             updateStatus(current, EmbeddingStatus.FAILED, e.getMessage());
+        }
+    }
+
+    private void addVectorStore(AgentKnowledge current) {
+        // 不同的类型有不同得到处理方法
+        String type = current.getType();
+        // 问答、常见类型
+        if (KnowledgeType.QA.getCode().equals(type) || KnowledgeType.FAQ.getCode().equals(type)) {
+            // todo 增加提示词 转换为文档
+
+        }
+        // 文件
+        else if (KnowledgeType.DOCUMENT.getCode().equals(type)) {
+            Resource resource = servaFile.getFileResource(current.getFileId());
+            // 使用TikaDocumentReader读取文件
+            TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(resource);
+            List<Document> documents = tikaDocumentReader.read();
+            TextSplitter splitter = textSplitterFactory.getSplitter(current.getSplitterType());
+            List<Document> result = DocumentConverter.convertAgentKnowledgeDocumentsWithMetadata(splitter.split(documents), current);
+            vectorStoreRepository.add(result);
         }
     }
 
