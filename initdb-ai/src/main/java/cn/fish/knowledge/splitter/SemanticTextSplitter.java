@@ -30,10 +30,7 @@ import java.util.regex.Pattern;
  * 生产级语义文本分块器 策略：滑动窗口Embedding + 语义相似度切分 + 最大长度强制切分 它尽可能地把句子往一个块里塞（为了上下文完整），直到 塞满了（超长） 或者
  * 发现话题变了（语义突变） 才会停下来切一刀。
  *
- * @author zihenzzz
- * @since 2025-01-03
  */
-@Slf4j
 @Builder
 public class SemanticTextSplitter extends TextSplitter {
 
@@ -67,7 +64,6 @@ public class SemanticTextSplitter extends TextSplitter {
 		if (sentences.isEmpty()) {
 			return List.of(text);
 		}
-		log.debug("Extracted {} sentences", sentences.size());
 
 		// 2. 只有一句，直接返回（或者检查长度）
 		if (sentences.size() == 1) {
@@ -114,7 +110,6 @@ public class SemanticTextSplitter extends TextSplitter {
 			if (!currentChunk.isEmpty()) {
 				// 1. 长度检查：加上这句是否超长？
 				if (currentChunk.length() + sentence.length() > maxChunkSize) {
-					log.debug("Splitting at index {} due to max size limit", i);
 					shouldSplit = true;
 				}
 				// 2. 语义检查：语义突变？
@@ -123,7 +118,6 @@ public class SemanticTextSplitter extends TextSplitter {
 					// 只有当当前块已经达到最小长度时，才允许按语义切分
 					// 否则即使语义变了，为了保证块不太碎，也强行合并
 					if (similarity < similarityThreshold && currentChunk.length() >= minChunkSize) {
-						log.debug("Splitting at index {} due to semantic shift (sim={})", i, similarity);
 						shouldSplit = true;
 					}
 				}
@@ -221,7 +215,6 @@ public class SemanticTextSplitter extends TextSplitter {
 				}
 			}
 			catch (Exception e) {
-				log.error("Embedding failed for batch {}-{}", i, endIdx, e);
 				// 填充零向量
 				for (int k = 0; k < batch.size(); k++)
 					allEmbeddings.add(new float[dimensions]);

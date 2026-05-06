@@ -30,10 +30,7 @@ import java.util.regex.Pattern;
 /**
  * 句子分块器
  *
- * @author zihenzzz
- * @since 2025/1/3
  */
-@Slf4j
 public class SentenceSplitter extends TextSplitter {
 
 	/**
@@ -98,7 +95,6 @@ public class SentenceSplitter extends TextSplitter {
 				result.addAll(splitDocument(doc));
 			}
 		}
-		log.info("Split {} documents into {} chunks", documents.size(), result.size());
 		return result;
 	}
 

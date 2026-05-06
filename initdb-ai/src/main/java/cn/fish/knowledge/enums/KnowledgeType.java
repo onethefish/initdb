@@ -47,17 +47,4 @@ public enum KnowledgeType {
 		this.description = description;
 	}
 
-	/**
-	 * 根据代码获取枚举
-	 */
-	public static KnowledgeType fromCode(String code) {
-		for (KnowledgeType type : values()) {
-			// 严格比对
-			if (type.getCode().equals(code)) {
-				return type;
-			}
-		}
-		throw new IllegalArgumentException("未知的知识类型代码: " + code);
-	}
-
 }

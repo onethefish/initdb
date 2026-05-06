@@ -15,6 +15,7 @@
  */
 package cn.fish.knowledge.splitter;
 
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.transformer.splitter.TextSplitter;
 
@@ -26,7 +27,7 @@ import java.util.regex.Pattern;
 /**
  * 段落文本分块器 特性：递归降级策略（段落->句子->字符）、智能Overlap、防文本丢失
  */
-@Slf4j
+@Builder
 public class ParagraphTextSplitter extends TextSplitter {
     /**
      * 默认分块大小，基于token数量
@@ -63,7 +64,6 @@ public class ParagraphTextSplitter extends TextSplitter {
 
         // 1. 按段落粗切
         String[] paragraphs = PARAGRAPH_PATTERN.split(text);
-        log.debug("Split text into {} paragraphs", paragraphs.length);
 
         List<String> chunks = new ArrayList<>();
         StringBuilder currentChunk = new StringBuilder();
@@ -76,8 +76,6 @@ public class ParagraphTextSplitter extends TextSplitter {
 
             // --- 情况 A: 遇到超大段落 (递归处理) ---
             if (trimmedParagraph.length() > chunkSize) {
-                log.debug("Processing large paragraph length: {}", trimmedParagraph.length());
-
                 // 1. 先结算当前缓存区 (Buffer)，确保之前的上下文不丢失
                 if (currentChunk.length() > 0) {
                     chunks.add(currentChunk.toString().trim());
@@ -143,8 +141,6 @@ public class ParagraphTextSplitter extends TextSplitter {
         if (currentChunk.length() > 0) {
             chunks.add(currentChunk.toString().trim());
         }
-
-        log.info("Created {} paragraph chunks", chunks.size());
         return chunks;
     }
 

@@ -1,4 +1,4 @@
-package cn.fish.web.controller;
+package cn.fish.knowledge.controller;
 
 import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.knowledge.service.DocumentService;
