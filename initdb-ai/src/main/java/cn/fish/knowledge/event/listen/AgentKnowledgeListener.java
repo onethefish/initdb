@@ -9,6 +9,8 @@ import cn.fish.knowledge.event.AgentKnowledgeEmbeddingEvent;
 import cn.fish.knowledge.repository.AgentKnowledgeRepository;
 import cn.fish.knowledge.repository.VectorStoreRepository;
 import cn.fish.knowledge.splitter.TextSplitterFactory;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
@@ -20,6 +22,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -62,7 +65,15 @@ public class AgentKnowledgeListener {
         String type = current.getType();
         // 问答、常见类型
         if (KnowledgeType.QA.getCode().equals(type) || KnowledgeType.FAQ.getCode().equals(type)) {
-            // todo 增加提示词 转换为文档
+            //  增加提示词 转换为文档
+
+            String content = current.getContent();
+            String question = current.getQuestion();
+            String chatContent = StrUtil.format("question：{}\n,answer:{} \n", question, content);
+            Document document = new Document(chatContent, Map.of("question", current.getQuestion()));
+            TextSplitter splitter = textSplitterFactory.getSplitter(current.getSplitterType());
+            List<Document> result = DocumentConverter.convertAgentKnowledgeDocumentsWithMetadata(splitter.split(CollUtil.newArrayList(document)), current);
+            vectorStoreRepository.add(result);
 
         }
         // 文件
