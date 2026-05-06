@@ -28,22 +28,23 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TextSplitterFactory {
 
-	private final Map<String, TextSplitter> splitterMap;
+    private final Map<String, TextSplitter> splitterMap;
 
-	/**
-	 * 根据类型字符串获取对应的 Splitter
-	 * @param type 前端传入的类型，例如 "token", "recursive"
-	 * @return 对应的 TextSplitter 实例
-	 */
-	public TextSplitter getSplitter(String type) {
-		// 1. 尝试直接获取
-		TextSplitter splitter = splitterMap.get(type);
-		// 2. 如果没找到，尝返回默认
-		if (splitter == null) {
-			log.warn("Splitter type '{}' not found, falling back to default 'token'", type);
-			return splitterMap.get(SplitterType.TOKEN.getValue());
-		}
-		return splitter;
-	}
+    /**
+     * 根据类型字符串获取对应的 Splitter
+     *
+     * @param type 前端传入的类型，例如 "token", "recursive"
+     * @return 对应的 TextSplitter 实例
+     */
+    public TextSplitter getSplitter(String type) {
+        // 1. 尝试直接获取
+        TextSplitter splitter = splitterMap.get(type);
+        // 2. 如果没找到，尝返回默认
+        if (splitter == null) {
+            log.warn("Splitter type '{}' not found, falling back to default 'token'", type);
+            return splitterMap.get(SplitterType.TOKEN.getCode());
+        }
+        return splitter;
+    }
 
 }

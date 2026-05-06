@@ -2,6 +2,7 @@ package cn.fish.knowledge.entity;
 
 import cn.fish.knowledge.enums.EmbeddingStatus;
 import cn.fish.knowledge.enums.KnowledgeType;
+import cn.fish.knowledge.enums.SplitterType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -29,5 +30,9 @@ public class AgentKnowledgeVO extends AgentKnowledge {
 
     public String getTypeValue() {
         return KnowledgeType.getValueByCode(getType());
+    }
+
+    public String getSplitterTypeValue() {
+        return SplitterType.getValueByCode(getSplitterType());
     }
 }

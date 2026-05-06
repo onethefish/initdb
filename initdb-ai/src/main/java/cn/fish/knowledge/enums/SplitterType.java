@@ -20,16 +20,25 @@ import lombok.Getter;
 @Getter
 public enum SplitterType {
 
-	TOKEN("token"),
-    RECURSIVE("recursive"),
-    SENTENCE("sentence"),
-    PARAGRAPH("paragraph"),
-    SEMANTIC("semantic");
-
+    TOKEN("token","Token分割"),
+    RECURSIVE("recursive","递归分割"),
+    SENTENCE("sentence","句子分割"),
+    PARAGRAPH("paragraph","段落分割"),
+    SEMANTIC("semantic","语义分割");
+    private final String code;
 	private final String value;
 
-	SplitterType(String value) {
-		this.value = value;
+	SplitterType(String code, String value) {
+        this.code = code;
+        this.value = value;
 	}
 
+    public static String getValueByCode(String code) {
+        for (SplitterType status : values()) {
+            if (status.getCode().equals(code)) {
+                return status.getValue();
+            }
+        }
+        return null;
+    }
 }
