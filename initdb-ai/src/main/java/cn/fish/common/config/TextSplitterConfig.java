@@ -1,4 +1,4 @@
-package cn.fish.config;
+package cn.fish.common.config;
 
 import cn.fish.common.properties.TextSplitterProperties;
 import cn.fish.knowledge.splitter.ParagraphTextSplitter;
