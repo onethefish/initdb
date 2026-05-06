@@ -23,28 +23,36 @@ import lombok.Getter;
 @Getter
 public enum KnowledgeType {
 
-	/**
-	 * 文档类型
-	 */
-	DOCUMENT("DOCUMENT", "文档类型"),
+    /**
+     * 文档类型
+     */
+    DOCUMENT("DOCUMENT", "文档类型"),
 
-	/**
-	 * 问答类型
-	 */
-	QA("QA", "问答类型"),
+    /**
+     * 问答类型
+     */
+    QA("QA", "问答类型"),
 
-	/**
-	 * 常见问题类型
-	 */
-	FAQ("FAQ", "常见问题类型");
+    /**
+     * 常见问题类型
+     */
+    FAQ("FAQ", "常见问题类型");
 
-	private final String code;
+    private final String code;
 
-	private final String description;
+    private final String value;
 
-	KnowledgeType(String code, String description) {
-		this.code = code;
-		this.description = description;
-	}
+    KnowledgeType(String code, String value) {
+        this.code = code;
+        this.value = value;
+    }
 
+    public static String getValueByCode(String code) {
+        for (KnowledgeType status : values()) {
+            if (status.getCode().equals(code)) {
+                return status.getValue();
+            }
+        }
+        return null;
+    }
 }

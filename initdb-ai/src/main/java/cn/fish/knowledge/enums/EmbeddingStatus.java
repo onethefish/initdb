@@ -20,25 +20,26 @@ import lombok.Getter;
 @Getter
 public enum EmbeddingStatus {
 
-    PENDING(0),         //待处理
-    PROCESSING(1),   //处理中
-    COMPLETED(2),     //已完成
-    FAILED(3);           //失败
+    PENDING(0, "待处理"),
+    PROCESSING(1, "处理中"),
+    COMPLETED(2, "已完成"),
+    FAILED(3, "失败");
 
-    private final Integer value;
+    private final Integer code;
+    private final String value;
 
-    EmbeddingStatus(Integer value) {
+    EmbeddingStatus(Integer code, String value) {
+        this.code = code;
         this.value = value;
     }
 
-    public static EmbeddingStatus fromValue(Integer value) {
-        for (EmbeddingStatus status : EmbeddingStatus.values()) {
-            // 严格比对
-            if (status.value.equals(value)) {
-                return status;
+    public static String getValueByCode(Integer code) {
+        for (EmbeddingStatus status : values()) {
+            if (status.getCode().equals(code)) {
+                return status.getValue();
             }
         }
-        throw new IllegalArgumentException("Unknown embedding status: " + value);
+        return null;
     }
 
 }

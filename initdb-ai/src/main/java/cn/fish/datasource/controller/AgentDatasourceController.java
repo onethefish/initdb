@@ -24,8 +24,7 @@ public class AgentDatasourceController extends BaseController {
     @GetMapping("/query/page")
     public ResponseResult<Page<AgentDatasource>> queryPage(@RequestParam Map<String, Object> request) {
         AgentDatasource agentDatasource = RequestUtil.getObject(request, AgentDatasource.class);
-        Page<AgentDatasource> iPage = getIPage(request);
-        return result(agentDatasourceService.queryPage(agentDatasource, iPage));
+        return result(agentDatasourceService.queryPage(agentDatasource, getIPage(request)));
     }
 
     @GetMapping("/query/unique")

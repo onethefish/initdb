@@ -18,14 +18,15 @@ public class AgentDatasourceServiceImpl implements AgentDatasourceService {
     private final AgentDatasourceRepository agentDatasourceRepository;
     private final DataBaseRepository dataBaseRepository;
 
-    @Override
-    public AgentDatasource queryUnique(AgentDatasource agentDatasource) {
-        return agentDatasourceRepository.getById(agentDatasource.getId());
-    }
 
     @Override
     public Page<AgentDatasource> queryPage(AgentDatasource agentDatasource, Page<AgentDatasource> page) {
         return agentDatasourceRepository.queryPage(agentDatasource, page);
+    }
+
+    @Override
+    public AgentDatasource queryUnique(AgentDatasource agentDatasource) {
+        return agentDatasourceRepository.getById(agentDatasource.getId());
     }
 
     @Override

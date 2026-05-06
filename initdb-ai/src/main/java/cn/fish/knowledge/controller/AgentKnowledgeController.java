@@ -1,14 +1,16 @@
 package cn.fish.knowledge.controller;
 
 import cn.fish.cloud.serva.web.controller.BaseController;
+import cn.fish.cloud.serva.web.controller.RequestUtil;
 import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.knowledge.entity.AgentKnowledgeDTO;
+import cn.fish.knowledge.entity.AgentKnowledgeVO;
 import cn.fish.knowledge.service.AgentKnowledgeService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 
 @RestController
@@ -21,6 +23,17 @@ public class AgentKnowledgeController extends BaseController {
         this.agentKnowledgeService = agentKnowledgeService;
     }
 
+    @GetMapping("/query/page")
+    public ResponseResult<Page<AgentKnowledgeVO>> queryPage(@RequestParam Map<String, Object> request) {
+        AgentKnowledgeVO vo = RequestUtil.getObject(request, AgentKnowledgeVO.class);
+        return result(agentKnowledgeService.queryPage(vo, getIPage(request)));
+    }
+
+    @GetMapping("/query/unique")
+    public ResponseResult<AgentKnowledgeVO> queryUnique(@RequestParam Map<String, Object> request) {
+        AgentKnowledgeVO vo = RequestUtil.getObject(request, AgentKnowledgeVO.class);
+        return result(agentKnowledgeService.queryUnique(vo));
+    }
 
     @PostMapping(value = "/add")
     public ResponseResult<Void> add(@RequestPart("datasourceId") String datasourceId,
@@ -30,9 +43,26 @@ public class AgentKnowledgeController extends BaseController {
                                     @RequestPart(value = "file", required = false) MultipartFile file, // todo 可修改为 FilePart 调整为响应式
                                     @RequestPart(value = "splitterType", required = false) String splitterType) {
         // 要处理文件必须这样 不能用对象
-        AgentKnowledgeDTO dto = new AgentKnowledgeDTO(datasourceId, title, type, question, content, file, splitterType);
+        AgentKnowledgeDTO dto = new AgentKnowledgeDTO(null, datasourceId, title, type, question, content, file, splitterType);
         agentKnowledgeService.add(dto);
-        return ResponseResult.success();
+        return result();
     }
 
+    @PostMapping(value = "/update")
+    public ResponseResult<Void> update(@RequestBody AgentKnowledgeDTO agentKnowledgeDTO) {
+        agentKnowledgeService.update(agentKnowledgeDTO);
+        return result();
+    }
+
+    @DeleteMapping(value = "/delete")
+    public ResponseResult<Void> delete(@RequestBody AgentKnowledgeDTO agentKnowledgeDTO) {
+        agentKnowledgeService.delete(agentKnowledgeDTO);
+        return result();
+    }
+
+    @DeleteMapping(value = "/delete/batch")
+    public ResponseResult<Void> deleteBatch(@RequestBody AgentKnowledgeDTO agentKnowledgeDTO) {
+        agentKnowledgeService.delete(agentKnowledgeDTO);
+        return result();
+    }
 }

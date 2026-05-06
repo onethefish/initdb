@@ -35,7 +35,7 @@ public class AgentKnowledgeConverter {
         knowledge.setQuestion(agentKnowledgeDto.getQuestion());
         knowledge.setContent(agentKnowledgeDto.getContent());
         knowledge.setIsRecall(1); // 默认为召回状态
-        knowledge.setEmbeddingStatus(EmbeddingStatus.PENDING.getValue()); // 初始状态为待处理
+        knowledge.setEmbeddingStatus(EmbeddingStatus.PENDING.getCode()); // 初始状态为待处理
 
         // 如果是文档类型，设置文件相关信息
         if (agentKnowledgeDto.getFile() != null && !agentKnowledgeDto.getFile().isEmpty()) {

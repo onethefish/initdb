@@ -75,7 +75,7 @@ public class AgentKnowledgeListener {
 
 
     private void updateStatus(AgentKnowledge knowledge, EmbeddingStatus status, String errorMsg) {
-        knowledge.setEmbeddingStatus(status.getValue());
+        knowledge.setEmbeddingStatus(status.getCode());
         if (errorMsg != null) {
             // 截断错误信息防止数据库报错
             knowledge.setErrorMsg(errorMsg.length() > 1024 ? errorMsg.substring(0, 1024) : errorMsg);

@@ -20,7 +20,11 @@ import lombok.Getter;
 @Getter
 public enum SplitterType {
 
-	TOKEN("token"), RECURSIVE("recursive"), SENTENCE("sentence"), PARAGRAPH("paragraph"), SEMANTIC("semantic");
+	TOKEN("token"),
+    RECURSIVE("recursive"),
+    SENTENCE("sentence"),
+    PARAGRAPH("paragraph"),
+    SEMANTIC("semantic");
 
 	private final String value;
 
