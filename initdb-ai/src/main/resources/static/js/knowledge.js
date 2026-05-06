@@ -1,0 +1,429 @@
+/* global Api, escapeHtml, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog */
+'use strict';
+
+let contextDatasourceId = '';
+let knowledgeList = [];
+let knowledgePageNum = 1;
+let knowledgePageSize = 10;
+let knowledgeTotal = 0;
+let editingKnowledgeId = null;
+let editingKnowledgeType = '';
+const selectedKnowledgeIds = new Set();
+
+function normalizeTypeSelectValue(stored) {
+    if (stored == null || String(stored).trim() === '') return '';
+    const s = String(stored).trim().toLowerCase();
+    if (s === 'mysql' || s.includes('mysql')) return 'mysql';
+    if (s.includes('postgres')) return 'postgresql';
+    return '';
+}
+
+function formatDbTypeLabel(type) {
+    const raw = type != null ? String(type).trim() : '';
+    if (!raw) return '';
+    const n = normalizeTypeSelectValue(raw);
+    if (n === 'mysql') return 'MySQL';
+    if (n === 'postgresql') return 'PostgreSQL';
+    return raw;
+}
+
+function mapEmbeddingLabel(code) {
+    const n = Number(code);
+    const map = {0: '待处理', 1: '处理中', 2: '已完成', 3: '失败'};
+    return map[n] != null ? map[n] : '—';
+}
+
+function mapRecallLabel(isRecall) {
+    if (Number(isRecall) === 1) return '<span class="status-tag status-enabled">是</span>';
+    if (Number(isRecall) === 0) return '<span class="status-tag test-unknown">否</span>';
+    return '—';
+}
+
+function getKnowledgeFilters() {
+    const type = document.getElementById('kbFilterType').value.trim();
+    const emb = document.getElementById('kbFilterEmbedding').value.trim();
+    const recall = document.getElementById('kbFilterRecall').value.trim();
+    const params = {
+        datasourceId: contextDatasourceId,
+        title: document.getElementById('kbFilterTitle').value.trim()
+    };
+    if (type) params.type = type;
+    if (emb !== '') params.embeddingStatus = Number(emb);
+    if (recall !== '') params.isRecall = Number(recall);
+    return params;
+}
+
+function updateKnowledgePageInfo() {
+    const totalPages = knowledgeTotal > 0 ? Math.ceil(knowledgeTotal / knowledgePageSize) : 1;
+    const el = document.getElementById('knowledgePageInfo');
+    if (el) {
+        el.textContent = `第 ${knowledgePageNum} 页 / 共 ${totalPages} 页（${knowledgeTotal} 条）`;
+    }
+}
+
+function renderKnowledgeTable() {
+    const tbody = document.getElementById('knowledgeTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    selectedKnowledgeIds.clear();
+    const selectAll = document.getElementById('selectAllKnowledge');
+    if (selectAll) selectAll.checked = false;
+
+    if (!knowledgeList.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="8" class="empty-hint">暂无知识条目，请点击「新增」添加</td>';
+        tbody.appendChild(tr);
+        updateKnowledgePageInfo();
+        return;
+    }
+
+    knowledgeList.forEach(row => {
+        const tr = document.createElement('tr');
+        const id = row.id != null ? String(row.id) : '';
+        const idAttr = escapeHtml(id);
+        const typeLabel = escapeHtml(row.typeValue || row.type || '');
+        const qPreview = escapeHtml((row.question || '').slice(0, 80));
+        const fileHint = row.fileType || row.fileId ? escapeHtml(String(row.fileType || row.fileId || '').slice(0, 24)) : '—';
+        tr.innerHTML = `
+            <td><input data-id="${idAttr}" type="checkbox" onchange="toggleKnowledgeSelection('${id.replace(/'/g, '\\\'')}', this.checked)"></td>
+            <td>${escapeHtml(row.title)}</td>
+            <td>${typeLabel}</td>
+            <td class="knowledge-cell-preview" title="${escapeHtml(row.question || '')}">${qPreview || '—'}</td>
+            <td>${escapeHtml(mapEmbeddingLabel(row.embeddingStatus))}</td>
+            <td>${mapRecallLabel(row.isRecall)}</td>
+            <td class="knowledge-cell-preview">${fileHint}</td>
+            <td>
+                <div class="table-actions">
+                  <button type="button" onclick="openKnowledgeModal('${id.replace(/'/g, '\\\'')}')">编辑</button>
+                  <button type="button" onclick="deleteKnowledge('${id.replace(/'/g, '\\\'')}')">删除</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    updateKnowledgePageInfo();
+}
+
+async function queryKnowledgePage() {
+    if (!contextDatasourceId) return;
+    try {
+        const params = {
+            ...getKnowledgeFilters(),
+            pageNum: knowledgePageNum,
+            pageSize: knowledgePageSize
+        };
+        const raw = await Api.get('/agentKnowledge/query/page', params);
+        const pageData = normalizePagePayload(raw);
+        knowledgeList = pageData.records;
+        knowledgeTotal = pageData.total;
+        knowledgePageNum = pageData.current || knowledgePageNum;
+        knowledgePageSize = pageData.size || knowledgePageSize;
+        renderKnowledgeTable();
+    } catch (error) {
+        console.error('Query knowledge page error:', error);
+        notifyErrorUnlessShown(error, '查询知识库失败');
+    }
+}
+
+function resetKnowledgeFilters() {
+    document.getElementById('kbFilterTitle').value = '';
+    document.getElementById('kbFilterType').value = '';
+    document.getElementById('kbFilterEmbedding').value = '';
+    document.getElementById('kbFilterRecall').value = '';
+    knowledgePageNum = 1;
+    queryKnowledgePage();
+}
+
+function changeKnowledgePage(direction) {
+    const totalPages = knowledgeTotal > 0 ? Math.ceil(knowledgeTotal / knowledgePageSize) : 1;
+    const next = knowledgePageNum + direction;
+    if (next < 1 || next > totalPages) return;
+    knowledgePageNum = next;
+    queryKnowledgePage();
+}
+
+function toggleKnowledgeSelection(id, checked) {
+    if (checked) selectedKnowledgeIds.add(id);
+    else selectedKnowledgeIds.delete(id);
+}
+
+function toggleSelectAllKnowledge(checkbox) {
+    const checked = !!checkbox.checked;
+    document.querySelectorAll('#knowledgeTableBody input[type="checkbox"]').forEach(item => {
+        item.checked = checked;
+        const id = item.dataset.id;
+        if (!id) return;
+        if (checked) selectedKnowledgeIds.add(id);
+        else selectedKnowledgeIds.delete(id);
+    });
+}
+
+function syncKnowledgeModalFields() {
+    const type = document.getElementById('kbModalType').value;
+    const isEdit = !!editingKnowledgeId;
+    const qGroup = document.getElementById('kbModalQuestionGroup');
+    const cGroup = document.getElementById('kbModalContentGroup');
+    const fileGroup = document.getElementById('kbModalFileGroup');
+    const splitGroup = document.getElementById('kbModalSplitterGroup');
+    const typeSelect = document.getElementById('kbModalType');
+
+    if (type === 'DOCUMENT') {
+        qGroup.hidden = true;
+        cGroup.hidden = true;
+        fileGroup.hidden = isEdit;
+        splitGroup.hidden = isEdit;
+        typeSelect.disabled = isEdit;
+    } else {
+        qGroup.hidden = false;
+        cGroup.hidden = false;
+        fileGroup.hidden = true;
+        splitGroup.hidden = true;
+        typeSelect.disabled = isEdit;
+    }
+}
+
+function resetKnowledgeModalForm() {
+    document.getElementById('kbModalType').value = 'DOCUMENT';
+    document.getElementById('kbModalTitle').value = '';
+    document.getElementById('kbModalQuestion').value = '';
+    document.getElementById('kbModalContent').value = '';
+    document.getElementById('kbModalFile').value = '';
+    document.getElementById('kbModalSplitter').value = 'token';
+    document.getElementById('kbModalQuestion').disabled = false;
+    syncKnowledgeModalFields();
+}
+
+async function openKnowledgeModal(id) {
+    editingKnowledgeId = id || null;
+    document.getElementById('knowledgeModalTitle').textContent = editingKnowledgeId ? '编辑知识' : '新增';
+    document.getElementById('kbModalType').disabled = false;
+
+    if (!editingKnowledgeId) {
+        resetKnowledgeModalForm();
+        document.getElementById('knowledgeModal').style.display = 'flex';
+        return;
+    }
+
+    try {
+        const row = await Api.get('/agentKnowledge/query/unique', {id: editingKnowledgeId});
+        if (!row) {
+            showErrorDialog({title: '提示', message: '未找到该知识条目'});
+            return;
+        }
+        editingKnowledgeType = row.type || '';
+        document.getElementById('kbModalType').value = editingKnowledgeType || 'DOCUMENT';
+        document.getElementById('kbModalType').disabled = true;
+        document.getElementById('kbModalTitle').value = row.title || '';
+        document.getElementById('kbModalQuestion').value = row.question || '';
+        document.getElementById('kbModalContent').value = row.content || '';
+        document.getElementById('kbModalFile').value = '';
+        const qEl = document.getElementById('kbModalQuestion');
+        qEl.disabled = true;
+        syncKnowledgeModalFields();
+        document.getElementById('knowledgeModal').style.display = 'flex';
+    } catch (error) {
+        console.error('Query knowledge unique error:', error);
+        notifyErrorUnlessShown(error, '加载知识详情失败');
+    }
+}
+
+function closeKnowledgeModal() {
+    editingKnowledgeId = null;
+    editingKnowledgeType = '';
+    document.getElementById('kbModalType').disabled = false;
+    document.getElementById('kbModalQuestion').disabled = false;
+    document.getElementById('knowledgeModal').style.display = 'none';
+}
+
+async function submitKnowledgeModal() {
+    const title = document.getElementById('kbModalTitle').value.trim();
+    if (!title) {
+        showErrorDialog({title: '提示', message: '请填写标题'});
+        return;
+    }
+
+    if (editingKnowledgeId) {
+        try {
+            await Api.post('/agentKnowledge/update', {
+                id: editingKnowledgeId,
+                datasourceId: contextDatasourceId,
+                title,
+                type: editingKnowledgeType,
+                question: document.getElementById('kbModalQuestion').value,
+                content: document.getElementById('kbModalContent').value
+            });
+            closeKnowledgeModal();
+            await queryKnowledgePage();
+        } catch (error) {
+            console.error('Update knowledge error:', error);
+            notifyErrorUnlessShown(error, '保存失败');
+        }
+        return;
+    }
+
+    const type = document.getElementById('kbModalType').value;
+    const question = document.getElementById('kbModalQuestion').value.trim();
+    const content = document.getElementById('kbModalContent').value.trim();
+    const fileInput = document.getElementById('kbModalFile');
+    const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+    const splitterType = document.getElementById('kbModalSplitter').value.trim() || 'token';
+
+    if (type === 'DOCUMENT') {
+        if (!file) {
+            showErrorDialog({title: '提示', message: '文档类型请上传文件'});
+            return;
+        }
+    } else {
+        if (!question || !content) {
+            showErrorDialog({title: '提示', message: '问答 / 常见问题类型请填写「问题」与「内容」'});
+            return;
+        }
+    }
+
+    const formData = new FormData();
+    formData.append('datasourceId', contextDatasourceId);
+    formData.append('title', title);
+    formData.append('type', type);
+    if (question) formData.append('question', question);
+    if (content) formData.append('content', content);
+    if (file) formData.append('file', file);
+    if (type === 'DOCUMENT') {
+        formData.append('splitterType', splitterType);
+    }
+
+    try {
+        await Api.requestForm('/agentKnowledge/add', formData);
+        closeKnowledgeModal();
+        await queryKnowledgePage();
+    } catch (error) {
+        console.error('Add knowledge error:', error);
+        notifyErrorUnlessShown(error, '新增失败');
+    }
+}
+
+async function deleteKnowledge(id) {
+    if (!confirm('确认删除该知识条目吗？')) return;
+    try {
+        await Api.del('/agentKnowledge/delete', {body: {id, datasourceId: contextDatasourceId}});
+        await queryKnowledgePage();
+    } catch (error) {
+        console.error('Delete knowledge error:', error);
+        notifyErrorUnlessShown(error, '删除失败');
+    }
+}
+
+async function deleteSelectedKnowledge() {
+    if (!selectedKnowledgeIds.size) {
+        showErrorDialog({title: '提示', message: '请先选择要删除的条目'});
+        return;
+    }
+    if (!confirm(`确认删除选中的 ${selectedKnowledgeIds.size} 条知识吗？`)) return;
+    const ids = Array.from(selectedKnowledgeIds);
+    try {
+        for (const id of ids) {
+            await Api.del('/agentKnowledge/delete', {body: {id, datasourceId: contextDatasourceId}});
+        }
+        selectedKnowledgeIds.clear();
+        await queryKnowledgePage();
+    } catch (error) {
+        console.error('Batch delete knowledge error:', error);
+        notifyErrorUnlessShown(error, '批量删除失败');
+    }
+}
+
+function syncKnowledgeContextToWindow() {
+    if (typeof window !== 'undefined') {
+        window.__knowledgeDsId = contextDatasourceId || '';
+    }
+}
+
+function setKnowledgeLayoutVisible(mode) {
+    const invalid = document.getElementById('knowledgeInvalid');
+    const body = document.getElementById('knowledgeBody');
+    const bar = document.getElementById('knowledgeContextBar');
+    if (!invalid) {
+        if (body) body.hidden = false;
+        if (bar) bar.hidden = false;
+        return;
+    }
+    if (mode === 'invalid') {
+        invalid.hidden = false;
+        if (body) body.hidden = true;
+        if (bar) bar.hidden = true;
+    } else {
+        invalid.hidden = true;
+        if (body) body.hidden = false;
+        if (bar) bar.hidden = false;
+    }
+}
+
+async function initKnowledgeContextAndQuery() {
+    try {
+        const ds = await Api.get('/datasource/query/unique', {id: contextDatasourceId});
+        const meta = document.getElementById('knowledgeContextMeta');
+        if (meta && ds) {
+            const name = ds.name != null ? String(ds.name) : '';
+            const host = ds.host != null ? String(ds.host) : '';
+            const port = ds.port != null ? String(ds.port) : '';
+            const db = ds.databaseName != null ? String(ds.databaseName) : '';
+            meta.textContent = name
+                ? `${name}（${formatDbTypeLabel(ds.type)} · ${host}:${port} / ${db}）`
+                : '当前数据源';
+        }
+    } catch (error) {
+        console.error('Load datasource for context error:', error);
+        const meta = document.getElementById('knowledgeContextMeta');
+        if (meta) {
+            meta.textContent = `数据源 ID：${contextDatasourceId}（详情加载失败）`;
+        }
+        notifyErrorUnlessShown(error, '加载数据源信息失败');
+    }
+
+    syncKnowledgeContextToWindow();
+    knowledgePageNum = 1;
+    await queryKnowledgePage();
+}
+
+async function initKnowledgePage() {
+    const params = new URLSearchParams(window.location.search);
+    // 与数据源列表一致：后端主键字段为 id；兼容历史链接 datasourceId
+    contextDatasourceId = (params.get('id') || params.get('datasourceId') || '').trim();
+    if (!contextDatasourceId) {
+        setKnowledgeLayoutVisible('invalid');
+        return;
+    }
+
+    setKnowledgeLayoutVisible('ok');
+    await initKnowledgeContextAndQuery();
+}
+
+/**
+ * 数据源页内嵌：由表格「知识库维护」或 ?kb= 进入。
+ */
+async function enterEmbeddedKnowledge(datasourceId) {
+    if (!datasourceId || !document.getElementById('panelKnowledge')) return;
+    contextDatasourceId = String(datasourceId).trim();
+    const tab = document.getElementById('navTabKnowledge');
+    if (tab) tab.classList.remove('top-tab--hidden');
+    if (typeof switchDatasourceShellView === 'function') {
+        switchDatasourceShellView('knowledge');
+    }
+    try {
+        const u = new URL(window.location.href);
+        u.searchParams.set('kb', contextDatasourceId);
+        history.replaceState(null, '', u.pathname + '?' + u.searchParams.toString());
+    } catch (_) {
+        /* ignore */
+    }
+    await initKnowledgeContextAndQuery();
+}
+
+function clearEmbeddedKnowledgeContext() {
+    contextDatasourceId = '';
+    syncKnowledgeContextToWindow();
+}
+
+if (typeof window !== 'undefined') {
+    window.enterEmbeddedKnowledge = enterEmbeddedKnowledge;
+    window.clearEmbeddedKnowledgeContext = clearEmbeddedKnowledgeContext;
+}

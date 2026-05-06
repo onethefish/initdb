@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 嵌入数据源页：与 knowledge.js、knowledgeModal 使用相同元素 id（与独立 knowledge 页分文件，避免模板内重复 id） -->
+<div id="knowledgeEmbeddedRoot" th:fragment="knowledgeEmbedded">
+  <div class="knowledge-context-bar" id="knowledgeContextBar">
+    <div class="knowledge-context-text">
+      <strong>知识库维护</strong>
+      <span class="knowledge-context-sep">·</span>
+      <span id="knowledgeContextMeta">当前数据源</span>
+    </div>
+    <button class="btn btn-secondary knowledge-back-to-list" onclick="returnToDatasourceList()" type="button">返回列表</button>
+  </div>
+  <div class="knowledge-body" id="knowledgeBody">
+    <div class="datasource-toolbar">
+      <input id="kbFilterTitle" placeholder="标题关键词" type="text">
+      <select id="kbFilterType" title="知识类型">
+        <option value="">类型(全部)</option>
+        <option value="DOCUMENT">文档</option>
+        <option value="QA">问答</option>
+        <option value="FAQ">常见问题</option>
+      </select>
+      <select id="kbFilterEmbedding" title="向量化状态">
+        <option value="">向量化(全部)</option>
+        <option value="0">待处理</option>
+        <option value="1">处理中</option>
+        <option value="2">已完成</option>
+        <option value="3">失败</option>
+      </select>
+      <select id="kbFilterRecall" title="是否参与召回">
+        <option value="">召回(全部)</option>
+        <option value="1">是</option>
+        <option value="0">否</option>
+      </select>
+      <div class="datasource-toolbar-actions">
+        <button class="btn btn-toolbar btn-toolbar--query" onclick="queryKnowledgePage()" type="button">查询</button>
+        <button class="btn btn-toolbar btn-toolbar--reset" onclick="resetKnowledgeFilters()" type="button">重置</button>
+        <button class="btn btn-toolbar btn-toolbar--create" onclick="openKnowledgeModal()" type="button">新增</button>
+      </div>
+    </div>
+    <div class="datasource-table-wrapper">
+      <table class="datasource-table knowledge-table">
+        <thead>
+        <tr>
+          <th><input id="selectAllKnowledge" onchange="toggleSelectAllKnowledge(this)" type="checkbox"></th>
+          <th>标题</th>
+          <th>类型</th>
+          <th>问题</th>
+          <th>向量化</th>
+          <th>召回</th>
+          <th>文件</th>
+          <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="knowledgeTableBody"></tbody>
+      </table>
+    </div>
+    <div class="datasource-footer">
+      <button class="btn btn-danger" onclick="deleteSelectedKnowledge()" type="button">批量删除</button>
+      <div class="datasource-pagination">
+        <button onclick="changeKnowledgePage(-1)" type="button">上一页</button>
+        <span id="knowledgePageInfo">第 1 页</span>
+        <button onclick="changeKnowledgePage(1)" type="button">下一页</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

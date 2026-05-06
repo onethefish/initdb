@@ -34,6 +34,67 @@ body {
     font-weight: 600;
 }
 
+/* 顶栏统一：品牌居左，页签组居右（数据源页、对话页共用 .top-tabs--datasource） */
+.top-tabs--datasource .top-tabs-brand {
+    margin-left: 0;
+}
+
+.top-tabs--datasource .top-tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* 页签分色：数据源=蓝系，对话=绿系，知识库=紫系（激活态加深） */
+.top-tab.top-tab--ds:not(.active) {
+    border-color: #91caff;
+    background: #f0f7ff;
+    color: #1d5a9e;
+}
+
+.top-tab.top-tab--ds.active {
+    border-color: var(--color-primary);
+    background: #d9ecff;
+    color: #0d5bb8;
+}
+
+.top-tab.top-tab--chat:not(.active) {
+    border-color: #95de64;
+    background: #f6ffed;
+    color: #389e0d;
+}
+
+.top-tab.top-tab--chat.active {
+    border-color: #52c41a;
+    background: #d9f7be;
+    color: #237804;
+}
+
+.top-tab.top-tab--knowledge:not(.active) {
+    border-color: #b37feb;
+    background: #f9f0ff;
+    color: #531dab;
+}
+
+.top-tab.top-tab--knowledge.active {
+    border-color: #9254de;
+    background: #efdbff;
+    color: #391085;
+}
+
+.top-tab.top-tab--ds:not(.active):hover {
+    background: #e6f2ff;
+}
+
+.top-tab.top-tab--chat:not(.active):hover {
+    background: #edf9e0;
+}
+
+.top-tab.top-tab--knowledge:not(.active):not(.top-tab--hidden):hover {
+    background: #f3e8ff;
+}
+
 .top-tabs-brand .brand-logo {
     width: 22px;
     height: 22px;
@@ -53,12 +114,6 @@ body {
     box-sizing: border-box;
 }
 
-.top-tab.active {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-    background-color: #ecf5ff;
-}
-
 .page-panel {
     display: none;
     flex: 1;
@@ -68,4 +123,9 @@ body {
 .page-panel-active {
     display: flex;
     flex-direction: column;
+}
+
+/* 通用：所有表格表头单元格居中（业务页可用更高优先级覆盖） */
+table th {
+    text-align: center;
 }

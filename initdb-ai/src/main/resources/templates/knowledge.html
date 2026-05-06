@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>知识库维护 — 智能数据库助手</title>
+  <link href="/css/knowledge-app.css" rel="stylesheet">
+</head>
+<body>
+<div class="main-content">
+  <div th:replace="~{fragments/nav :: appNav('datasource')}"></div>
+  <div th:replace="~{fragments/knowledge-content :: knowledgePage}"></div>
+</div>
+<div th:replace="~{fragments/knowledge-content :: knowledgeModal}"></div>
+<script defer src="/js/api.js"></script>
+<script defer src="/js/utils.js"></script>
+<script defer src="/js/knowledge.js"></script>
+<script defer src="/js/knowledge-page.js"></script>
+</body>
+</html>

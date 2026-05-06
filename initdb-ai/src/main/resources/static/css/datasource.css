@@ -1,4 +1,16 @@
+.top-tab--hidden {
+    display: none !important;
+}
+
+.datasource-page-inner {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 .datasource-toolbar {
+    --toolbar-control-height: 36px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -8,7 +20,16 @@
 }
 
 .datasource-toolbar input,
-.datasource-toolbar select,
+.datasource-toolbar select {
+    height: var(--toolbar-control-height);
+    padding: 0 10px;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    font-size: 14px;
+    line-height: normal;
+}
+
 #dsStatus {
     padding: 8px 10px;
     border: 1px solid #ddd;
@@ -19,7 +40,57 @@
     margin-left: auto;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+}
+
+/* 工具栏：查询 / 重置 / 新增 — 与左侧条件框同高；查询（蓝）与新增（绿）分色 */
+.datasource-toolbar-actions .btn-toolbar {
+    height: var(--toolbar-control-height);
+    padding: 0 14px;
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.datasource-toolbar-actions .btn-toolbar--query {
+    border: 1px solid var(--color-primary);
+    background: #ecf5ff;
+    color: #2b6cb0;
+}
+
+.datasource-toolbar-actions .btn-toolbar--query:hover {
+    background: #d4e8ff;
+    border-color: var(--color-primary-hover);
+    color: #1d4f8f;
+}
+
+.datasource-toolbar-actions .btn-toolbar--reset {
+    border: 1px solid #c0c4cc;
+    background: #fff;
+    color: #606266;
+}
+
+.datasource-toolbar-actions .btn-toolbar--reset:hover {
+    background: #f5f7fa;
+    border-color: #a8abb2;
+    color: #303133;
+}
+
+.datasource-toolbar-actions .btn-toolbar--create {
+    border: 1px solid #67c23a;
+    background: #f0f9eb;
+    color: #529b2e;
+}
+
+.datasource-toolbar-actions .btn-toolbar--create:hover {
+    background: #e1f3d8;
+    border-color: #5daf34;
+    color: #3d7323;
 }
 
 .datasource-table-wrapper {
@@ -34,6 +105,51 @@
     background: #fff;
 }
 
+/* 数据源列表：描述列限制宽度为操作列让路；操作列固定宽度容纳一行四钮（不用 fixed 表布局，避免挤压变形） */
+.datasource-table:not(.knowledge-table) th:nth-child(9),
+.datasource-table:not(.knowledge-table) td:nth-child(9) {
+    max-width: 11rem;
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.datasource-table:not(.knowledge-table) th:nth-child(10),
+.datasource-table:not(.knowledge-table) td:nth-child(10) {
+    width: 20.5rem;
+    min-width: 20.5rem;
+    max-width: 20.5rem;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
+/* 知识库列表：标题 / 问题列限制最大宽度；操作列固定容纳两钮一行 */
+.knowledge-table th:nth-child(2),
+.knowledge-table td:nth-child(2) {
+    max-width: 12rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.knowledge-table th:nth-child(4),
+.knowledge-table td:nth-child(4) {
+    max-width: 16rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+}
+
+.knowledge-table th:nth-child(8),
+.knowledge-table td:nth-child(8) {
+    width: 11rem;
+    min-width: 11rem;
+    max-width: 11rem;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+
 .datasource-table th,
 .datasource-table td {
     border: 1px solid #eee;
@@ -44,6 +160,43 @@
 
 .datasource-table th {
     background: #f8f9fb;
+    text-align: center;
+}
+
+/* 第一列勾选：列宽一致、复选框统一尺寸、表头与数据格均居中 */
+.datasource-table th:first-child,
+.datasource-table td:first-child:not(.empty-hint) {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    text-align: center;
+    vertical-align: middle;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+.datasource-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    vertical-align: middle;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+}
+
+/* 数据行：奇偶行背景区分（仅 tbody，表头不变） */
+.datasource-table tbody tr:nth-child(odd) {
+    background-color: #fff;
+}
+
+.datasource-table tbody tr:nth-child(even) {
+    background-color: #f5f7fa;
+}
+
+.datasource-table tbody tr:hover {
+    background-color: #e8eef5;
 }
 
 .datasource-table td.empty-hint {
@@ -101,8 +254,44 @@
     background-color: #e6a23c;
 }
 
+/* 数据源表：类型、状态、测试状态（枚举 / 标签列）居中 */
+.datasource-table:not(.knowledge-table) thead th:nth-child(3),
+.datasource-table:not(.knowledge-table) tbody td:nth-child(3),
+.datasource-table:not(.knowledge-table) thead th:nth-child(7),
+.datasource-table:not(.knowledge-table) tbody td:nth-child(7),
+.datasource-table:not(.knowledge-table) thead th:nth-child(8),
+.datasource-table:not(.knowledge-table) tbody td:nth-child(8) {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 知识库表：类型、向量化、召回 居中 */
+.knowledge-table thead th:nth-child(3),
+.knowledge-table tbody td:nth-child(3),
+.knowledge-table thead th:nth-child(5),
+.knowledge-table tbody td:nth-child(5),
+.knowledge-table thead th:nth-child(6),
+.knowledge-table tbody td:nth-child(6) {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 操作列（末列）：按钮组在单元格内水平居中 */
+.datasource-table tbody td:last-child {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.datasource-table tbody td:last-child .table-actions {
+    justify-content: center;
+    flex-wrap: nowrap;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
 .table-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
 }
 
@@ -113,6 +302,59 @@
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 12px;
+}
+
+/* 操作列：四色区分（浅底 + 同色描边，悬停略加深） */
+.table-actions .ds-row-action {
+    font-weight: 500;
+}
+
+.table-actions .ds-row-action--test {
+    border-color: #e6a23c;
+    background: #fdf6ec;
+    color: #b88230;
+}
+
+.table-actions .ds-row-action--test:hover {
+    background: #faecd8;
+    border-color: #cf9236;
+    color: #9a6b1a;
+}
+
+.table-actions .ds-row-action--edit {
+    border-color: var(--color-primary);
+    background: #ecf5ff;
+    color: #337ecc;
+}
+
+.table-actions .ds-row-action--edit:hover {
+    background: #d9ecff;
+    border-color: var(--color-primary-hover);
+    color: #2563a8;
+}
+
+.table-actions .ds-row-action--knowledge {
+    border-color: #9254de;
+    background: #f9f0ff;
+    color: #722ed1;
+}
+
+.table-actions .ds-row-action--knowledge:hover {
+    background: #efdbff;
+    border-color: #7c3acd;
+    color: #531dab;
+}
+
+.table-actions .ds-row-action--delete {
+    border-color: #f56c6c;
+    background: #fef0f0;
+    color: #c45656;
+}
+
+.table-actions .ds-row-action--delete:hover {
+    background: #fde2e2;
+    border-color: #e85d5d;
+    color: #a33030;
 }
 
 .btn-danger {

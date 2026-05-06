@@ -1,12 +1,27 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<div class="top-tabs" th:fragment="appNav (activeTab)">
-  <a th:class="${activeTab == 'datasource'} ? 'top-tab active' : 'top-tab'" th:href="@{/datasource}">数据源管理</a>
-  <a th:class="${activeTab == 'chat'} ? 'top-tab active' : 'top-tab'" th:href="@{/chat}">智能对话</a>
+<div class="top-tabs top-tabs--datasource" th:fragment="appNav (activeTab)">
   <div class="top-tabs-brand">
     <img alt="Logo" class="brand-logo" th:src="@{/images/logo.svg}">
     <span>智能数据库助手</span>
+  </div>
+  <div class="top-tabs-nav">
+    <a th:class="${activeTab == 'datasource'} ? 'top-tab top-tab--ds active' : 'top-tab top-tab--ds'" th:href="@{/datasource}">数据源管理</a>
+    <a th:class="${activeTab == 'chat'} ? 'top-tab top-tab--chat active' : 'top-tab top-tab--chat'" th:href="@{/chat}">智能对话</a>
+  </div>
+</div>
+
+<!-- 数据源页：左侧品牌，右侧页签；「知识库」默认隐藏，从表格进入后显示，返回列表后再次隐藏 -->
+<div class="top-tabs top-tabs--datasource" th:fragment="datasourceNav">
+  <div class="top-tabs-brand">
+    <img alt="Logo" class="brand-logo" th:src="@{/images/logo.svg}">
+    <span>智能数据库助手</span>
+  </div>
+  <div class="top-tabs-nav">
+    <a class="top-tab top-tab--hidden top-tab--knowledge" href="#" id="navTabKnowledge" role="button">知识库</a>
+    <a class="top-tab top-tab--ds active" href="#" id="navTabDatasource" role="button">数据源管理</a>
+    <a class="top-tab top-tab--chat" id="navTabChat" th:href="@{/chat}">智能对话</a>
   </div>
 </div>
 </body>

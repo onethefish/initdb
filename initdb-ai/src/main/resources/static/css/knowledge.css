@@ -1,0 +1,71 @@
+.knowledge-context-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #ecf5ff;
+    border-bottom: 1px solid var(--color-border-light);
+    font-size: 14px;
+    color: var(--color-text-main);
+}
+
+.knowledge-context-sep {
+    margin: 0 6px;
+    color: #999;
+}
+
+.knowledge-back-link {
+    text-decoration: none;
+    display: inline-block;
+    padding: 8px 14px;
+    font-size: 13px;
+}
+
+.knowledge-back-to-list {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 13px;
+}
+
+.knowledge-invalid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    color: var(--color-text-secondary);
+}
+
+.knowledge-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.knowledge-table td.knowledge-cell-preview {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.knowledge-modal-content {
+    width: 560px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+}

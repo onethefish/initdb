@@ -8,12 +8,19 @@
 </head>
 <body>
 <div class="main-content">
-  <div th:replace="~{fragments/nav :: appNav('datasource')}"></div>
-  <div th:replace="~{fragments/datasource-content :: datasourcePage}"></div>
+  <div th:replace="~{fragments/nav :: datasourceNav}"></div>
+  <div class="page-panel page-panel-active" id="panelDatasource">
+    <div th:replace="~{fragments/datasource-content :: datasourcePage}"></div>
+  </div>
+  <div class="page-panel" id="panelKnowledge">
+    <div th:replace="~{fragments/knowledge-embedded :: knowledgeEmbedded}"></div>
+  </div>
 </div>
 <div th:replace="~{fragments/datasource-content :: datasourceModal}"></div>
+<div th:replace="~{fragments/knowledge-content :: knowledgeModal}"></div>
 <script defer src="/js/api.js"></script>
 <script defer src="/js/utils.js"></script>
+<script defer src="/js/knowledge.js"></script>
 <script defer src="/js/datasource.js"></script>
 <script defer src="/js/datasource-page.js"></script>
 </body>

@@ -1,4 +1,4 @@
-/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog */
+/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, closeKnowledgeModal */
 'use strict';
 
 let datasourceList = [];
@@ -109,7 +109,7 @@ function renderDatasourceTable() {
 
     if (!datasourceList.length) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="10" class="empty-hint">暂无数据源，请点击“新增数据源”创建</td>';
+        tr.innerHTML = '<td colspan="10" class="empty-hint">暂无数据源，请点击「新增」创建</td>';
         tbody.appendChild(tr);
         updateDatasourcePageInfo();
         return;
@@ -129,9 +129,10 @@ function renderDatasourceTable() {
             <td>${escapeHtml(ds.description)}</td>
             <td>
                 <div class="table-actions">
-                  <button type="button" onclick="testDatasourceRow('${ds.id}')">测试</button>
-                  <button type="button" onclick="openDatasourceModal('${ds.id}')">编辑</button>
-                  <button type="button" onclick="deleteDatasource('${ds.id}')">删除</button>
+                  <button class="ds-row-action ds-row-action--test" type="button" onclick="testDatasourceRow('${ds.id}')">测试</button>
+                  <button class="ds-row-action ds-row-action--edit" type="button" onclick="openDatasourceModal('${ds.id}')">编辑</button>
+                  <button class="ds-row-action ds-row-action--knowledge" type="button" onclick="openKnowledgeMaintenance('${ds.id}')">知识库维护</button>
+                  <button class="ds-row-action ds-row-action--delete" type="button" onclick="deleteDatasource('${ds.id}')">删除</button>
                 </div>
             </td>
         `;
@@ -242,7 +243,7 @@ function collectDatasourceForm() {
 
 async function openDatasourceModal(id) {
     editingDatasourceId = id || null;
-    document.getElementById('datasourceModalTitle').textContent = editingDatasourceId ? '编辑数据源' : '新增数据源';
+    document.getElementById('datasourceModalTitle').textContent = editingDatasourceId ? '编辑数据源' : '新增';
 
     if (!editingDatasourceId) {
         fillDatasourceForm(null);
@@ -354,4 +355,93 @@ async function deleteSelectedDatasource() {
     }
 }
 
+function openKnowledgeMaintenance(datasourceId) {
+    if (datasourceId == null || String(datasourceId).trim() === '') return;
+    if (typeof window.enterEmbeddedKnowledge === 'function' && document.getElementById('panelKnowledge')) {
+        window.enterEmbeddedKnowledge(String(datasourceId).trim());
+        return;
+    }
+}
+
+function switchDatasourceShellView(view) {
+    const panelDs = document.getElementById('panelDatasource');
+    const panelKb = document.getElementById('panelKnowledge');
+    const tabK = document.getElementById('navTabKnowledge');
+    const tabD = document.getElementById('navTabDatasource');
+    if (!panelDs || !panelKb || !tabD) return;
+    if (view === 'knowledge') {
+        panelDs.classList.remove('page-panel-active');
+        panelKb.classList.add('page-panel-active');
+        if (tabK) tabK.classList.add('active');
+        tabD.classList.remove('active');
+    } else {
+        panelKb.classList.remove('page-panel-active');
+        panelDs.classList.add('page-panel-active');
+        if (tabK) tabK.classList.remove('active');
+        tabD.classList.add('active');
+    }
+}
+
+function stripKbQueryFromUrl() {
+    try {
+        const u = new URL(window.location.href);
+        u.searchParams.delete('kb');
+        const qs = u.searchParams.toString();
+        history.replaceState(null, '', u.pathname + (qs ? '?' + qs : ''));
+    } catch (_) {
+        /* ignore */
+    }
+}
+
+function hideKnowledgeTab() {
+    const tabK = document.getElementById('navTabKnowledge');
+    if (tabK) {
+        tabK.classList.add('top-tab--hidden');
+        tabK.classList.remove('active');
+    }
+}
+
+/** 回到数据源列表：清 URL 参数、隐藏「知识库」顶栏页签、清空内嵌上下文 */
+function returnToDatasourceList() {
+    const km = document.getElementById('knowledgeModal');
+    if (km && km.style.display === 'flex' && typeof closeKnowledgeModal === 'function') {
+        closeKnowledgeModal();
+    }
+    switchDatasourceShellView('datasource');
+    stripKbQueryFromUrl();
+    hideKnowledgeTab();
+    window.__knowledgeDsId = '';
+    if (typeof window.clearEmbeddedKnowledgeContext === 'function') {
+        window.clearEmbeddedKnowledgeContext();
+    }
+}
+
+function bindDatasourceShellNav() {
+    const tabK = document.getElementById('navTabKnowledge');
+    const tabD = document.getElementById('navTabDatasource');
+    if (!tabD || !document.getElementById('panelKnowledge')) return;
+
+    tabD.addEventListener('click', e => {
+        e.preventDefault();
+        returnToDatasourceList();
+    });
+
+    if (tabK) {
+        tabK.addEventListener('click', e => {
+            e.preventDefault();
+            const id = window.__knowledgeDsId;
+            if (!id) return;
+            switchDatasourceShellView('knowledge');
+            try {
+                const u = new URL(window.location.href);
+                u.searchParams.set('kb', id);
+                history.replaceState(null, '', u.pathname + '?' + u.searchParams.toString());
+            } catch (_) {
+                /* ignore */
+            }
+        });
+    }
+}
+
+bindDatasourceShellNav();
 bindDatasourceUrlAutoSync();

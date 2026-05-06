@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<div class="page-panel page-panel-active" id="datasourcePage" th:fragment="datasourcePage">
+<div class="datasource-page-inner" id="datasourcePage" th:fragment="datasourcePage">
   <div class="datasource-toolbar">
     <input id="dsFilterName" placeholder="数据源名称" type="text">
     <select id="dsFilterType" title="数据库类型">
@@ -16,9 +16,9 @@
       <option value="0">禁用</option>
     </select>
     <div class="datasource-toolbar-actions">
-      <button class="btn btn-primary" onclick="queryDatasourcePage()" type="button">查询</button>
-      <button class="btn btn-secondary" onclick="resetDatasourceFilters()" type="button">重置</button>
-      <button class="btn btn-primary" onclick="openDatasourceModal()" type="button">新增数据源</button>
+      <button class="btn btn-toolbar btn-toolbar--query" onclick="queryDatasourcePage()" type="button">查询</button>
+      <button class="btn btn-toolbar btn-toolbar--reset" onclick="resetDatasourceFilters()" type="button">重置</button>
+      <button class="btn btn-toolbar btn-toolbar--create" onclick="openDatasourceModal()" type="button">新增</button>
     </div>
   </div>
   <div class="datasource-table-wrapper">
@@ -52,7 +52,7 @@
 
 <div class="modal" id="datasourceModal" th:fragment="datasourceModal">
   <div class="modal-content datasource-modal-content">
-    <h2 id="datasourceModalTitle">新增数据源</h2>
+    <h2 id="datasourceModalTitle">新增</h2>
     <div class="form-group">
       <label for="dsName">名称</label>
       <input id="dsName" required type="text">

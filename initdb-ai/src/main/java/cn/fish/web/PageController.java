@@ -21,6 +21,11 @@ public class PageController {
         return "chat";
     }
 
+    @GetMapping("/knowledge")
+    public String knowledge() {
+        return "knowledge";
+    }
+
     @GetMapping("/index")
     public String legacyIndex() {
         return "redirect:/datasource";

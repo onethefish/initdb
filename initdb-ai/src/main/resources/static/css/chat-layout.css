@@ -137,12 +137,40 @@
 .bot-message td {
     border: 1px solid #c5c5c5;
     padding: 6px 10px;
-    text-align: left;
     vertical-align: top;
 }
 
+.bot-message td {
+    text-align: left;
+}
+
 .bot-message th {
+    text-align: center;
     background: rgba(0, 0, 0, 0.06);
+    font-weight: 600;
+}
+
+/* 用户消息内 Markdown 表格（与助手侧一致：表头居中） */
+.user-message table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.user-message th,
+.user-message td {
+    border: 1px solid #90caf9;
+    padding: 6px 10px;
+    vertical-align: top;
+}
+
+.user-message td {
+    text-align: left;
+}
+
+.user-message th {
+    text-align: center;
+    background: rgba(25, 118, 210, 0.12);
     font-weight: 600;
 }
 
