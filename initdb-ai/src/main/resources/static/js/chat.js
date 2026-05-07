@@ -1,4 +1,4 @@
-/* global Api, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, escapeHtml, marked */
+/* global Api, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, escapeHtml, marked, openModalAnimated, closeModalAnimated */
 'use strict';
 
 let sessions = [];
@@ -184,7 +184,7 @@ async function loadChatDatasourceOptions() {
 }
 
 async function createModal() {
-    document.getElementById('sessionModal').style.display = 'flex';
+    openModalAnimated(document.getElementById('sessionModal'));
     await loadChatDatasourceOptions();
 }
 
@@ -205,7 +205,7 @@ async function deleteModal() {
 }
 
 function closeModal() {
-    document.getElementById('sessionModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('sessionModal'));
     document.getElementById('sessionName').value = '新的对话' + (sessionNameSuffixCounter++);
     const select = document.getElementById('chatDatasourceSelect');
     if (select) {

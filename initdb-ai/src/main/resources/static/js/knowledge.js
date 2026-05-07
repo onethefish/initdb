@@ -1,4 +1,4 @@
-/* global Api, escapeHtml, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog */
+/* global Api, escapeHtml, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, openModalAnimated, closeModalAnimated */
 'use strict';
 
 let contextDatasourceId = '';
@@ -27,10 +27,32 @@ function formatDbTypeLabel(type) {
     return raw;
 }
 
-function mapEmbeddingLabel(code) {
+/** 知识类型：图标 + 短文案（类名仅允许已知枚举） */
+function mapKnowledgeTypeBadge(row) {
+    const code = String(row.type || '').trim().toUpperCase();
+    const codeSafe = ['DOCUMENT', 'QA', 'FAQ'].includes(code) ? code.toLowerCase() : 'unk';
+    const shortMap = {DOCUMENT: '文档', QA: '问答', FAQ: '常见'};
+    const shortTxt = shortMap[code] || (row.typeValue ? String(row.typeValue).slice(0, 4) : (row.type ? String(row.type).slice(0, 4) : '—'));
+    const iconMap = {DOCUMENT: '📄', QA: '💬', FAQ: '📋'};
+    const icon = iconMap[code] || '📌';
+    const titleSrc = row.typeValue || ({DOCUMENT: '文档', QA: '问答', FAQ: '常见问题'}[code]) || row.type || '';
+    return `<span class="kb-enum kb-type kb-type--${codeSafe}" title="${escapeHtml(String(titleSrc))}"><span class="kb-enum__ico" aria-hidden="true">${icon}</span><span class="kb-enum__txt">${escapeHtml(shortTxt)}</span></span>`;
+}
+
+/** 向量化状态：图标 + 文案 */
+function mapEmbeddingBadge(code) {
     const n = Number(code);
-    const map = {0: '待处理', 1: '处理中', 2: '已完成', 3: '失败'};
-    return map[n] != null ? map[n] : '—';
+    const defs = {
+        0: {cls: 'kb-emb--pending', icon: '⏸', label: '待处理'},
+        1: {cls: 'kb-emb--run', icon: '⏳', label: '处理中'},
+        2: {cls: 'kb-emb--ok', icon: '✓', label: '已完成'},
+        3: {cls: 'kb-emb--fail', icon: '✕', label: '失败'}
+    };
+    const d = defs[n];
+    if (!d) {
+        return '<span class="kb-enum kb-emb kb-emb--unk" title="未知"><span class="kb-enum__ico" aria-hidden="true">—</span></span>';
+    }
+    return `<span class="kb-enum kb-emb ${d.cls}" title="${escapeHtml(d.label)}"><span class="kb-enum__ico" aria-hidden="true">${d.icon}</span><span class="kb-enum__lbl">${escapeHtml(d.label)}</span></span>`;
 }
 
 function mapRecallLabel(isRecall) {
@@ -81,21 +103,21 @@ function renderKnowledgeTable() {
         const tr = document.createElement('tr');
         const id = row.id != null ? String(row.id) : '';
         const idAttr = escapeHtml(id);
-        const typeLabel = escapeHtml(row.typeValue || row.type || '');
-        const qPreview = escapeHtml((row.question || '').slice(0, 80));
+        const qPreview = escapeHtml((row.question || '').slice(0, 160));
         const fileHint = row.fileType || row.fileId ? escapeHtml(String(row.fileType || row.fileId || '').slice(0, 24)) : '—';
         tr.innerHTML = `
             <td><input data-id="${idAttr}" type="checkbox" onchange="toggleKnowledgeSelection('${id.replace(/'/g, '\\\'')}', this.checked)"></td>
-            <td>${escapeHtml(row.title)}</td>
-            <td>${typeLabel}</td>
-            <td class="knowledge-cell-preview" title="${escapeHtml(row.question || '')}">${qPreview || '—'}</td>
-            <td>${escapeHtml(mapEmbeddingLabel(row.embeddingStatus))}</td>
+            <td class="knowledge-cell-preview knowledge-cell-title" title="${escapeHtml(row.title || '')}">${row.title ? escapeHtml(row.title) : '—'}</td>
+            <td>${mapKnowledgeTypeBadge(row)}</td>
+            <td class="knowledge-cell-preview knowledge-cell-question" title="${escapeHtml(row.question || '')}">${qPreview || '—'}</td>
+            <td>${mapEmbeddingBadge(row.embeddingStatus)}</td>
             <td>${mapRecallLabel(row.isRecall)}</td>
             <td class="knowledge-cell-preview">${fileHint}</td>
             <td>
                 <div class="table-actions">
-                  <button type="button" onclick="openKnowledgeModal('${id.replace(/'/g, '\\\'')}')">编辑</button>
-                  <button type="button" onclick="deleteKnowledge('${id.replace(/'/g, '\\\'')}')">删除</button>
+                  <button class="ds-row-action ds-row-action--edit" type="button" onclick="openKnowledgeModal('${id.replace(/'/g, '\\\'')}')">编辑</button>
+                  <button class="ds-row-action ds-row-action--test" type="button" onclick="refreshKnowledge('${id.replace(/'/g, '\\\'')}')">刷新向量</button>
+                  <button class="ds-row-action ds-row-action--delete" type="button" onclick="deleteKnowledge('${id.replace(/'/g, '\\\'')}')">删除</button>
                 </div>
             </td>
         `;
@@ -200,7 +222,7 @@ async function openKnowledgeModal(id) {
 
     if (!editingKnowledgeId) {
         resetKnowledgeModalForm();
-        document.getElementById('knowledgeModal').style.display = 'flex';
+        openModalAnimated(document.getElementById('knowledgeModal'));
         return;
     }
 
@@ -220,7 +242,7 @@ async function openKnowledgeModal(id) {
         const qEl = document.getElementById('kbModalQuestion');
         qEl.disabled = true;
         syncKnowledgeModalFields();
-        document.getElementById('knowledgeModal').style.display = 'flex';
+        openModalAnimated(document.getElementById('knowledgeModal'));
     } catch (error) {
         console.error('Query knowledge unique error:', error);
         notifyErrorUnlessShown(error, '加载知识详情失败');
@@ -232,7 +254,7 @@ function closeKnowledgeModal() {
     editingKnowledgeType = '';
     document.getElementById('kbModalType').disabled = false;
     document.getElementById('kbModalQuestion').disabled = false;
-    document.getElementById('knowledgeModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('knowledgeModal'));
 }
 
 function resetVectorSearchModal() {
@@ -248,7 +270,7 @@ function resetVectorSearchModal() {
 
 function openVectorSearchModal() {
     if (!contextDatasourceId) {
-        showErrorDialog({title: '提示', message: '请先进入某一数据源的知识库页签'});
+        showErrorDialog({title: '提示', message: '请先进入某一数据源的「知识库管理」页签'});
         return;
     }
     const modal = document.getElementById('vectorSearchModal');
@@ -259,12 +281,12 @@ function openVectorSearchModal() {
     if (typeEl && filterType && filterType.value) {
         typeEl.value = filterType.value;
     }
-    modal.style.display = 'flex';
+    openModalAnimated(modal);
 }
 
 function closeVectorSearchModal() {
     const modal = document.getElementById('vectorSearchModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) closeModalAnimated(modal);
     resetVectorSearchModal();
 }
 
@@ -337,7 +359,7 @@ async function submitKnowledgeModal() {
 
     if (editingKnowledgeId) {
         try {
-            await Api.post('/agentKnowledge/update', {
+            await Api.put('/agentKnowledge/update', {
                 id: editingKnowledgeId,
                 datasourceId: contextDatasourceId,
                 title,
@@ -405,6 +427,35 @@ async function deleteKnowledge(id) {
     }
 }
 
+async function refreshKnowledge(id) {
+    if (!id || !contextDatasourceId) return;
+    if (!confirm('确认对该条目重新发起向量化？处理为异步，完成后请刷新列表查看状态。')) return;
+    try {
+        await Api.post('/agentKnowledge/refresh', {id, datasourceId: contextDatasourceId});
+        await queryKnowledgePage();
+    } catch (error) {
+        console.error('Refresh knowledge embedding error:', error);
+        notifyErrorUnlessShown(error, '刷新向量失败');
+    }
+}
+
+async function refreshSelectedKnowledge() {
+    if (!selectedKnowledgeIds.size) {
+        showErrorDialog({title: '提示', message: '请先勾选要刷新的条目'});
+        return;
+    }
+    if (!confirm(`确认对选中的 ${selectedKnowledgeIds.size} 条重新发起向量化？处理为异步，完成后请刷新列表查看状态。`)) return;
+    const ids = Array.from(selectedKnowledgeIds);
+    const body = ids.map(kid => ({id: kid, datasourceId: contextDatasourceId}));
+    try {
+        await Api.post('/agentKnowledge/refresh/batch', body);
+        await queryKnowledgePage();
+    } catch (error) {
+        console.error('Batch refresh knowledge embedding error:', error);
+        notifyErrorUnlessShown(error, '批量刷新向量失败');
+    }
+}
+
 async function deleteSelectedKnowledge() {
     if (!selectedKnowledgeIds.size) {
         showErrorDialog({title: '提示', message: '请先选择要删除的条目'});
@@ -412,10 +463,9 @@ async function deleteSelectedKnowledge() {
     }
     if (!confirm(`确认删除选中的 ${selectedKnowledgeIds.size} 条知识吗？`)) return;
     const ids = Array.from(selectedKnowledgeIds);
+    const body = ids.map(id => ({id, datasourceId: contextDatasourceId}));
     try {
-        for (const id of ids) {
-            await Api.del('/agentKnowledge/delete', {body: {id, datasourceId: contextDatasourceId}});
-        }
+        await Api.del('/agentKnowledge/delete/batch', {body});
         selectedKnowledgeIds.clear();
         await queryKnowledgePage();
     } catch (error) {
@@ -491,7 +541,7 @@ async function initKnowledgePage() {
 }
 
 /**
- * 数据源页内嵌：由表格「知识库维护」或 ?kb= 进入。
+ * 数据源页内嵌：由表格「知识库管理」或 ?kb= 进入。
  */
 async function enterEmbeddedKnowledge(datasourceId) {
     if (!datasourceId || !document.getElementById('panelKnowledge')) return;

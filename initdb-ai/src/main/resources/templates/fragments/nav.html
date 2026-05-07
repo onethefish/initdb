@@ -12,14 +12,14 @@
   </div>
 </div>
 
-<!-- 数据源页：左侧品牌，右侧页签；「知识库」默认隐藏，从表格进入后显示，返回列表后再次隐藏 -->
+<!-- 数据源页：左侧品牌，右侧页签；「知识库管理」默认隐藏，从表格进入后显示，返回列表后再次隐藏 -->
 <div class="top-tabs top-tabs--datasource" th:fragment="datasourceNav">
   <div class="top-tabs-brand">
     <img alt="Logo" class="brand-logo" th:src="@{/images/logo.svg}">
     <span>智能数据库助手</span>
   </div>
   <div class="top-tabs-nav">
-    <a class="top-tab top-tab--hidden top-tab--knowledge" href="#" id="navTabKnowledge" role="button">知识库</a>
+    <a class="top-tab top-tab--hidden top-tab--knowledge" href="#" id="navTabKnowledge" role="button">知识库管理</a>
     <a class="top-tab top-tab--ds active" href="#" id="navTabDatasource" role="button">数据源管理</a>
     <a class="top-tab top-tab--chat" id="navTabChat" th:href="@{/chat}">智能对话</a>
   </div>

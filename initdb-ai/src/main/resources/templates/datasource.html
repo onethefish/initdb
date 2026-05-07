@@ -9,11 +9,13 @@
 <body>
 <div class="main-content">
   <div th:replace="~{fragments/nav :: datasourceNav}"></div>
-  <div class="page-panel page-panel-active" id="panelDatasource">
-    <div th:replace="~{fragments/datasource-content :: datasourcePage}"></div>
-  </div>
-  <div class="page-panel" id="panelKnowledge">
-    <div th:replace="~{fragments/knowledge-embedded :: knowledgeEmbedded}"></div>
+  <div class="page-panels-shell">
+    <div class="page-panel page-panel-active" id="panelDatasource">
+      <div th:replace="~{fragments/datasource-content :: datasourcePage}"></div>
+    </div>
+    <div class="page-panel" id="panelKnowledge">
+      <div th:replace="~{fragments/knowledge-embedded :: knowledgeEmbedded}"></div>
+    </div>
   </div>
 </div>
 <div th:replace="~{fragments/datasource-content :: datasourceModal}"></div>

@@ -112,6 +112,12 @@ body {
     font-size: inherit;
     font-family: inherit;
     box-sizing: border-box;
+    transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease,
+        box-shadow 0.22s ease, transform 0.16s ease;
+}
+
+.top-tab:active {
+    transform: scale(0.97);
 }
 
 .page-panel {
@@ -123,6 +129,56 @@ body {
 .page-panel-active {
     display: flex;
     flex-direction: column;
+}
+
+/* 数据源页：数据源列表与知识库管理叠放切换，淡入淡出 */
+.page-panels-shell {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.page-panels-shell > .page-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.28s;
+}
+
+.page-panels-shell > .page-panel.page-panel-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.page-panels-shell > .page-panel:not(.page-panel-active) {
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .top-tab {
+        transition: none;
+    }
+
+    .top-tab:active {
+        transform: none;
+    }
+
+    .page-panels-shell > .page-panel {
+        transition: none;
+    }
 }
 
 /* 通用：所有表格表头单元格居中（业务页可用更高优先级覆盖） */

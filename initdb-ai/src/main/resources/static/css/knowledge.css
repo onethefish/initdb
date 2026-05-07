@@ -8,6 +8,7 @@
     border-bottom: 1px solid var(--color-border-light);
     font-size: 14px;
     color: var(--color-text-main);
+    flex-shrink: 0;
 }
 
 .knowledge-context-sep {
@@ -46,11 +47,203 @@
     flex-direction: column;
 }
 
+/* 与 .datasource-page-inner 相同：表格区占满中间高度，页脚贴在面板底部 */
+#knowledgeEmbeddedRoot {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* flex 子项默认 min-width:auto，表格按内容撑开会出现整页横向滚动 */
+.knowledge-body .datasource-table-wrapper {
+    min-width: 0;
+    min-height: 0;
+    flex: 1;
+}
+
+/* 独立知识页 / 数据源内嵌面板：占满 main-content 剩余高度，底部栏才能沉底 */
+#knowledgePage,
+#panelKnowledge {
+    min-width: 0;
+    flex: 1;
+    min-height: 0;
+}
+
+/* 列宽仅由 colgroup 百分比分配，合计 100%，避免 % 与 rem 混用撑破视口 */
+.knowledge-table {
+    table-layout: fixed;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.knowledge-table col.knowledge-col-cb {
+    width: 4%;
+}
+
+.knowledge-table col.knowledge-col-title {
+    width: 21%;
+}
+
+.knowledge-table col.knowledge-col-type {
+    width: 7%;
+}
+
+.knowledge-table col.knowledge-col-question {
+    width: 23%;
+}
+
+.knowledge-table col.knowledge-col-emb {
+    width: 10%;
+}
+
+.knowledge-table col.knowledge-col-recall {
+    width: 5%;
+}
+
+.knowledge-table col.knowledge-col-file {
+    width: 12%;
+}
+
+.knowledge-table col.knowledge-col-actions {
+    width: 18%;
+}
+
+/* 覆盖全局「首列 44px」：改由 col 百分比控制勾选列 */
+.knowledge-table th:first-child,
+.knowledge-table td:first-child:not(.empty-hint) {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
+.knowledge-table th,
+.knowledge-table td {
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.knowledge-table th:nth-child(3),
+.knowledge-table td:nth-child(3),
+.knowledge-table th:nth-child(5),
+.knowledge-table td:nth-child(5),
+.knowledge-table th:nth-child(6),
+.knowledge-table td:nth-child(6) {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+.knowledge-table td:nth-child(3),
+.knowledge-table td:nth-child(5),
+.knowledge-table td:nth-child(6) {
+    white-space: nowrap;
+}
+
+.knowledge-table th:nth-child(8),
+.knowledge-table td:nth-child(8) {
+    white-space: normal;
+}
+
 .knowledge-table td.knowledge-cell-preview {
-    max-width: 220px;
+    max-width: none;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* 枚举格：类型 / 向量化 */
+.kb-enum {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    vertical-align: middle;
+    line-height: 1.25;
+    font-size: 12px;
+}
+
+.kb-enum__ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    flex-shrink: 0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.kb-type .kb-enum__txt {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    max-width: 2.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kb-type--document .kb-enum__ico {
+    background: #e6f4ff;
+    color: #1677ff;
+}
+
+.kb-type--qa .kb-enum__ico {
+    background: #f6ffed;
+    color: #389e0d;
+}
+
+.kb-type--faq .kb-enum__ico {
+    background: #fff7e6;
+    color: #d46b08;
+}
+
+.kb-type--unk .kb-enum__ico {
+    background: #f5f5f5;
+    color: #8c8c8c;
+}
+
+.kb-emb .kb-enum__lbl {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    font-size: 11px;
+    max-width: 3.4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kb-emb--pending .kb-enum__ico {
+    background: #f4f4f5;
+    color: #606266;
+}
+
+.kb-emb--run .kb-enum__ico {
+    background: #e6f4ff;
+    color: #1677ff;
+}
+
+.kb-emb--ok .kb-enum__ico {
+    background: #f6ffed;
+    color: #389e0d;
+}
+
+.kb-emb--fail .kb-enum__ico {
+    background: #fff2f0;
+    color: #cf1322;
+}
+
+.kb-emb--unk .kb-enum__ico {
+    background: #fafafa;
+    color: #bfbfbf;
+}
+
+/* 表头：类型 / 向量化 小图标 */
+.kb-th-icon {
+    display: inline-block;
+    margin-right: 0.28em;
+    font-size: 1.05em;
+    vertical-align: -0.12em;
+    opacity: 0.92;
 }
 
 .knowledge-modal-content {

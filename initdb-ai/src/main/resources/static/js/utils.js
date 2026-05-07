@@ -62,6 +62,41 @@ function normalizePagePayload(raw) {
     return {records, total, current, size};
 }
 
+/** 与 modal-common.css 中遮罩 / 内容 transition 时长对齐 */
+const MODAL_ANIM_MS = 280;
+
+/**
+ * 打开 .modal：先 display:flex，再下一帧加 modal-is-open 触发过渡。
+ * @param {HTMLElement|null} el
+ */
+function openModalAnimated(el) {
+    if (!el) return;
+    if (el._modalCloseTid) {
+        clearTimeout(el._modalCloseTid);
+        el._modalCloseTid = null;
+    }
+    el.style.display = 'flex';
+    el.classList.remove('modal-is-open');
+    void el.offsetWidth;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => el.classList.add('modal-is-open'));
+    });
+}
+
+/**
+ * 关闭 .modal：先去掉 modal-is-open，再在动画结束后 display:none。
+ * @param {HTMLElement|null} el
+ */
+function closeModalAnimated(el) {
+    if (!el) return;
+    el.classList.remove('modal-is-open');
+    if (el._modalCloseTid) clearTimeout(el._modalCloseTid);
+    el._modalCloseTid = setTimeout(() => {
+        el.style.display = 'none';
+        el._modalCloseTid = null;
+    }, MODAL_ANIM_MS);
+}
+
 function ensureGlobalErrorModal() {
     if (document.getElementById('globalErrorModal')) return;
 
@@ -82,7 +117,7 @@ function ensureGlobalErrorModal() {
     document.body.appendChild(modal);
 
     const close = () => {
-        modal.style.display = 'none';
+        closeModalAnimated(modal);
     };
     document.getElementById('globalErrorOk').addEventListener('click', close);
     modal.addEventListener('click', (e) => {
@@ -123,7 +158,7 @@ function showErrorDialog(opts) {
         metaEl.hidden = true;
     }
 
-    modal.style.display = 'flex';
+    openModalAnimated(modal);
 
     const okBtn = document.getElementById('globalErrorOk');
     if (okBtn) {

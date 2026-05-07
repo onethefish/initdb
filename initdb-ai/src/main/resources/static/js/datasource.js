@@ -1,4 +1,4 @@
-/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, closeKnowledgeModal */
+/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, closeKnowledgeModal, openModalAnimated, closeModalAnimated */
 'use strict';
 
 let datasourceList = [];
@@ -131,7 +131,7 @@ function renderDatasourceTable() {
                 <div class="table-actions">
                   <button class="ds-row-action ds-row-action--test" type="button" onclick="testDatasourceRow('${ds.id}')">测试</button>
                   <button class="ds-row-action ds-row-action--edit" type="button" onclick="openDatasourceModal('${ds.id}')">编辑</button>
-                  <button class="ds-row-action ds-row-action--knowledge" type="button" onclick="openKnowledgeMaintenance('${ds.id}')">知识库维护</button>
+                  <button class="ds-row-action ds-row-action--knowledge" type="button" onclick="openKnowledgeMaintenance('${ds.id}')">知识库管理</button>
                   <button class="ds-row-action ds-row-action--delete" type="button" onclick="deleteDatasource('${ds.id}')">删除</button>
                 </div>
             </td>
@@ -247,14 +247,14 @@ async function openDatasourceModal(id) {
 
     if (!editingDatasourceId) {
         fillDatasourceForm(null);
-        document.getElementById('datasourceModal').style.display = 'flex';
+        openModalAnimated(document.getElementById('datasourceModal'));
         return;
     }
 
     try {
         const ds = await Api.get('/datasource/query/unique', {id: editingDatasourceId});
         fillDatasourceForm(ds || {});
-        document.getElementById('datasourceModal').style.display = 'flex';
+        openModalAnimated(document.getElementById('datasourceModal'));
     } catch (error) {
         console.error('Query datasource unique error:', error);
         notifyErrorUnlessShown(error, '加载数据源详情失败');
@@ -265,7 +265,7 @@ function closeDatasourceModal() {
     editingDatasourceId = null;
     datasourceModalTestStatus = null;
     datasourceUrlManualOverride = false;
-    document.getElementById('datasourceModal').style.display = 'none';
+    closeModalAnimated(document.getElementById('datasourceModal'));
 }
 
 async function submitDatasourceForm() {
@@ -401,10 +401,10 @@ function hideKnowledgeTab() {
     }
 }
 
-/** 回到数据源列表：清 URL 参数、隐藏「知识库」顶栏页签、清空内嵌上下文 */
+/** 回到数据源列表：清 URL 参数、隐藏「知识库管理」顶栏页签、清空内嵌上下文 */
 function returnToDatasourceList() {
     const km = document.getElementById('knowledgeModal');
-    if (km && km.style.display === 'flex' && typeof closeKnowledgeModal === 'function') {
+    if (km && km.style.display !== 'none' && typeof closeKnowledgeModal === 'function') {
         closeKnowledgeModal();
     }
     switchDatasourceShellView('datasource');

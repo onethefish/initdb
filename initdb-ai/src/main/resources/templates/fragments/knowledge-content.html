@@ -4,7 +4,7 @@
 <div class="page-panel page-panel-active" id="knowledgePage" th:fragment="knowledgePage">
   <div class="knowledge-context-bar" id="knowledgeContextBar" hidden>
     <div class="knowledge-context-text">
-      <strong>知识库维护</strong>
+      <strong>知识库管理</strong>
       <span class="knowledge-context-sep">·</span>
       <span id="knowledgeContextMeta">当前数据源</span>
     </div>
@@ -44,13 +44,23 @@
     </div>
     <div class="datasource-table-wrapper">
       <table class="datasource-table knowledge-table">
+        <colgroup>
+          <col class="knowledge-col-cb">
+          <col class="knowledge-col-title">
+          <col class="knowledge-col-type">
+          <col class="knowledge-col-question">
+          <col class="knowledge-col-emb">
+          <col class="knowledge-col-recall">
+          <col class="knowledge-col-file">
+          <col class="knowledge-col-actions">
+        </colgroup>
         <thead>
         <tr>
           <th><input id="selectAllKnowledge" onchange="toggleSelectAllKnowledge(this)" type="checkbox"></th>
           <th>标题</th>
-          <th>类型</th>
+          <th><span class="kb-th-icon" aria-hidden="true">📂</span>类型</th>
           <th>问题</th>
-          <th>向量化</th>
+          <th><span class="kb-th-icon" aria-hidden="true">📡</span>向量化</th>
           <th>召回</th>
           <th>文件</th>
           <th>操作</th>
@@ -60,7 +70,10 @@
       </table>
     </div>
     <div class="datasource-footer">
-      <button class="btn btn-danger" onclick="deleteSelectedKnowledge()" type="button">批量删除</button>
+      <div class="datasource-footer-actions">
+        <button class="btn btn-toolbar btn-toolbar--reset" onclick="refreshSelectedKnowledge()" type="button">批量刷新向量</button>
+        <button class="btn btn-toolbar btn-toolbar--danger" onclick="deleteSelectedKnowledge()" type="button">批量删除</button>
+      </div>
       <div class="datasource-pagination">
         <button onclick="changeKnowledgePage(-1)" type="button">上一页</button>
         <span id="knowledgePageInfo">第 1 页</span>
