@@ -2,9 +2,9 @@ package cn.fish.knowledge.repository.impl;
 
 import cn.fish.knowledge.repository.VectorStoreRepository;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -26,6 +26,11 @@ public class VectorStoreRepositoryImpl implements VectorStoreRepository {
     @Override
     public List<Document> queryList(SearchRequest searchRequest) {
         return vectorStore.similaritySearch(searchRequest);
+    }
+
+    @Override
+    public void delete(Filter.Expression filterExpression) {
+        vectorStore.delete(filterExpression);
     }
 
 

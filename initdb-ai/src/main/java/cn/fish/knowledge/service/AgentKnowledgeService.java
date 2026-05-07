@@ -21,4 +21,6 @@ public interface AgentKnowledgeService {
     void delete(AgentKnowledgeDTO agentKnowledgeDTO);
 
     void delete(List<AgentKnowledgeDTO> agentKnowledgeDTOList);
+
+    void refresh(List<AgentKnowledgeDTO> agentKnowledgeDTOList);
 }

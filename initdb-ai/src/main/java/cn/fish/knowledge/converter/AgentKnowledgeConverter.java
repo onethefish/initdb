@@ -47,5 +47,11 @@ public class AgentKnowledgeConverter {
         knowledge.setSplitterType(agentKnowledgeDto.getSplitterType());
         return knowledge;
     }
+    public static AgentKnowledge toEmbeddingEntity(AgentKnowledgeDTO agentKnowledgeDTO) {
+        AgentKnowledge knowledge = new AgentKnowledge();
+        knowledge.setId(agentKnowledgeDTO.getId());
+        knowledge.setDatasourceId(agentKnowledgeDTO.getDatasourceId());
+        return knowledge;
+    }
 
 }

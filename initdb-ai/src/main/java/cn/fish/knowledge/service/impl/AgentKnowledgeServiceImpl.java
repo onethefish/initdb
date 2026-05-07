@@ -7,6 +7,7 @@ import cn.fish.knowledge.converter.EntityConver;
 import cn.fish.knowledge.entity.AgentKnowledge;
 import cn.fish.knowledge.entity.AgentKnowledgeDTO;
 import cn.fish.knowledge.entity.AgentKnowledgeVO;
+import cn.fish.knowledge.event.AgentKnowledgeDeleteEvent;
 import cn.fish.knowledge.event.AgentKnowledgeEmbeddingEvent;
 import cn.fish.knowledge.repository.AgentKnowledgeRepository;
 import cn.fish.knowledge.service.AgentKnowledgeService;
@@ -76,17 +77,17 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
         current.setTitle(agentKnowledgeDTO.getTitle());
         current.setContent(agentKnowledgeDTO.getContent());
         agentKnowledgeRepository.updateById(current);
-        // todo
-
+        eventPublisher.publishEvent(new AgentKnowledgeEmbeddingEvent(this, current));
     }
 
     @Override
     @Transactional
     public void delete(AgentKnowledgeDTO agentKnowledgeDTO) {
-        // todo
-
+        AgentKnowledge knowledge = AgentKnowledgeConverter.toEmbeddingEntity(agentKnowledgeDTO);
         agentKnowledgeRepository.removeById(agentKnowledgeDTO.getId());
+        eventPublisher.publishEvent(new AgentKnowledgeDeleteEvent(this, knowledge));
     }
+
 
     @Override
     @Transactional
@@ -94,6 +95,15 @@ public class AgentKnowledgeServiceImpl implements AgentKnowledgeService {
         // 有业务逻辑 不能直接批量
         for (AgentKnowledgeDTO agentKnowledgeDTO : agentKnowledgeDTOList) {
             delete(agentKnowledgeDTO);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void refresh(List<AgentKnowledgeDTO> agentKnowledgeDTOList) {
+        for (AgentKnowledgeDTO agentKnowledgeDTO : agentKnowledgeDTOList) {
+            AgentKnowledge current = AgentKnowledgeConverter.toEmbeddingEntity(agentKnowledgeDTO);
+            eventPublisher.publishEvent(new AgentKnowledgeEmbeddingEvent(this, current));
         }
     }
 }
