@@ -16,7 +16,7 @@ public class RepositoryConfig {
     @Bean
     public VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
         PgVectorStore.PgVectorStoreBuilder builder = PgVectorStore.builder(jdbcTemplate, embeddingModel);
-        builder.initializeSchema(true);
+//        builder.initializeSchema(true);
         return builder.build();
     }
 
