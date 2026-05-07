@@ -155,5 +155,19 @@
     </div>
   </div>
 </div>
+
+<div class="modal" id="kbEmbeddingErrorModal" th:fragment="kbEmbeddingErrorModal">
+  <div class="modal-content knowledge-modal-content kb-embedding-error-modal">
+    <h2>向量化失败</h2>
+    <p class="form-hint kb-emb-error-meta" id="kbEmbeddingErrorTitle"></p>
+    <div class="form-group">
+      <label>错误详情</label>
+      <pre class="kb-embedding-error-pre" id="kbEmbeddingErrorBody"></pre>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-primary" onclick="closeKbEmbeddingErrorModal()" type="button">关闭</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

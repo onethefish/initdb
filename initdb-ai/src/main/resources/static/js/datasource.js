@@ -1,4 +1,4 @@
-/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, closeKnowledgeModal, openModalAnimated, closeModalAnimated */
+/* global Api, escapeHtml, mapStatusTag, mapTestStatusTag, normalizePagePayload, notifyErrorUnlessShown, showErrorDialog, closeKnowledgeModal, closeKbEmbeddingErrorModal, openModalAnimated, closeModalAnimated */
 'use strict';
 
 let datasourceList = [];
@@ -406,6 +406,10 @@ function returnToDatasourceList() {
     const km = document.getElementById('knowledgeModal');
     if (km && km.style.display !== 'none' && typeof closeKnowledgeModal === 'function') {
         closeKnowledgeModal();
+    }
+    const kbem = document.getElementById('kbEmbeddingErrorModal');
+    if (kbem && kbem.style.display !== 'none' && typeof closeKbEmbeddingErrorModal === 'function') {
+        closeKbEmbeddingErrorModal();
     }
     switchDatasourceShellView('datasource');
     stripKbQueryFromUrl();

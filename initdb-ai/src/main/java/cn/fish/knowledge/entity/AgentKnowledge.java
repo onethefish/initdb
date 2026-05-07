@@ -4,9 +4,7 @@ import cn.fish.common.entity.DbBase;
 import cn.fish.knowledge.enums.EmbeddingStatus;
 import cn.fish.knowledge.enums.KnowledgeType;
 import cn.fish.knowledge.enums.SplitterType;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -67,6 +65,7 @@ public class AgentKnowledge extends DbBase {
     /**
      * 错误信息（操作失败时记录）
      */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String errorMsg;
 
     /**

@@ -130,6 +130,10 @@ public class AgentKnowledgeListener {
             // 截断错误信息防止数据库报错
             knowledge.setErrorMsg(errorMsg.length() > 1024 ? errorMsg.substring(0, 1024) : errorMsg);
         }
+        else {
+            // 给空 让数据库能够清空错误日志
+            knowledge.setErrorMsg(null);
+        }
         agentKnowledgeRepository.updateById(knowledge);
     }
 

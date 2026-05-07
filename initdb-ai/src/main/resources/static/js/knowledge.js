@@ -55,6 +55,32 @@ function mapEmbeddingBadge(code) {
     return `<span class="kb-enum kb-emb ${d.cls}" title="${escapeHtml(d.label)}"><span class="kb-enum__ico" aria-hidden="true">${d.icon}</span><span class="kb-enum__lbl">${escapeHtml(d.label)}</span></span>`;
 }
 
+/** 向量化列：失败时可点「详情」看 errorMsg */
+function mapEmbeddingColumnHtml(row) {
+    const badge = mapEmbeddingBadge(row.embeddingStatus);
+    if (Number(row.embeddingStatus) !== 3) {
+        return badge;
+    }
+    return `<div class="kb-emb-cell-wrap">${badge}<button type="button" class="kb-emb-error-btn" title="查看错误详情">详情</button></div>`;
+}
+
+function openKbEmbeddingErrorModal(row) {
+    const modal = document.getElementById('kbEmbeddingErrorModal');
+    const titleLine = document.getElementById('kbEmbeddingErrorTitle');
+    const bodyEl = document.getElementById('kbEmbeddingErrorBody');
+    if (!modal || !titleLine || !bodyEl) return;
+    const t = row && row.title != null ? String(row.title).trim() : '';
+    titleLine.textContent = t || '（无标题）';
+    const msg = row && row.errorMsg != null ? String(row.errorMsg).trim() : '';
+    bodyEl.textContent = msg || '暂无详细错误信息。';
+    openModalAnimated(modal);
+}
+
+function closeKbEmbeddingErrorModal() {
+    const modal = document.getElementById('kbEmbeddingErrorModal');
+    if (modal) closeModalAnimated(modal);
+}
+
 function mapRecallLabel(isRecall) {
     if (Number(isRecall) === 1) return '<span class="status-tag status-enabled">是</span>';
     if (Number(isRecall) === 0) return '<span class="status-tag test-unknown">否</span>';
@@ -110,7 +136,7 @@ function renderKnowledgeTable() {
             <td class="knowledge-cell-preview knowledge-cell-title" title="${escapeHtml(row.title || '')}">${row.title ? escapeHtml(row.title) : '—'}</td>
             <td>${mapKnowledgeTypeBadge(row)}</td>
             <td class="knowledge-cell-preview knowledge-cell-question" title="${escapeHtml(row.question || '')}">${qPreview || '—'}</td>
-            <td>${mapEmbeddingBadge(row.embeddingStatus)}</td>
+            <td>${mapEmbeddingColumnHtml(row)}</td>
             <td>${mapRecallLabel(row.isRecall)}</td>
             <td class="knowledge-cell-preview">${fileHint}</td>
             <td>
@@ -121,6 +147,10 @@ function renderKnowledgeTable() {
                 </div>
             </td>
         `;
+        const errDetBtn = tr.querySelector('.kb-emb-error-btn');
+        if (errDetBtn) {
+            errDetBtn.addEventListener('click', () => openKbEmbeddingErrorModal(row));
+        }
         tbody.appendChild(tr);
     });
     updateKnowledgePageInfo();
