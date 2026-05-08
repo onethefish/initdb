@@ -5,6 +5,7 @@ import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
@@ -26,7 +27,9 @@ public class DBAgentController extends BaseController {
         return result(chat);
     }
 
-    @PostMapping("/chat/stream")
+    @PostMapping(path = "/chat/stream",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = "text/plain;charset=UTF-8")
     public Flux<String> chatStream(@RequestBody ChatRequest chatRequest) {
         return dbAgentService.chatStream(chatRequest);
     }

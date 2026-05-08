@@ -63,11 +63,14 @@ public class DBAgentServiceImpl implements DBAgentService {
              - 工具返回空结果时必须如实告知，不得自行编造数据
             """;
     private final ReactAgent dbAgent;
+    private final ContextualizeServiceImpl contextualizeService;
     private final ApplicationEventPublisher eventPublisher;
 
     public DBAgentServiceImpl(ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                               GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool, GetTableDataTool getTableDataTool,
-                              KnowledgeRetrievalTool knowledgeRetrievalTool, MemorySaver memorySaver, ApplicationEventPublisher eventPublisher) {
+                              KnowledgeRetrievalTool knowledgeRetrievalTool, MemorySaver memorySaver,
+                              ContextualizeServiceImpl dbAgentContextualizeService, ApplicationEventPublisher eventPublisher) {
+        this.contextualizeService = dbAgentContextualizeService;
         this.eventPublisher = eventPublisher;
         this.dbAgent = ReactAgent.builder()
                                  .name("数据库智能体")          // 名称
@@ -89,6 +92,7 @@ public class DBAgentServiceImpl implements DBAgentService {
 
     }
 
+
     @Override
     public ChatResponse chat(ChatRequest chatRequest) {
         String sessionId = chatRequest.getSessionId();
@@ -96,11 +100,13 @@ public class DBAgentServiceImpl implements DBAgentService {
             throw new CommonException("Sorry, an error occurred: sessionId is null");
         }
         try {
+
+            String standalone = contextualizeService.apply(chatRequest);
             RunnableConfig config = RunnableConfig.builder()
-                                                  .threadId(sessionId)
+                                                  .threadId(chatRequest.getSessionId())
                                                   .mergeReasoningContent(true)
                                                   .build();
-            NodeOutput result = dbAgent.invokeAndGetOutput(chatRequest.getMessage(), config).orElse(null);
+            NodeOutput result = dbAgent.invokeAndGetOutput(standalone, config).orElse(null);
             eventPublisher.publishEvent(new ChartAutoSummarizeEvent(this, config));
             String response = NodeOutputUtil.extractResponse(result);
             return new ChatResponse(response, sessionId);
@@ -116,11 +122,12 @@ public class DBAgentServiceImpl implements DBAgentService {
             return Flux.just("Sorry, an error occurred: sessionId is null");
         }
         try {
+            String standalone = contextualizeService.apply(chatRequest);
             RunnableConfig config = RunnableConfig.builder()
-                                                  .threadId(sessionId)
+                                                  .threadId(chatRequest.getSessionId())
                                                   .mergeReasoningContent(true)
                                                   .build();
-            Flux<NodeOutput> stream = dbAgent.stream(chatRequest.getMessage(), config);
+            Flux<NodeOutput> stream = dbAgent.stream(standalone, config);
             return stream
                     .doOnComplete(() -> eventPublisher.publishEvent(new ChartAutoSummarizeEvent(this, config)))
                     .filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND()) // 过滤掉开始和结束事件

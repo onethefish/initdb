@@ -348,15 +348,9 @@ async function sendMessage() {
     setSendButtonDisabled(true);
 
     try {
-        const response = await fetch('/db/chat/stream', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message,
-                sessionId: currentSessionId
-            })
+        const response = await Api.streamPost('/db/chat/stream', {
+            message,
+            sessionId: currentSessionId
         });
 
         if (!response.ok) {

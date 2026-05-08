@@ -160,6 +160,22 @@
         return requestFormMethod('POST', url, formData);
     }
 
+    /**
+     * JSON POST，响应体为流式纯文本（非 JSON 包装），由调用方用 ReadableStream 读取。
+     * 与 {@code DBAgentController} {@code /db/chat/stream}（produces text/plain;charset=UTF-8）对齐。
+     */
+    async function streamPost(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'text/plain;charset=UTF-8'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(body || {})
+        });
+    }
+
     // 便利方法（JSON）
     function get(url, params) {
         return requestJsonMethod('GET', url, {params});
@@ -180,6 +196,7 @@
 
     global.Api = {
         requestForm,
+        streamPost,
         get,
         post,
         put,
