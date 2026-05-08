@@ -282,7 +282,11 @@ function renderChatMessages(messages) {
     chatMessagesElement.innerHTML = '';
 
     messages.forEach(msg => {
-        addMessageToDOM(msg.role, msg.content);
+        if (msg.role === 'bot' && msg.contextualize) {
+            addMessageToDOM('bot', {contextualize: msg.contextualize, content: msg.content || ''});
+        } else {
+            addMessageToDOM(msg.role, msg.content);
+        }
     });
 
     chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
@@ -304,20 +308,47 @@ function setBotMessageHtml(messageDiv, md) {
     messageDiv.innerHTML = `<div class="bot-message-body">${parseBotMarkdown(md)}</div>`;
 }
 
-/** 流式输出用纯文本，避免不完整 Markdown 反复 marked 导致重叠/错乱；结束后再 setBotMessageHtml */
-function setBotMessageStreamingPlain(messageDiv, plain) {
-    messageDiv.innerHTML =
-        `<div class="bot-message-body"><pre class="bot-stream-plain">${escapeHtml(plain)}</pre></div>`;
+/** 补全区块 + 助手正文（最终态，answer 走 Markdown） */
+function setBotMessageStructured(messageDiv, contextualizeText, answerMd) {
+    const ctx = String(contextualizeText ?? '').trim();
+    const ctxBlock = ctx
+        ? `<div class="bot-contextualize-wrap" role="note" aria-label="补全的会话">
+        <div class="bot-contextualize-label">补全的会话</div>
+        <div class="bot-contextualize-body">${escapeHtml(ctx)}</div>
+    </div>`
+        : '';
+    const body = answerMd ? parseBotMarkdown(answerMd) : '';
+    messageDiv.innerHTML = `${ctxBlock}<div class="bot-message-body">${body}</div>`;
 }
 
+/** 流式：补全区 + 回答区均为纯文本，结束后再 setBotMessageStructured */
+function setBotMessageStreamingStructured(messageDiv, contextualizeText, answerPlain) {
+    const ctx = String(contextualizeText ?? '').trim();
+    const ctxBlock = ctx
+        ? `<div class="bot-contextualize-wrap" role="note" aria-label="补全的会话">
+        <div class="bot-contextualize-label">补全的会话</div>
+        <div class="bot-contextualize-body">${escapeHtml(ctx)}</div>
+    </div>`
+        : '';
+    messageDiv.innerHTML = `${ctxBlock}<div class="bot-message-body"><pre class="bot-stream-plain">${escapeHtml(
+        String(answerPlain ?? '')
+    )}</pre></div>`;
+}
+
+/**
+ * @param {string} role
+ * @param {string|{contextualize?: string, content: string}} content 用户侧为字符串；助手可为旧版纯字符串或 { contextualize, content }
+ */
 function addMessageToDOM(role, content) {
     const chatMessagesElement = document.getElementById('chatMessages');
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${role}-message`;
     if (role === 'user') {
         messageDiv.innerHTML = escapeHtml(content);
+    } else if (content && typeof content === 'object') {
+        setBotMessageStructured(messageDiv, content.contextualize, content.content || '');
     } else {
-        setBotMessageHtml(messageDiv, content);
+        setBotMessageHtml(messageDiv, content || '');
     }
     chatMessagesElement.appendChild(messageDiv);
 
@@ -366,12 +397,36 @@ async function sendMessage() {
         const chatMessagesEl = document.getElementById('chatMessages');
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
-        let fullResponse = '';
+        let lineBuffer = '';
+        let contextualizeText = '';
+        let answerAccum = '';
         let streamRafId = null;
+
+        const consumeNdjsonLines = chunkStr => {
+            lineBuffer += chunkStr;
+            let nl;
+            while ((nl = lineBuffer.indexOf('\n')) >= 0) {
+                const line = lineBuffer.slice(0, nl).trim();
+                lineBuffer = lineBuffer.slice(nl + 1);
+                if (!line) {
+                    continue;
+                }
+                try {
+                    const o = JSON.parse(line);
+                    if (o.p === 'contextualize' && typeof o.t === 'string') {
+                        contextualizeText = o.t;
+                    } else if (o.p === 'answer' && typeof o.t === 'string') {
+                        answerAccum += o.t;
+                    }
+                } catch (e) {
+                    console.warn('NDJSON stream line parse failed', e, line);
+                }
+            }
+        };
 
         const flushStreamToDom = () => {
             streamRafId = null;
-            setBotMessageStreamingPlain(botMessageDiv, fullResponse);
+            setBotMessageStreamingStructured(botMessageDiv, contextualizeText, answerAccum);
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
         };
 
@@ -383,27 +438,31 @@ async function sendMessage() {
 
         while (true) {
             const {done, value} = await reader.read();
-            if (done) break;
+            if (done) {
+                break;
+            }
 
-            fullResponse += decoder.decode(value, {stream: true});
+            consumeNdjsonLines(decoder.decode(value, {stream: true}));
             scheduleStreamFlush();
         }
 
-        fullResponse += decoder.decode();
+        consumeNdjsonLines(decoder.decode());
 
         if (streamRafId !== null) {
             cancelAnimationFrame(streamRafId);
             streamRafId = null;
         }
 
-        if (!fullResponse) {
+        if (!contextualizeText && !answerAccum) {
             throw new Error('请求失败：返回内容为空');
         }
 
-        setBotMessageHtml(botMessageDiv, fullResponse);
+        setBotMessageStructured(botMessageDiv, contextualizeText, answerAccum);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
-        const botMsg = {role: 'bot', content: fullResponse};
+        const botMsg = contextualizeText
+            ? {role: 'bot', contextualize: contextualizeText, content: answerAccum}
+            : {role: 'bot', content: answerAccum};
         sessions[sessionIndex].messages.push(botMsg);
     } catch (error) {
         console.error('Error:', error);

@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.fish.initDB.service.impl;
+package cn.fish.initDB.workflow.tool.impl;
 
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.service.DataBaseService;
 import cn.fish.chart.entity.ChatSession;
-import cn.fish.initDB.service.AgentAbstractTool;
+import cn.fish.initDB.workflow.tool.AgentAbstractTool;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;

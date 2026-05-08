@@ -15,16 +15,17 @@ public class RepositoryConfig {
     @Bean
     public VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
         PgVectorStore.PgVectorStoreBuilder builder = PgVectorStore.builder(jdbcTemplate, embeddingModel);
-//        builder.initializeSchema(true);
+        //        builder.initializeSchema(true);
         return builder.build();
     }
 
     // 提供一个RAG向量库（内存） 后续调整为配置文件注入
-//    @Bean
-//    public VectorStore createVectorStore(EmbeddingModel embeddingModel) {
-//        return SimpleVectorStore.builder(embeddingModel).build();
-//    }
+    //    @Bean
+    //    public VectorStore createVectorStore(EmbeddingModel embeddingModel) {
+    //        return SimpleVectorStore.builder(embeddingModel).build();
+    //    }
 
+    // 会话记忆
     @Bean
     public ChatMemorySaver createChatMemorySaver() {
         return new ChatMemorySaver();

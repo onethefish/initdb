@@ -1,12 +1,13 @@
 package cn.fish.initDB.controller;
 
 import cn.fish.cloud.serva.web.controller.BaseController;
-import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.initDB.entity.ChatRequest;
-import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.service.DBAgentService;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
 
@@ -29,17 +30,17 @@ public class DBAgentController extends BaseController {
 
     @PostMapping(path = "/chat/stream",
             consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = "text/plain;charset=UTF-8")
+            produces = "application/x-ndjson;charset=UTF-8")
     public Flux<String> chatStream(@RequestBody ChatRequest chatRequest) {
         return dbAgentService.chatStream(chatRequest);
     }
 
-    @GetMapping("/chat")
-    public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,
-                                                @RequestParam(value = "sessionId", required = false) String sessionId) {
-        ChatResponse chat = dbAgentService.chat(new ChatRequest(message, sessionId));
-        return result(chat);
-    }
+//    @GetMapping("/chat")
+    //    public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,
+    //                                                @RequestParam(value = "sessionId", required = false) String sessionId) {
+    //        ChatResponse chat = dbAgentService.chat(new ChatRequest(message, sessionId));
+    //        return result(chat);
+    //    }
 
 
 }
