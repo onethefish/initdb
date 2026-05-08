@@ -44,6 +44,9 @@ public class ChartEventListener {
             - 用中文总结
             - 控制在100字以内
             - 保留关键技术细节
+            
+            ---对话记录---
+            
             """;
 
     private final BaseCheckpointSaver baseCheckpointSaver;
@@ -94,7 +97,7 @@ public class ChartEventListener {
                 if (historyBlock.length() > MAX_CHARS_FOR_SUMMARY_INPUT) {
                     historyBlock = historyBlock.substring(0, MAX_CHARS_FOR_SUMMARY_INPUT) + "\n...[truncated]";
                 }
-                String fullPrompt = SUMMARY_PROMPT + "\n\n---对话记录---\n" + historyBlock;
+                String fullPrompt = SUMMARY_PROMPT + historyBlock;
                 String summary = chatModel.call(new Prompt(fullPrompt)).getResult().getOutput().getText();
                 if (StrUtil.isEmpty(summary)) {
                     log.warn("Auto summary empty, skip checkpoint update");

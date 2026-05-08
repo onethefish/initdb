@@ -31,4 +31,9 @@ public class AgentVectorController extends BaseController {
         return result(agentVectorService.queryList(vo));
     }
 
+    @GetMapping("/query/rag")
+    public ResponseResult<String> rag(@RequestParam Map<String, Object> request) {
+        AgentKnowledgeVO vo = RequestUtil.getObject(request, AgentKnowledgeVO.class);
+        return result(agentVectorService.rag(vo));
+    }
 }

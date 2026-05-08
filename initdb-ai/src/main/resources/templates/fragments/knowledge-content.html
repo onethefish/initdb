@@ -131,7 +131,7 @@
 <div class="modal" id="vectorSearchModal" th:fragment="vectorSearchModal">
   <div class="modal-content knowledge-modal-content vector-search-modal">
     <h2>向量检索</h2>
-    <p class="form-hint">在当前数据源已向量化的知识片段中，按语义查找与描述最相近的内容。</p>
+    <p class="form-hint">在当前数据源已向量化的知识片段中，按语义查找与描述最相近的内容。「检索」返回原始片段；「增强检索」会合并多条相近片段并由模型生成简洁中文回答。</p>
     <div class="form-group">
       <label for="kbVectorQuery">检索描述</label>
       <textarea id="kbVectorQuery" placeholder="输入问题或关键词…" rows="4"></textarea>
@@ -145,13 +145,18 @@
         <option value="FAQ">常见问题</option>
       </select>
     </div>
+    <div class="form-group">
+      <label for="kbVectorTopK">返回条数 topK（可选）</label>
+      <input class="kb-vector-topk-input" id="kbVectorTopK" type="number" min="1" max="20" step="1" placeholder="1～20，留空用默认" title="留空时：普通检索默认 1 条，增强检索默认 5 条；填写则两种检索均使用该条数（上限 20）">
+    </div>
     <div class="form-group" id="vectorSearchResultsGroup" hidden>
       <label>检索结果</label>
       <div class="vector-search-results" id="vectorSearchResults"></div>
     </div>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closeVectorSearchModal()" type="button">关闭</button>
-      <button class="btn btn-primary" onclick="submitVectorSearch()" type="button">检索</button>
+      <button class="btn btn-secondary" onclick="submitVectorSearch()" type="button">检索</button>
+      <button class="btn btn-primary" onclick="submitVectorRagSearch()" type="button">增强检索</button>
     </div>
   </div>
 </div>

@@ -16,7 +16,7 @@ public class AgentKnowledgeVO extends AgentKnowledge {
     //
     //    private String typeValue;
     private String query;
-
+    private String topK;
     /**
      * 向量检索附加等值条件（metadata 字段名 -> 值），字段名需与 {@link cn.fish.knowledge.constants.DocumentMetadataConstant}
      * 及 {@link cn.fish.knowledge.converter.DocumentConverter} 写入的 metadata key 一致。

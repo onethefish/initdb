@@ -5,7 +5,10 @@ import cn.fish.knowledge.constants.DocumentMetadataConstant;
 import cn.fish.knowledge.entity.AgentKnowledgeVO;
 import cn.fish.knowledge.repository.VectorStoreRepository;
 import cn.fish.knowledge.service.AgentVectorService;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.filter.Filter;
@@ -19,21 +22,84 @@ public class AgentVectorServiceImpl implements AgentVectorService {
 
 
     private final VectorStoreRepository vectorStoreRepository;
+    private final ChatModel chatModel;
 
-    public AgentVectorServiceImpl(VectorStoreRepository vectorStoreRepository) {
+    private static final String ANSWER_PROMPT = """
+            基于以下知识库内容回答问题：
+            
+            %s
+            
+            问题：%s
+            
+            请用中文简洁回答，仅基于上述知识库内容。
+            """;
+
+    public AgentVectorServiceImpl(ChatModel chatModel, VectorStoreRepository vectorStoreRepository) {
+        this.chatModel = chatModel;
         this.vectorStoreRepository = vectorStoreRepository;
     }
 
+    private static final int QUERY_LIST_TOP_K = 1;
+    private static final int RAG_TOP_K = 5;
+    private static final int TOP_K_MAX = 20;
+
     @Override
     public List<Document> queryList(AgentKnowledgeVO vo) {
+        validateBase(vo);
+        return similaritySearch(vo, resolveTopK(vo.getTopK(), QUERY_LIST_TOP_K));
+    }
+
+    @Override
+    public String rag(AgentKnowledgeVO vo) {
+        validateBase(vo);
+        List<Document> documents = similaritySearch(vo, resolveTopK(vo.getTopK(), RAG_TOP_K));
+        if (CollUtil.isEmpty(documents)) {
+            return "未找到相关知识库内容";
+        }
+
+        String context = documents.stream()
+                                  .map(Document::getText)
+                                  .filter(StrUtil::isNotBlank)
+                                  .reduce((a, b) -> a + "\n\n" + b)
+                                  .orElse("");
+
+        String fullPrompt=String.format(ANSWER_PROMPT,context,vo.getQuery());
+
+        return chatModel.call(new Prompt(fullPrompt))
+                        .getResult()
+                        .getOutput()
+                        .getText();
+    }
+
+    private static void validateBase(AgentKnowledgeVO vo) {
         if (StrUtil.isBlank(vo.getDatasourceId())) {
             throw new CommonException("向量检索必须指定 datasourceId");
         }
+    }
 
+    /**
+     * 解析 {@link AgentKnowledgeVO#getTopK()}：空或非法时使用 defaultTopK，否则限制在 [1, TOP_K_MAX]。
+     */
+    private static int resolveTopK(String topKRaw, int defaultTopK) {
+        if (StrUtil.isBlank(topKRaw)) {
+            return defaultTopK;
+        }
+        try {
+            int k = Integer.parseInt(topKRaw.trim());
+            if (k < 1) {
+                return defaultTopK;
+            }
+            return Math.min(k, TOP_K_MAX);
+        } catch (NumberFormatException e) {
+            return defaultTopK;
+        }
+    }
+
+    private List<Document> similaritySearch(AgentKnowledgeVO vo, int topK) {
         Filter.Expression expression = buildExpression(vo);
         SearchRequest searchRequest = SearchRequest.builder()
                                                    .query(vo.getQuery())
-                                                   .topK(1)
+                                                   .topK(topK)
                                                    .filterExpression(expression)
                                                    .build();
         return vectorStoreRepository.queryList(searchRequest);

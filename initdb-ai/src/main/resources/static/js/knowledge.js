@@ -290,11 +290,17 @@ function closeKnowledgeModal() {
 function resetVectorSearchModal() {
     const q = document.getElementById('kbVectorQuery');
     const t = document.getElementById('kbVectorType');
+    const k = document.getElementById('kbVectorTopK');
     const group = document.getElementById('vectorSearchResultsGroup');
     const box = document.getElementById('vectorSearchResults');
     if (q) q.value = '';
     if (t) t.value = '';
-    if (group) group.hidden = true;
+    if (k) k.value = '';
+    if (group) {
+        group.hidden = true;
+        const labelEl = group.querySelector('label');
+        if (labelEl) labelEl.textContent = '检索结果';
+    }
     if (box) box.innerHTML = '';
 }
 
@@ -331,6 +337,8 @@ function renderVectorSearchResults(list) {
     const group = document.getElementById('vectorSearchResultsGroup');
     const box = document.getElementById('vectorSearchResults');
     if (!group || !box) return;
+    const labelEl = group.querySelector('label');
+    if (labelEl) labelEl.textContent = '检索结果';
     const docs = Array.isArray(list) ? list : [];
     group.hidden = false;
     if (!docs.length) {
@@ -351,6 +359,29 @@ function renderVectorSearchResults(list) {
     }).join('');
 }
 
+function buildVectorSearchParams() {
+    const query = document.getElementById('kbVectorQuery').value.trim();
+    const type = document.getElementById('kbVectorType').value.trim();
+    const topKEl = document.getElementById('kbVectorTopK');
+    const topKRaw = topKEl && String(topKEl.value).trim();
+    const params = {
+        datasourceId: contextDatasourceId,
+        query
+    };
+    if (type) params.type = type;
+    if (topKRaw !== '') {
+        const n = Number(topKRaw);
+        if (Number.isFinite(n) && n >= 1) {
+            params.topK = String(Math.min(Math.floor(n), 20));
+        }
+    }
+    if (selectedKnowledgeIds.size === 1) {
+        const onlyId = Array.from(selectedKnowledgeIds)[0];
+        if (onlyId) params.id = onlyId;
+    }
+    return params;
+}
+
 async function submitVectorSearch() {
     if (!contextDatasourceId) {
         showErrorDialog({title: '提示', message: '缺少数据源上下文'});
@@ -361,22 +392,44 @@ async function submitVectorSearch() {
         showErrorDialog({title: '提示', message: '请填写检索描述'});
         return;
     }
-    const type = document.getElementById('kbVectorType').value.trim();
-    const params = {
-        datasourceId: contextDatasourceId,
-        query
-    };
-    if (type) params.type = type;
-    if (selectedKnowledgeIds.size === 1) {
-        const onlyId = Array.from(selectedKnowledgeIds)[0];
-        if (onlyId) params.id = onlyId;
-    }
+    const params = buildVectorSearchParams();
     try {
         const raw = await Api.get('/agentVector/query/list', params);
         renderVectorSearchResults(raw);
     } catch (error) {
         console.error('Vector search error:', error);
         notifyErrorUnlessShown(error, '向量检索失败');
+    }
+}
+
+function renderVectorRagAnswer(text) {
+    const group = document.getElementById('vectorSearchResultsGroup');
+    const box = document.getElementById('vectorSearchResults');
+    if (!group || !box) return;
+    group.hidden = false;
+    const labelEl = group.querySelector('label');
+    if (labelEl) labelEl.textContent = '增强检索回答';
+    const safe = escapeHtml(text == null ? '' : String(text));
+    box.innerHTML = `<div class="vector-rag-answer">${safe || '（无内容）'}</div>`;
+}
+
+async function submitVectorRagSearch() {
+    if (!contextDatasourceId) {
+        showErrorDialog({title: '提示', message: '缺少数据源上下文'});
+        return;
+    }
+    const query = document.getElementById('kbVectorQuery').value.trim();
+    if (!query) {
+        showErrorDialog({title: '提示', message: '请填写检索描述'});
+        return;
+    }
+    const params = buildVectorSearchParams();
+    try {
+        const raw = await Api.get('/agentVector/query/rag', params);
+        renderVectorRagAnswer(raw);
+    } catch (error) {
+        console.error('Vector RAG error:', error);
+        notifyErrorUnlessShown(error, '增强检索失败');
     }
 }
 

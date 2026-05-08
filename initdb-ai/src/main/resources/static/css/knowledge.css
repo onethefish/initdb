@@ -321,6 +321,14 @@
     font-size: 13px;
 }
 
+.vector-rag-answer {
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--color-text-main);
+    line-height: 1.55;
+    font-size: 14px;
+}
+
 .vector-search-result-item {
     padding: 10px 0;
     border-bottom: 1px solid #eee;
@@ -371,4 +379,9 @@
     font-size: 14px;
     font-family: inherit;
     resize: vertical;
+}
+
+.kb-vector-topk-input {
+    max-width: 11rem;
+    box-sizing: border-box;
 }
