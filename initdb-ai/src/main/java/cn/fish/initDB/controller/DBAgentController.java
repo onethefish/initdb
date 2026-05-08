@@ -21,11 +21,11 @@ public class DBAgentController extends BaseController {
     }
 
 
-    @PostMapping("/chat")
-    public ResponseResult<ChatResponse> chat(@RequestBody ChatRequest chatRequest) {
-        ChatResponse chat = dbAgentService.chat(chatRequest);
-        return result(chat);
-    }
+//    @PostMapping("/chat")
+//    public ResponseResult<ChatResponse> chat(@RequestBody ChatRequest chatRequest) {
+//        ChatResponse chat = dbAgentService.chat(chatRequest);
+//        return result(chat);
+//    }
 
     @PostMapping(path = "/chat/stream",
             consumes = MediaType.APPLICATION_JSON_VALUE,

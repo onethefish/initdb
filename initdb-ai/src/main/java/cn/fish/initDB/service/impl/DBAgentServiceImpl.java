@@ -1,11 +1,8 @@
 package cn.fish.initDB.service.impl;
 
-import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.initDB.entity.ChatRequest;
-import cn.fish.initDB.entity.ChatResponse;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.fish.initDB.service.DBAgentService;
-import cn.fish.initDB.util.NodeOutputUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
@@ -14,8 +11,6 @@ import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import lombok.extern.slf4j.Slf4j;
-import org.springaicommunity.mcp.annotation.McpTool;
-import org.springaicommunity.mcp.annotation.McpToolParam;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -93,27 +88,27 @@ public class DBAgentServiceImpl implements DBAgentService {
     }
 
 
-    @Override
-    public ChatResponse chat(ChatRequest chatRequest) {
-        String sessionId = chatRequest.getSessionId();
-        if (StrUtil.isEmpty(sessionId)) {
-            throw new CommonException("Sorry, an error occurred: sessionId is null");
-        }
-        try {
-
-            String standalone = contextualizeService.apply(chatRequest);
-            RunnableConfig config = RunnableConfig.builder()
-                                                  .threadId(chatRequest.getSessionId())
-                                                  .mergeReasoningContent(true)
-                                                  .build();
-            NodeOutput result = dbAgent.invokeAndGetOutput(standalone, config).orElse(null);
-            eventPublisher.publishEvent(new ChartAutoSummarizeEvent(this, config));
-            String response = NodeOutputUtil.extractResponse(result);
-            return new ChatResponse(response, sessionId);
-        } catch (Exception e) {
-            throw new CommonException("Sorry, an error occurred: sessionId is null");
-        }
-    }
+//    @Override
+//    public ChatResponse chat(ChatRequest chatRequest) {
+//        String sessionId = chatRequest.getSessionId();
+//        if (StrUtil.isEmpty(sessionId)) {
+//            throw new CommonException("Sorry, an error occurred: sessionId is null");
+//        }
+//        try {
+//
+//            String standalone = contextualizeService.apply(chatRequest);
+//            RunnableConfig config = RunnableConfig.builder()
+//                                                  .threadId(chatRequest.getSessionId())
+//                                                  .mergeReasoningContent(true)
+//                                                  .build();
+//            NodeOutput result = dbAgent.invokeAndGetOutput(standalone, config).orElse(null);
+//            eventPublisher.publishEvent(new ChartAutoSummarizeEvent(this, config));
+//            String response = NodeOutputUtil.extractResponse(result);
+//            return new ChatResponse(response, sessionId);
+//        } catch (Exception e) {
+//            throw new CommonException("Sorry, an error occurred: sessionId is null");
+//        }
+//    }
 
     @Override
     public Flux<String> chatStream(ChatRequest chatRequest) {
@@ -162,11 +157,11 @@ public class DBAgentServiceImpl implements DBAgentService {
         }
     }
 
-    @Override
-    @McpTool(description = "获取会话中的数据库相关信息")
-    public String getDBChart(@McpToolParam(description = "message") String message, @McpToolParam(description = "Session id") String
-            sessionId) {
-        return chat(new ChatRequest(message, sessionId)).getResponse();
-    }
+//    @Override
+    //    @McpTool(description = "获取会话中的数据库相关信息")
+    //    public String getDBChart(@McpToolParam(description = "message") String message, @McpToolParam(description = "Session id") String
+    //            sessionId) {
+    //        return chat(new ChatRequest(message, sessionId)).getResponse();
+    //    }
 
 }
