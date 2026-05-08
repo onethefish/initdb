@@ -1,7 +1,7 @@
 package cn.fish.initDB.workflow;
 
 import cn.fish.initDB.workflow.agent.DbReactAgentConfig;
-import cn.fish.initDB.chat.DbChatInputKeys;
+import cn.fish.initDB.constants.DbChatInputConstants;
 import cn.fish.initDB.workflow.node.DbAgentInputBridgeNode;
 import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -46,7 +46,7 @@ public class DBAgentStateGraphConfig {
             Map<String, KeyStrategy> m = new HashMap<>();
             m.put(OverAllState.DEFAULT_INPUT_KEY, new ReplaceStrategy());
             m.put("messages", new AppendStrategy());
-            m.put(DbChatInputKeys.STANDALONE, new ReplaceStrategy());
+            m.put(DbChatInputConstants.STANDALONE, new ReplaceStrategy());
             return m;
         };
         StateGraph graph = new StateGraph("db_chat_workflow", keyStrategyFactory, StateGraph.DEFAULT_JACKSON_SERIALIZER);

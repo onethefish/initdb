@@ -1,9 +1,9 @@
 package cn.fish.initDB.entity;
 
-import cn.fish.initDB.chat.DbChatInputKeys;
+import cn.fish.initDB.constants.DbChatInputConstants;
 
 /**
- * 问句补全结果：{@link #getStandalone()} 写入图初始状态 {@link DbChatInputKeys#STANDALONE}；
+ * 问句补全结果：{@link #getStandalone()} 写入图初始状态 {@link DbChatInputConstants#STANDALONE}；
  * {@link #getDisplay()} 供流式 NDJSON 单独下发前端。
  */
 public final class QuestionContextualizeResult {

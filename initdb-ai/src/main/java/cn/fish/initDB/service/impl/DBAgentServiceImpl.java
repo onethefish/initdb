@@ -6,7 +6,7 @@ import cn.fish.initDB.service.DBAgentService;
 import cn.fish.initDB.entity.QuestionContextualizeResult;
 import cn.fish.initDB.service.QuestionContextualizeService;
 import cn.fish.initDB.workflow.DBAgentStateGraphConfig;
-import cn.fish.initDB.chat.DbChatInputKeys;
+import cn.fish.initDB.constants.DbChatInputConstants;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.NodeOutput;
@@ -71,7 +71,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                     : Flux.empty();
 
             Map<String, Object> inputs = new LinkedHashMap<>(2);
-            inputs.put(DbChatInputKeys.STANDALONE, contextualize.getStandalone());
+            inputs.put(DbChatInputConstants.STANDALONE, contextualize.getStandalone());
 
             Flux<NodeOutput> stream = dbChatWorkflow.stream(inputs, config);
             Flux<String> answerFlux = stream
