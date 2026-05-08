@@ -28,7 +28,7 @@ import java.util.Objects;
 @Service
 public class DBAgentServiceImpl implements DBAgentService {
 
-    private static final String DESCRIPTION = "数据库智能助手，支持查询表结构、执行SQL查询、分析数据功能";
+    private static final String DESCRIPTION = "数据库智能助手，支持查询表结构、执行SQL查询、分析数据与知识库检索";
     private static final String SYSTEM_PROMPT = """
              你是中文数据库助手。
             
@@ -37,7 +37,12 @@ public class DBAgentServiceImpl implements DBAgentService {
              2. 仅执行SELECT查询，禁止DML操作
              3. 默认限制10条结果，除非用户指定
              4. 表无数据时明确告知，勿重复查询
-             5. 每个工具在一次对话中最多调用一次
+             5. 每个工具在一次对话中最多调用一次（含 knowledge_retrieval）
+            
+            知识库检索（knowledge_retrieval）：
+             - 适用：命名/分表/设计规范、项目约定、使用说明；数据库业务知识（业务规则、领域概念、表/字段业务含义、指标口径等）；业务背景与术语；用户明确提到文档、知识库、手册、内部规范等；问题无法仅靠 information_schema 或现有表结构直接回答时，可先检索再作答。
+             - 不适用：仅列举表、查列类型与约束、写 SQL 并查数等，直接用 get_all_tables / get_table_schema / 查数据完整流程即可，不必为凑步骤调用 knowledge_retrieval。
+             - 用法：构造简短、关键词充分的 query；检索结果为空时如实说明，再 fallback 到表结构或 SQL 流程（若仍相关）；有命中时归纳要点，勿逐段照抄长文，勿编造未出现在检索片段中的事实。
             
             响应策略：
              - 用户问"有哪些表/列出表/列出所有表" → 调用get_all_tables后直接返回结果，用Markdown表格格式回答，不要继续其他步骤
@@ -77,7 +82,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                                          , getTableSchemaTool.toolCallback()
                                          , querySqlCheckTool.toolCallback()
                                          , getTableDataTool.toolCallback()
-                                         //                                 , knowledgeRetrievalTool.toolCallback()
+                                         , knowledgeRetrievalTool.toolCallback()
                                  )
                                  .build();
 

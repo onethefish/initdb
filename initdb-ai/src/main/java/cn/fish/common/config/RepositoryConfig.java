@@ -1,8 +1,7 @@
 package cn.fish.common.config;
 
-import cn.fish.initDB.savers.ChatMemorySaver;
+import cn.fish.common.savers.ChatMemorySaver;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.context.annotation.Bean;

@@ -15,8 +15,11 @@
  */
 package cn.fish.initDB.service.impl;
 
-import cn.fish.knowledge.repository.VectorStoreRepository;
+import cn.fish.chart.entity.ChatSession;
+import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.initDB.service.AgentAbstractTool;
+import cn.fish.knowledge.constants.DocumentMetadataConstant;
+import cn.fish.knowledge.repository.VectorStoreRepository;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -28,7 +31,6 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -41,25 +43,30 @@ import java.util.function.BiFunction;
 @Component
 public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunction<KnowledgeRetrievalTool.Request, ToolContext, List<Document>> {
 
-    private static final int DEFAULT_TOP_K = 4;
-    @Autowired
-    private VectorStoreRepository vectorStoreRepository;
+    private static final int DEFAULT_TOP_K = 1;
+
+    private final VectorStoreRepository vectorStoreRepository;
+    private final ChatSessionRepository chatSessionRepository;
+
+    public KnowledgeRetrievalTool(VectorStoreRepository vectorStoreRepository, ChatSessionRepository chatSessionRepository) {
+        this.vectorStoreRepository = vectorStoreRepository;
+        this.chatSessionRepository = chatSessionRepository;
+    }
 
     @Override
     public List<Document> apply(Request request, ToolContext toolContext) {
         log.info("KnowledgeRetrievalTool::apply");
         String sessionId = getSessionId(toolContext);
         int topK = request.topK() != null ? request.topK() : DEFAULT_TOP_K;
-
+        ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
         FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
-        Filter.Expression expression = filterExpressionBuilder.eq("sessionId", sessionId)
+        Filter.Expression expression = filterExpressionBuilder.eq(DocumentMetadataConstant.DATASOURCE_ID, chatSession.getDatasourceId())
                                                               .build();
         SearchRequest searchRequest = SearchRequest.builder()
                                                    .query(request.query())
                                                    .topK(topK)
                                                    .filterExpression(expression)
                                                    .build();
-        // 2. 执行相似性搜索
         return vectorStoreRepository.queryList(searchRequest);
     }
 
@@ -67,17 +74,17 @@ public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunct
     public ToolCallback toolCallback() {
         return FunctionToolCallback.builder("knowledge_retrieval", this)
                                    .description(
-                                           "从用户上传的知识库中检索相关信息。当你需要回答关于当前数据库相关的的问题（例如数据库设计、数据库使用、数据库命名规范、分表设计）时，请使用此工具。该工具会执行语义搜索，根据查询内容查找最相关的技术文档。")
+                                           "从当前数据源关联的知识库中做语义检索。除库表设计、使用说明、命名与分表规范等技术文档外，知识库还可包含数据库业务知识：业务规则、领域概念、表/字段的业务含义、指标与统计口径、流程与协作约定等。当仅靠 information_schema 或表结构元数据不足以回答业务或背景类问题时，应使用本工具；返回若干相关片段，请据此归纳回答，勿编造未出现在片段中的内容。")
                                    .inputType(Request.class)
                                    .build();
     }
 
-    @JsonClassDescription("来自文档的知识检索请求")
+    @JsonClassDescription("向知识库发起的语义检索请求")
     public record Request(@JsonProperty(value = "query", required = true)
-                          @JsonPropertyDescription("用于查找相关文档的搜索查询。请尽量具体，并包含与您的问题相关的关键词。") String query,
+                          @JsonPropertyDescription("检索用语。尽量具体，可含业务术语、表名、指标名、业务场景或与问题强相关的关键词。") String query,
 
                           @JsonProperty(value = "top_k")
-                          @JsonPropertyDescription("要检索的顶部结果数量（默认值：4）") Integer topK) {
+                          @JsonPropertyDescription("要检索的顶部结果数量（默认值：1）") Integer topK) {
     }
 
 }
