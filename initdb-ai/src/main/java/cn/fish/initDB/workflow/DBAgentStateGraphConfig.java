@@ -1,7 +1,6 @@
 package cn.fish.initDB.workflow;
 
-import cn.fish.initDB.workflow.agent.DbReactAgentConfig;
-import cn.fish.initDB.constants.DbChatInputConstants;
+import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.workflow.node.DbAgentInputBridgeNode;
 import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -25,13 +24,9 @@ import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 @Configuration
 public class DBAgentStateGraphConfig {
 
-    public static final String DB_CHAT_WORKFLOW_BEAN = "dbChatWorkflowGraph";
-
-    private static final String NODE_DB_REACT = "db_react";
-
-    @Bean(name = DB_CHAT_WORKFLOW_BEAN)
+    @Bean(name = InitDBConstants.DB_CHAT_WORKFLOW_BEAN)
     public CompiledGraph dbChatWorkflowGraph(
-            @Qualifier(DbReactAgentConfig.DB_REACT_AGENT_BEAN) ReactAgent dbReactAgent,
+            @Qualifier(InitDBConstants.DB_REACT_AGENT_BEAN) ReactAgent dbReactAgent,
             MemorySaver memorySaver) {
         try {
             return buildDbChatWorkflow(dbReactAgent, memorySaver);
@@ -45,19 +40,20 @@ public class DBAgentStateGraphConfig {
         KeyStrategyFactory keyStrategyFactory = () -> {
             Map<String, KeyStrategy> m = new HashMap<>();
             m.put(OverAllState.DEFAULT_INPUT_KEY, new ReplaceStrategy());
-            m.put("messages", new AppendStrategy());
-            m.put(DbChatInputConstants.STANDALONE, new ReplaceStrategy());
+            m.put(InitDBConstants.STATE_KEY_MESSAGES, new AppendStrategy());
+            m.put(InitDBConstants.STANDALONE, new ReplaceStrategy());
             return m;
         };
-        StateGraph graph = new StateGraph("db_chat_workflow", keyStrategyFactory, StateGraph.DEFAULT_JACKSON_SERIALIZER);
-        graph.addNode(DbAgentInputBridgeNode.NODE_ID, node_async(new DbAgentInputBridgeNode()));
-        graph.addNode(NODE_DB_REACT, dbReactAgent.getAndCompileGraph());
-        graph.addEdge(StateGraph.START, DbAgentInputBridgeNode.NODE_ID);
-        graph.addEdge(DbAgentInputBridgeNode.NODE_ID, NODE_DB_REACT);
-        graph.addEdge(NODE_DB_REACT, StateGraph.END);
+        StateGraph graph = new StateGraph(
+                InitDBConstants.GRAPH_NAME_DB_CHAT_WORKFLOW, keyStrategyFactory, StateGraph.DEFAULT_JACKSON_SERIALIZER);
+        graph.addNode(InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE, node_async(new DbAgentInputBridgeNode()));
+        graph.addNode(InitDBConstants.NODE_DB_REACT, dbReactAgent.getAndCompileGraph());
+        graph.addEdge(StateGraph.START, InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE);
+        graph.addEdge(InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE, InitDBConstants.NODE_DB_REACT);
+        graph.addEdge(InitDBConstants.NODE_DB_REACT, StateGraph.END);
         CompileConfig compileConfig = CompileConfig.builder()
                                                    .saverConfig(SaverConfig.builder().register(memorySaver).build())
-                                                   .recursionLimit(100)
+                                                   .recursionLimit(InitDBConstants.DB_CHAT_WORKFLOW_RECURSION_LIMIT)
                                                    .build();
         return graph.compile(compileConfig);
     }

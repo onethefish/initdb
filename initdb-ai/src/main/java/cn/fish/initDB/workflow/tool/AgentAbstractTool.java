@@ -1,5 +1,6 @@
 package cn.fish.initDB.workflow.tool;
 
+import cn.fish.initDB.constants.InitDBConstants;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants;
 import org.springframework.ai.chat.model.ToolContext;
@@ -32,13 +33,13 @@ public abstract class AgentAbstractTool {
 
     /**
      * 与 {@link com.alibaba.cloud.ai.graph.internal.node.ResumableSubGraphAction#subGraphId} 生成的后缀对齐：
-     * {@code original + "_" + "subgraph_" + nodeId}。
+     * {@code original + "_" + InitDBConstants#SUBGRAPH_THREAD_MARKER + nodeId}。
      */
     static String stripSubGraphCheckpointThreadSuffix(String threadId) {
         if (threadId == null || threadId.isEmpty()) {
             return threadId;
         }
-        int idx = threadId.indexOf("_subgraph_");
+        int idx = threadId.indexOf(InitDBConstants.SUBGRAPH_THREAD_MARKER);
         if (idx > 0) {
             return threadId.substring(0, idx);
         }

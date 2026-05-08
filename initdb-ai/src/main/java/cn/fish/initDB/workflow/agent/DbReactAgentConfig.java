@@ -1,5 +1,6 @@
 package cn.fish.initDB.workflow.agent;
 
+import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.workflow.tool.impl.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
@@ -12,8 +13,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class DbReactAgentConfig {
-
-    public static final String DB_REACT_AGENT_BEAN = "dbReactAgent";
 
     private static final String DESCRIPTION = "数据库智能助手，支持查询表结构、执行SQL查询、分析数据与知识库检索";
     private static final String SYSTEM_PROMPT = """
@@ -55,7 +54,7 @@ public class DbReactAgentConfig {
              - 除引用表名、SQL、数据等必要片段外，不要逐字复述用户消息；用户仅打招呼时用一两句话回应并引导问数据库即可，勿重复扩写其问候。
             """;
 
-    @Bean(name = DB_REACT_AGENT_BEAN)
+    @Bean(name = InitDBConstants.DB_REACT_AGENT_BEAN)
     public ReactAgent dbReactAgent(ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                                    GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool,
                                    GetTableDataTool getTableDataTool, KnowledgeRetrievalTool knowledgeRetrievalTool,

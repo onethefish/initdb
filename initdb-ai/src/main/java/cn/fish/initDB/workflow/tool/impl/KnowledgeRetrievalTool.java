@@ -15,6 +15,7 @@
  */
 package cn.fish.initDB.workflow.tool.impl;
 
+import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.initDB.workflow.tool.AgentAbstractTool;
@@ -43,8 +44,6 @@ import java.util.function.BiFunction;
 @Component
 public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunction<KnowledgeRetrievalTool.Request, ToolContext, List<Document>> {
 
-    private static final int DEFAULT_TOP_K = 1;
-
     private final VectorStoreRepository vectorStoreRepository;
     private final ChatSessionRepository chatSessionRepository;
 
@@ -57,7 +56,7 @@ public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunct
     public List<Document> apply(Request request, ToolContext toolContext) {
         log.info("KnowledgeRetrievalTool::apply");
         String sessionId = getSessionId(toolContext);
-        int topK = request.topK() != null ? request.topK() : DEFAULT_TOP_K;
+        int topK = request.topK() != null ? request.topK() : InitDBConstants.KNOWLEDGE_RETRIEVAL_DEFAULT_TOP_K;
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
         FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
         Filter.Expression expression = filterExpressionBuilder.eq(DocumentMetadataConstant.DATASOURCE_ID, chatSession.getDatasourceId())

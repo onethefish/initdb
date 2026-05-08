@@ -1,5 +1,6 @@
 package cn.fish.initDB.event.listen;
 
+import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
@@ -23,17 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ChartEventListener {
 
-    /**
-     * 消息条数达到该值才压缩（含用户/助手/工具等）。
-     * 须大于 {@link #KEEP_RECENT_MESSAGES}，否则拆分点无意义。
-     */
-    private static final int COMPRESS_MIN_MESSAGES = 12;
-    /**
-     * 压缩后保留的最近消息条数，需覆盖常见「模型 + 工具」多轮结构。
-     */
-    private static final int KEEP_RECENT_MESSAGES = 6;
-    private static final int MAX_CHARS_FOR_SUMMARY_INPUT = 14_000;
-
     private static final String SUMMARY_PROMPT = """
             你是对话总结助手。将以下对话历史总结为简洁的要点:
             - 用户的核心需求
@@ -48,6 +38,9 @@ public class ChartEventListener {
             ---对话记录---
             
             """;
+
+    private static final String COMPRESSED_HEAD_USER_MESSAGE_PREFIX =
+            "以下为此前多轮对话的压缩摘要，请在回答时保留其中涉及的业务与库表信息：\n\n";
 
     private final BaseCheckpointSaver baseCheckpointSaver;
     private final ChatModel chatModel;
@@ -80,10 +73,10 @@ public class ChartEventListener {
                 Checkpoint latest = latestOpt.get();
                 String checkpointIdAtStart = latest.getId();
                 List<Message> messages = copyMessagesFromState(latest.getState());
-                if (messages.size() < COMPRESS_MIN_MESSAGES) {
+                if (messages.size() < InitDBConstants.CHART_COMPRESS_MIN_MESSAGES) {
                     return;
                 }
-                int split = resolveCompressSplitIndex(messages, KEEP_RECENT_MESSAGES);
+                int split = resolveCompressSplitIndex(messages, InitDBConstants.CHART_KEEP_RECENT_MESSAGES);
                 if (split < 1) {
                     log.info(
                             "Skip compress: no tool-safe split (would orphan ToolResponse or truncate tool round), thread={}",
@@ -94,8 +87,9 @@ public class ChartEventListener {
                 List<Message> tail = new ArrayList<>(messages.subList(split, messages.size()));
 
                 String historyBlock = buildHistoryText(head);
-                if (historyBlock.length() > MAX_CHARS_FOR_SUMMARY_INPUT) {
-                    historyBlock = historyBlock.substring(0, MAX_CHARS_FOR_SUMMARY_INPUT) + "\n...[truncated]";
+                if (historyBlock.length() > InitDBConstants.CHART_MAX_CHARS_FOR_SUMMARY_INPUT) {
+                    historyBlock = historyBlock.substring(0, InitDBConstants.CHART_MAX_CHARS_FOR_SUMMARY_INPUT)
+                            + InitDBConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
                 }
                 String fullPrompt = SUMMARY_PROMPT + historyBlock;
                 String summary = chatModel.call(new Prompt(fullPrompt)).getResult().getOutput().getText();
@@ -115,14 +109,11 @@ public class ChartEventListener {
                 }
                 String trimSummary = summary.trim();
                 List<Message> compressed = new ArrayList<>();
-                compressed.add(
-                        new UserMessage(
-                                "以下为此前多轮对话的压缩摘要，请在回答时保留其中涉及的业务与库表信息：\n\n"
-                                        + trimSummary));
+                compressed.add(new UserMessage(COMPRESSED_HEAD_USER_MESSAGE_PREFIX + trimSummary));
                 compressed.addAll(tail);
 
                 Map<String, Object> newState = new HashMap<>(again.get().getState());
-                newState.put("messages", compressed);
+                newState.put(InitDBConstants.STATE_KEY_MESSAGES, compressed);
 
                 Checkpoint updated = Checkpoint.builder()
                                                .id(again.get().getId())
@@ -152,7 +143,7 @@ public class ChartEventListener {
         if (state == null) {
             return List.of();
         }
-        Object raw = state.get("messages");
+        Object raw = state.get(InitDBConstants.STATE_KEY_MESSAGES);
         if (!(raw instanceof List<?> list)) {
             return List.of();
         }
@@ -181,7 +172,7 @@ public class ChartEventListener {
     }
 
     /**
-     * 在「保留最近 keepRecent 条」基础上向左扩展切分点，避免：
+     * 在「保留最近 {@link InitDBConstants#CHART_KEEP_RECENT_MESSAGES} 条」基础上向左扩展切分点，避免：
      * <ul>
      *   <li>后缀以 {@link ToolResponseMessage} 开头（工具结果失去对应的 assistant tool_calls）；</li>
      *   <li>后缀内某条带 tool_calls 的 {@link AssistantMessage} 所需的 tool response 被切到 head 中。</li>
