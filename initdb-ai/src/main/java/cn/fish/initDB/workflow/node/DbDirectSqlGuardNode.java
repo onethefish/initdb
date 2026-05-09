@@ -2,7 +2,7 @@ package cn.fish.initDB.workflow.node;
 
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
-import cn.fish.initDB.workflow.tool.impl.QuerySqlCheckTool;
+import cn.fish.initDB.workflow.agent.tool.QuerySqlCheckTool;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;

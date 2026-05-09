@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cn.fish.initDB.workflow.tool.impl;
+package cn.fish.initDB.workflow.agent.tool;
 
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import com.fasterxml.jackson.annotation.JsonClassDescription;

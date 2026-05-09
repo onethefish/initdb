@@ -1,4 +1,4 @@
-package cn.fish.initDB.workflow.tool;
+package cn.fish.initDB.workflow.agent.tool;
 
 import cn.fish.initDB.constants.InitDBConstants;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
