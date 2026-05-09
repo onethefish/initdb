@@ -1,0 +1,169 @@
+package cn.fish.initDB.workflow.node;
+
+import cn.fish.chart.entity.ChatSession;
+import cn.fish.chart.repository.ChatSessionRepository;
+import cn.fish.database.service.DataBaseService;
+import cn.fish.initDB.constants.InitDBConstants;
+import com.alibaba.cloud.ai.graph.GraphResponse;
+import com.alibaba.cloud.ai.graph.NodeOutput;
+import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.alibaba.cloud.ai.graph.streaming.OutputType;
+import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import reactor.core.publisher.Flux;
+
+import java.util.*;
+
+/**
+ * 直连链路：执行 {@link InitDBConstants#STATE_KEY_GENERATED_SQL}，
+ * 通过嵌入 {@code Flux<GraphResponse<StreamingOutput>>} 流式输出「执行的 SQL」与 Markdown 表格结果，
+ * 并写入 {@link InitDBConstants#STATE_KEY_DIRECT_ANSWER} 供落库与兜底。
+ */
+@Slf4j
+@Component
+public class DbDirectExecuteQueryNode implements NodeAction {
+
+    private static final int MARKDOWN_CHUNK_CHARS = 900;
+    private static final int maxResults = 500;
+
+    private final DataBaseService dataBaseService;
+    private final ChatSessionRepository chatSessionRepository;
+
+    public DbDirectExecuteQueryNode(
+            DataBaseService dataBaseService,
+            ChatSessionRepository chatSessionRepository) {
+        this.dataBaseService = dataBaseService;
+        this.chatSessionRepository = chatSessionRepository;
+    }
+
+    @Override
+    public Map<String, Object> apply(OverAllState state) {
+        String sessionId = state.value(InitDBConstants.STATE_KEY_SESSION_ID, "");
+        String sql = state.value(InitDBConstants.STATE_KEY_GENERATED_SQL, "");
+        if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(sql)) {
+            String msg = "缺少会话或 SQL，无法执行查询。";
+            return directExecuteResult(state, msg, "## 提示\n\n" + msg);
+        }
+        ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
+        if (chatSession == null) {
+            String msg = "未找到会话，请先连接数据库。";
+            return directExecuteResult(state, msg, "## 提示\n\n" + msg);
+        }
+        String toRun = addLimitIfNeeded(sql);
+        try {
+            List<Map<String, Object>> rows = dataBaseService.queryTableData(chatSession, toRun);
+            String tableMd = toMarkdownTable(rows);
+            String header = "## 执行的 SQL\n\n```sql\n" + toRun + "\n```\n\n## 查询结果\n\n";
+            String full = header + tableMd;
+            return directExecuteResult(state, full, fluxFromMarkdown(state, full));
+        } catch (Exception e) {
+            log.error("db direct execute failed", e);
+            String plain = "执行查询失败：" + e.getMessage();
+            String md = "## 执行的 SQL\n\n```sql\n" + toRun + "\n```\n\n## 错误\n\n" + e.getMessage();
+            return directExecuteResult(state, plain, md);
+        }
+    }
+
+    /**
+     * 成功或失败均写入 {@link InitDBConstants#STATE_KEY_DIRECT_ANSWER} 与嵌入 Flux，避免仅 state 无流式帧时前端无展示。
+     */
+    private static Map<String, Object> directExecuteResult(OverAllState state, String directAnswer, String streamMarkdown) {
+        Flux<GraphResponse<NodeOutput>> flux = fluxFromMarkdown(state, streamMarkdown);
+        return directExecuteResult(state, directAnswer, flux);
+    }
+
+    private static Map<String, Object> directExecuteResult(
+            OverAllState state, String directAnswer, Flux<GraphResponse<NodeOutput>> streamFlux) {
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put(InitDBConstants.STATE_KEY_DIRECT_EXECUTE_STREAM, streamFlux);
+        out.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, directAnswer);
+        return out;
+    }
+
+    private static Flux<GraphResponse<NodeOutput>> fluxFromMarkdown(OverAllState state, String markdown) {
+        List<GraphResponse<NodeOutput>> parts = new ArrayList<>();
+        for (String piece : chunkMarkdown(markdown, MARKDOWN_CHUNK_CHARS)) {
+            parts.add(wrapChunk(state, piece));
+        }
+        if (parts.isEmpty()) {
+            parts.add(wrapChunk(state, StringUtils.hasText(markdown) ? markdown : "（无内容）"));
+        }
+        return Flux.fromIterable(parts);
+    }
+
+    private static GraphResponse<NodeOutput> wrapChunk(OverAllState state, String text) {
+        StreamingOutput<String> out = new StreamingOutput<>(
+                text,
+                InitDBConstants.NODE_DB_DIRECT_EXECUTE,
+                "",
+                state,
+                OutputType.GRAPH_NODE_STREAMING);
+        return GraphResponse.of((NodeOutput) out);
+    }
+
+    private static List<String> chunkMarkdown(String md, int maxChars) {
+        List<String> parts = new ArrayList<>();
+        if (md == null || md.isEmpty()) {
+            return parts;
+        }
+        int i = 0;
+        while (i < md.length()) {
+            int end = Math.min(i + maxChars, md.length());
+            if (end < md.length()) {
+                int nl = md.lastIndexOf('\n', end);
+                if (nl > i + maxChars / 2) {
+                    end = nl + 1;
+                }
+            }
+            parts.add(md.substring(i, end));
+            i = end;
+        }
+        return parts;
+    }
+
+    private String addLimitIfNeeded(String query) {
+        String lower = query.toLowerCase();
+        if (!lower.contains(" limit ") && !lower.contains("\nlimit ")) {
+            String q = query.endsWith(";") ? query.substring(0, query.length() - 1) : query;
+            return q + " LIMIT " + maxResults;
+        }
+        return query;
+    }
+
+    private static String toMarkdownTable(List<Map<String, Object>> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return "查询成功，结果为空（0 行）。";
+        }
+        Set<String> colOrder = new LinkedHashSet<>();
+        for (Map<String, Object> row : rows) {
+            colOrder.addAll(row.keySet());
+        }
+        List<String> columns = new ArrayList<>(colOrder);
+        StringBuilder sb = new StringBuilder();
+        sb.append("| ");
+        sb.append(String.join(" | ", columns));
+        sb.append(" |\n");
+        sb.append("|");
+        sb.append(" --- |".repeat(columns.size()));
+        sb.append("\n");
+        for (Map<String, Object> row : rows) {
+            sb.append("| ");
+            for (int j = 0; j < columns.size(); j++) {
+                if (j > 0) {
+                    sb.append(" | ");
+                }
+                Object v = row.get(columns.get(j));
+                sb.append(v == null ? "" : escapePipe(String.valueOf(v)));
+            }
+            sb.append(" |\n");
+        }
+        return sb.toString();
+    }
+
+    private static String escapePipe(String cell) {
+        return cell.replace("|", "\\|").replace("\n", " ");
+    }
+}

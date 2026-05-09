@@ -14,11 +14,44 @@ public final class InitDBConstants {
     public static final String DB_CHAT_WORKFLOW_BEAN = "dbChatWorkflowGraph";
 
     // --- Compiled graph / nodes ---
-    public static final String GRAPH_NAME_DB_CHAT_WORKFLOW = "db_chat_workflow";
+    public static final String GRAPH_NAME = "db_chat_workflow";
     public static final String NODE_DB_REACT = "db_react";
     public static final String NODE_DB_AGENT_INPUT_BRIDGE = "db_agent_input_bridge";
 
-    /** 父/子图 checkpoint threadId 中用于还原业务 sessionId 的片段 */
+    /** 意图：走原 ReAct 对话 */
+    public static final String NODE_DB_INTENT = "db_intent_classification";
+    /** 直连查数：生成 SQL */
+    public static final String NODE_DB_DIRECT_NL2SQL = "db_direct_nl2sql";
+    /** 直连查数：校验 SQL */
+    public static final String NODE_DB_DIRECT_SQL_GUARD = "db_direct_sql_guard";
+    /** 直连查数：执行并写入展示文本 */
+    public static final String NODE_DB_DIRECT_EXECUTE = "db_direct_execute";
+
+    /** 工作流分支：{@link #ROUTE_REACT_VALUE} 或 {@link #ROUTE_DIRECT_DATA_VALUE} */
+    public static final String STATE_KEY_DB_ROUTE = "db_route";
+    /** 客户端会话 id，供直连节点解析 {@link cn.fish.chart.entity.ChatSession} */
+    public static final String STATE_KEY_SESSION_ID = "session_id";
+    /** 直连链路生成的单条 SQL */
+    public static final String STATE_KEY_GENERATED_SQL = "generated_sql";
+    /** 直连：SQL 是否通过校验（供条件边读取） */
+    public static final String STATE_KEY_SQL_GUARD_OK = "sql_guard_ok";
+    /** 直连：用户可见答复（Markdown 等），聊天流会据此回传 */
+    public static final String STATE_KEY_DIRECT_ANSWER = "direct_answer";
+    /**
+     * 直连执行节点嵌入的流（{@code Flux<GraphResponse<StreamingOutput>>}），由 graph-core 展开为 {@link com.alibaba.cloud.ai.graph.streaming.StreamingOutput}。
+     * 必须放在 {@link java.util.LinkedHashMap} 的首项，以便 {@code getEmbedFlux} 稳定识别。
+     */
+    public static final String STATE_KEY_DIRECT_EXECUTE_STREAM = "direct_execute_stream";
+
+    public static final String ROUTE_REACT_VALUE = "react";
+    public static final String ROUTE_DIRECT_DATA_VALUE = "direct_data";
+
+    public static final String SQL_GUARD_EDGE_OK = "sql_guard_ok";
+    public static final String SQL_GUARD_EDGE_FAIL = "sql_guard_fail";
+
+    /**
+     * 父/子图 checkpoint threadId 中用于还原业务 sessionId 的片段
+     */
     public static final String SUBGRAPH_THREAD_MARKER = "_subgraph_";
 
     // --- Graph state keys ---

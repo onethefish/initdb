@@ -9,7 +9,6 @@ import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.zaxxer.hikari.HikariDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -139,7 +138,7 @@ public class DataBaseServiceImpl implements DataBaseService {
 
     private DataSource getDataSource(ChatSession chatSession) {
         String sessionId = chatSession.getSessionId();
-        HikariDataSource result = dataBaseRepository.get(sessionId);
+        DataSource result = dataBaseRepository.get(sessionId);
         // 重新加载数据源
         if (result == null) {
             String datasourceId = chatSession.getDatasourceId();

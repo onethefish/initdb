@@ -4,9 +4,7 @@ import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.service.ChatSessionService;
 import cn.fish.cloud.serva.web.controller.BaseController;
 import cn.fish.cloud.serva.web.response.ResponseResult;
-import cn.fish.initDB.entity.ChatRequest;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -18,12 +16,6 @@ public class ChatController extends BaseController {
 
     public ChatController(ChatSessionService chatSessionService) {
         this.chatSessionService = chatSessionService;
-    }
-
-
-    @PostMapping("/chat/stream")
-    public Flux<String> chatStream(@RequestBody ChatRequest chatRequest) {
-        return chatSessionService.chatStream(chatRequest);
     }
 
     @GetMapping("/query/list")

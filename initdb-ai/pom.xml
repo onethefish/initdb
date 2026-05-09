@@ -74,17 +74,6 @@
             <artifactId>spring-ai-tika-document-reader</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.commonmark</groupId>
-            <artifactId>commonmark</artifactId>
-            <version>0.22.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.commonmark</groupId>
-            <artifactId>commonmark-ext-gfm-tables</artifactId>
-            <version>0.22.0</version>
-        </dependency>
-
 
         <dependency>
             <groupId>org.springframework.ai</groupId>

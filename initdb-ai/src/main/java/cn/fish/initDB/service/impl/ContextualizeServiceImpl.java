@@ -2,6 +2,7 @@ package cn.fish.initDB.service.impl;
 
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.service.ContextualizeService;
+import cn.fish.initDB.util.ExplicitSqlUserInput;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
@@ -48,6 +49,11 @@ public class ContextualizeServiceImpl implements ContextualizeService {
             return rawMessage;
         }
         String trimmed = rawMessage.trim();
+        if (ExplicitSqlUserInput.matches(trimmed)) {
+            log.debug("Skip contextualize rewrite: explicit SQL input");
+            return trimmed;
+        }
+
         RunnableConfig checkpointConfig = RunnableConfig.builder()
                                                         .threadId(sessionId)
                                                         .mergeReasoningContent(true)

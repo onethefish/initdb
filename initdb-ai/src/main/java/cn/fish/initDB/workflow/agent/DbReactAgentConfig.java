@@ -65,7 +65,8 @@ public class DbReactAgentConfig {
                          .description(DESCRIPTION)
                          .model(chatModel)
                          .saver(memorySaver)
-                         .maxParallelTools(2)
+                         .parallelToolExecution(false)
+                         .maxParallelTools(1)
                          .enableLogging(true)
                          .tools(getAllTablesTool.toolCallback(),
                                  getTableSchemaTool.toolCallback(),
