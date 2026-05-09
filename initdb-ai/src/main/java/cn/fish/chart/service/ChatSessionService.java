@@ -8,7 +8,6 @@ import java.util.List;
 
 public interface ChatSessionService {
 
-    Flux<String> chatStream(ChatRequest chatRequest);
 
     ChatSession add(ChatSession chatSession);
 

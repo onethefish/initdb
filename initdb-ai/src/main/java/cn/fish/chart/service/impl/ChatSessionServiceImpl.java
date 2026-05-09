@@ -7,18 +7,11 @@ import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
-import cn.fish.initDB.entity.ChatRequest;
-import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
-import org.springframework.ai.chat.model.ChatModel;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -28,42 +21,21 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final DataBaseRepository dataBaseRepository;
     private final AgentDatasourceRepository agentDatasourceRepository;
-    private final ChatClient chatClient;
     private final BaseCheckpointSaver baseCheckpointSaver;
 
     public ChatSessionServiceImpl(ChatSessionRepository chatSessionRepository, DataBaseRepository dataBaseRepository,
-                                  AgentDatasourceRepository agentDatasourceRepository, ChatModel chatModel,
+                                  AgentDatasourceRepository agentDatasourceRepository,
                                   BaseCheckpointSaver baseCheckpointSaver) {
         this.chatSessionRepository = chatSessionRepository;
         this.dataBaseRepository = dataBaseRepository;
         this.agentDatasourceRepository = agentDatasourceRepository;
         this.baseCheckpointSaver = baseCheckpointSaver;
-        MessageWindowChatMemory messageWindowChatMemory = MessageWindowChatMemory.builder()
-                                                                                 .maxMessages(10)
-                                                                                 .build();
-        chatClient = ChatClient.builder(chatModel)
-                               .defaultAdvisors(MessageChatMemoryAdvisor.builder(messageWindowChatMemory).build())
-                               .build();
     }
 
-    @Override
-    public Flux<String> chatStream(ChatRequest chatRequest) {
-        String sessionId = chatRequest.getSessionId();
-        if (StrUtil.isEmpty(sessionId)) {
-            // 纯聊天 不需要id
-            //            throw new CommonException("Sorry, an error occurred: sessionId is null");
-        }
-        ChatClient.ChatClientRequestSpec clientRequestSpec = chatClient.prompt()
-                                                                       .user(chatRequest.getMessage())
-                                                                       .advisors(memoryAdvisor -> memoryAdvisor
-                                                                               .param(ChatMemory.CONVERSATION_ID, sessionId)
-                                                                       );
-        return clientRequestSpec.stream().content();
-    }
 
     @Override
     public ChatSession add(ChatSession chatSession) {
-        chatSession.setSessionId(IdUtil.simpleUUID());
+        chatSession.setSessionId(IdWorker.get32UUID());
         validateDataSource(chatSession);
         chatSessionRepository.add(chatSession);
         return chatSession;
@@ -83,12 +55,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         if (StrUtil.isBlank(ds.getConnectionUrl()) || StrUtil.isBlank(ds.getUsername())) {
             throw new CommonException("数据源连接信息不完整");
         }
-        try {
-            dataBaseRepository.add(chatSession.getSessionId(), ds.getConnectionUrl(), ds.getUsername(), ds.getPassword());
-        } catch (Exception e) {
-            throw new CommonException("数据库连接异常请检查参数", e);
-        }
-
+        dataBaseRepository.add(chatSession.getSessionId(), ds.getConnectionUrl(), ds.getUsername(), ds.getPassword());
     }
 
     @Override

@@ -8,7 +8,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * 为 Spring MVC 异步请求（如返回 {@link reactor.core.publisher.Flux} 的流式接口）配置线程池，
- * 避免使用默认 {@code SimpleAsyncTaskExecutor} 在生产环境产生告警。
+ * 避免使用默认 {@code SimpleAsyncTaskExecutor} 产生告警。
  */
 @Configuration
 public class MvcAsyncConfiguration {

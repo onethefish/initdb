@@ -10,7 +10,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
-import java.util.HashMap;
 
 @Repository
 public class DataBaseRepositoryImpl implements DataBaseRepository {
@@ -31,12 +30,12 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     }
 
     @Override
-    public HikariDataSource get(String id) {
+    public DataSource get(String id) {
         return DATA_SOURCE_CACHE.getIfPresent(id);
     }
 
     @Override
-    public HikariDataSource add(String id, String url, String username, String password) {
+    public DataSource add(String id, String url, String username, String password) {
         HikariDataSource hikariDataSource = createDataSource(url, username, password);
         DATA_SOURCE_CACHE.put(id, hikariDataSource);
         return hikariDataSource;

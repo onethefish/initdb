@@ -17,11 +17,8 @@ import java.util.Map;
 public class DbAgentInputBridgeNode implements NodeAction {
 
     @Override
-    public Map<String, Object> apply(OverAllState state) throws Exception {
-        String standalone = state.value(InitDBConstants.STANDALONE).map(Object::toString).orElse("");
-        if (standalone != null) {
-            standalone = standalone.strip();
-        }
+    public Map<String, Object> apply(OverAllState state) {
+        String standalone = state.value(InitDBConstants.STANDALONE, "");
         UserMessage userMessage = new UserMessage(standalone);
         List<Message> messages = List.of(userMessage);
         Map<String, Object> out = new HashMap<>();

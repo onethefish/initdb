@@ -1,6 +1,7 @@
 package cn.fish.initDB.workflow;
 
 import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.service.ContextualizeService;
 import cn.fish.initDB.workflow.node.DbAgentInputBridgeNode;
 import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -19,15 +20,13 @@ import java.util.Map;
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 
 /**
- * DB Agent 聊天工作流：仅「桥接 → ReAct 子图」；问句补全见 {@link cn.fish.initDB.service.QuestionContextualizeService}（在 {@link cn.fish.initDB.service.impl.DBAgentServiceImpl} 中图外执行）。
+ * DB Agent 聊天工作流：仅「桥接 → ReAct 子图」；问句补全见 {@link ContextualizeService}（在 {@link cn.fish.initDB.service.impl.DBAgentServiceImpl} 中图外执行）。
  */
 @Configuration
 public class DBAgentStateGraphConfig {
 
     @Bean(name = InitDBConstants.DB_CHAT_WORKFLOW_BEAN)
-    public CompiledGraph dbChatWorkflowGraph(
-            @Qualifier(InitDBConstants.DB_REACT_AGENT_BEAN) ReactAgent dbReactAgent,
-            MemorySaver memorySaver) {
+    public CompiledGraph dbChatWorkflowGraph(@Qualifier(InitDBConstants.DB_REACT_AGENT_BEAN) ReactAgent dbReactAgent, MemorySaver memorySaver) {
         try {
             return buildDbChatWorkflow(dbReactAgent, memorySaver);
         } catch (GraphStateException e) {
@@ -35,8 +34,7 @@ public class DBAgentStateGraphConfig {
         }
     }
 
-    private static CompiledGraph buildDbChatWorkflow(ReactAgent dbReactAgent, MemorySaver memorySaver)
-            throws GraphStateException {
+    private static CompiledGraph buildDbChatWorkflow(ReactAgent dbReactAgent, MemorySaver memorySaver) throws GraphStateException {
         KeyStrategyFactory keyStrategyFactory = () -> {
             Map<String, KeyStrategy> m = new HashMap<>();
             m.put(OverAllState.DEFAULT_INPUT_KEY, new ReplaceStrategy());
@@ -44,8 +42,7 @@ public class DBAgentStateGraphConfig {
             m.put(InitDBConstants.STANDALONE, new ReplaceStrategy());
             return m;
         };
-        StateGraph graph = new StateGraph(
-                InitDBConstants.GRAPH_NAME_DB_CHAT_WORKFLOW, keyStrategyFactory, StateGraph.DEFAULT_JACKSON_SERIALIZER);
+        StateGraph graph = new StateGraph(InitDBConstants.GRAPH_NAME_DB_CHAT_WORKFLOW, keyStrategyFactory, StateGraph.DEFAULT_JACKSON_SERIALIZER);
         graph.addNode(InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE, node_async(new DbAgentInputBridgeNode()));
         graph.addNode(InitDBConstants.NODE_DB_REACT, dbReactAgent.getAndCompileGraph());
         graph.addEdge(StateGraph.START, InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE);

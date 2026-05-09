@@ -1,8 +1,7 @@
 package cn.fish.initDB.service.impl;
 
 import cn.fish.initDB.constants.InitDBConstants;
-import cn.fish.initDB.entity.QuestionContextualizeResult;
-import cn.fish.initDB.service.QuestionContextualizeService;
+import cn.fish.initDB.service.ContextualizeService;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
@@ -20,14 +19,13 @@ import java.util.Optional;
 
 @Slf4j
 @Service
-public class QuestionContextualizeServiceImpl implements QuestionContextualizeService {
+public class ContextualizeServiceImpl implements ContextualizeService {
 
     private static final String REWRITE_SYSTEM = """
             你是「问句补全」助手，服务于数据库对话系统。你会收到一段此前多轮对话摘录，以及用户最新一句输入。
             任务：把「最新输入」改写成一条**独立可理解**的中文问题或指令；若其中指代词（如「那张表」「同上」「再查一下」）依赖上文，请根据摘录补全实体与意图。
             要求：
             - 只输出一行改写结果，不要解释、不要引号、不要 Markdown。
-            - 不要添加「补全的会话」等任何前缀或标签，只输出改写后的句子本身。
             - 若最新输入本身已自洽，可原样返回或只做标点/空白修整。
             - 不要编造摘录中未出现的表名或业务事实。
             """;
@@ -39,31 +37,29 @@ public class QuestionContextualizeServiceImpl implements QuestionContextualizeSe
     private final ChatModel chatModel;
     private final BaseCheckpointSaver checkpointSaver;
 
-    public QuestionContextualizeServiceImpl(ChatModel chatModel, BaseCheckpointSaver checkpointSaver) {
+    public ContextualizeServiceImpl(ChatModel chatModel, BaseCheckpointSaver checkpointSaver) {
         this.chatModel = chatModel;
         this.checkpointSaver = checkpointSaver;
     }
 
     @Override
-    public QuestionContextualizeResult rewrite(String rawMessage, String sessionId) {
-        String raw = rawMessage == null ? "" : rawMessage;
-        if (StrUtil.isBlank(raw)) {
-            return new QuestionContextualizeResult("", "");
+    public String rewrite(String rawMessage, String sessionId) {
+        if (StrUtil.isBlank(rawMessage)) {
+            return rawMessage;
         }
-        String trimmed = raw.trim();
-        String sid = StrUtil.trimToEmpty(sessionId);
+        String trimmed = rawMessage.trim();
         RunnableConfig checkpointConfig = RunnableConfig.builder()
-                                                        .threadId(sid)
+                                                        .threadId(sessionId)
                                                         .mergeReasoningContent(true)
                                                         .build();
 
         List<Message> prior = loadPriorMessages(checkpointSaver, checkpointConfig);
         if (prior.isEmpty()) {
-            return withDisplay(trimmed);
+            return trimmed;
         }
         String historyBlock = buildHistoryBlock(prior);
         if (StrUtil.isBlank(historyBlock)) {
-            return withDisplay(trimmed);
+            return trimmed;
         }
         String userBlock = USER_BLOCK_HISTORY + historyBlock + USER_BLOCK_LATEST + trimmed + USER_BLOCK_TAIL;
 
@@ -75,12 +71,12 @@ public class QuestionContextualizeServiceImpl implements QuestionContextualizeSe
                                .getText();
         } catch (Exception e) {
             log.warn("Contextualize LLM call failed, using trimmed input: {}", e.getMessage());
-            return withDisplay(trimmed);
+            return trimmed;
         }
 
         String cleaned = StrUtil.trimToEmpty(rawText).replaceAll("(?s)^\\s*[\"'「]|[\"'」]\\s*$", "");
         if (StrUtil.isBlank(cleaned)) {
-            return withDisplay(trimmed);
+            return trimmed;
         }
         int nl = cleaned.indexOf('\n');
         if (nl > 0) {
@@ -89,27 +85,8 @@ public class QuestionContextualizeServiceImpl implements QuestionContextualizeSe
         if (cleaned.length() > InitDBConstants.CONTEXTUALIZE_BODY_MAX_CHARS) {
             cleaned = cleaned.substring(0, InitDBConstants.CONTEXTUALIZE_BODY_MAX_CHARS);
         }
-        String body = stripDisplayPrefix(cleaned);
-        log.info("Question contextualize result (body): {}", body);
-        return withDisplay(body);
-    }
-
-    private static QuestionContextualizeResult withDisplay(String bodyForAgent) {
-        String body = StrUtil.trimToEmpty(bodyForAgent);
-        String display = body.isEmpty() ? "" : body;
-        return new QuestionContextualizeResult(body, display);
-    }
-
-    private static String stripDisplayPrefix(String cleaned) {
-        String s = StrUtil.trimToEmpty(cleaned);
-        for (String p : List.of(
-                InitDBConstants.CONTEXTUALIZE_DISPLAY_PREFIX,
-                InitDBConstants.CONTEXTUALIZE_DISPLAY_PREFIX_ASCII_COLON)) {
-            if (s.startsWith(p)) {
-                return StrUtil.trimToEmpty(s.substring(p.length()));
-            }
-        }
-        return s;
+        log.info("Question contextualize result: {}", cleaned);
+        return cleaned;
     }
 
     private static List<Message> loadPriorMessages(BaseCheckpointSaver checkpointSaver, RunnableConfig config) {
@@ -117,7 +94,6 @@ public class QuestionContextualizeServiceImpl implements QuestionContextualizeSe
         return cp.map(checkpoint -> copyMessagesFromState(checkpoint.getState())).orElseGet(List::of);
     }
 
-    @SuppressWarnings("unchecked")
     private static List<Message> copyMessagesFromState(Map<String, Object> checkpointState) {
         if (checkpointState == null) {
             return List.of();

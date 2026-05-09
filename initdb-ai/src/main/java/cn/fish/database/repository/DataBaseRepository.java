@@ -1,14 +1,14 @@
 package cn.fish.database.repository;
 
-import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
 
 public interface DataBaseRepository {
 
     void test(String url, String username, String password);
 
-    HikariDataSource get(String id);
+    DataSource get(String id);
 
-    HikariDataSource add(String id, String url, String username, String password);
+    DataSource add(String id, String url, String username, String password);
 
     void remove(String id);
 

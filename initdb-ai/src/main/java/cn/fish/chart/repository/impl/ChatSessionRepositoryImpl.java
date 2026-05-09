@@ -1,8 +1,8 @@
 package cn.fish.chart.repository.impl;
 
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.mapper.ChatSessionMapper;
 import cn.fish.chart.repository.ChatSessionRepository;
-import cn.fish.chart.entity.ChatSession;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.repository.CrudRepository;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -18,7 +18,7 @@ public class ChatSessionRepositoryImpl extends CrudRepository<ChatSessionMapper,
 
 
     private static final Cache<String, ChatSession> CHART_SESSION = Caffeine.newBuilder()
-                                                                            .expireAfterAccess(50, TimeUnit.MINUTES)
+                                                                            .expireAfterAccess(60, TimeUnit.MINUTES)
                                                                             .maximumSize(128) // 最大支持128个会话
                                                                             .build();
 
