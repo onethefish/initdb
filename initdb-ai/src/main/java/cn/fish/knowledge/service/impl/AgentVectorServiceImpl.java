@@ -1,6 +1,7 @@
 package cn.fish.knowledge.service.impl;
 
 import cn.fish.cloud.serva.web.exception.CommonException;
+import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.knowledge.constants.DocumentMetadataConstant;
 import cn.fish.knowledge.entity.AgentKnowledgeVO;
 import cn.fish.knowledge.repository.VectorStoreRepository;
@@ -23,20 +24,13 @@ public class AgentVectorServiceImpl implements AgentVectorService {
 
     private final VectorStoreRepository vectorStoreRepository;
     private final ChatModel chatModel;
+    private final ApplicationPromptTemplates applicationPromptTemplates;
 
-    private static final String ANSWER_PROMPT = """
-            基于以下知识库内容回答问题：
-            
-            %s
-            
-            问题：%s
-            
-            请用中文简洁回答，仅基于上述知识库内容。
-            """;
-
-    public AgentVectorServiceImpl(ChatModel chatModel, VectorStoreRepository vectorStoreRepository) {
+    public AgentVectorServiceImpl(ChatModel chatModel, VectorStoreRepository vectorStoreRepository,
+                                  ApplicationPromptTemplates applicationPromptTemplates) {
         this.chatModel = chatModel;
         this.vectorStoreRepository = vectorStoreRepository;
+        this.applicationPromptTemplates = applicationPromptTemplates;
     }
 
     private static final int QUERY_LIST_TOP_K = 1;
@@ -63,7 +57,7 @@ public class AgentVectorServiceImpl implements AgentVectorService {
                                   .reduce((a, b) -> a + "\n\n" + b)
                                   .orElse("");
 
-        String fullPrompt=String.format(ANSWER_PROMPT,context,vo.getQuery());
+        String fullPrompt = applicationPromptTemplates.renderAgentVectorRagAnswer(context, vo.getQuery());
 
         return chatModel.call(new Prompt(fullPrompt))
                         .getResult()

@@ -1,5 +1,6 @@
 package cn.fish.initDB.event.listen;
 
+import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.hutool.core.util.StrUtil;
@@ -24,32 +25,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ChartEventListener {
 
-    private static final String SUMMARY_PROMPT = """
-            你是对话总结助手。将以下对话历史总结为简洁的要点:
-            - 用户的核心需求
-            - 涉及的关键表和字段
-            - 重要的SQL查询或结论
-
-            要求:
-            - 用中文总结
-            - 控制在100字以内
-            - 保留关键技术细节
-            
-            ---对话记录---
-            
-            """;
-
-    private static final String COMPRESSED_HEAD_USER_MESSAGE_PREFIX =
-            "以下为此前多轮对话的压缩摘要，请在回答时保留其中涉及的业务与库表信息：\n\n";
-
     private final BaseCheckpointSaver baseCheckpointSaver;
     private final ChatModel chatModel;
+    private final ApplicationPromptTemplates applicationPromptTemplates;
 
     private static final ConcurrentHashMap<String, Object> SESSION_LOCKS = new ConcurrentHashMap<>();
 
-    public ChartEventListener(ChatModel chatModel, BaseCheckpointSaver baseCheckpointSaver) {
+    public ChartEventListener(ChatModel chatModel, BaseCheckpointSaver baseCheckpointSaver,
+                              ApplicationPromptTemplates applicationPromptTemplates) {
         this.chatModel = chatModel;
         this.baseCheckpointSaver = baseCheckpointSaver;
+        this.applicationPromptTemplates = applicationPromptTemplates;
     }
 
     private static Object lockForThread(String threadId) {
@@ -91,7 +77,7 @@ public class ChartEventListener {
                     historyBlock = historyBlock.substring(0, InitDBConstants.CHART_MAX_CHARS_FOR_SUMMARY_INPUT)
                             + InitDBConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
                 }
-                String fullPrompt = SUMMARY_PROMPT + historyBlock;
+                String fullPrompt = applicationPromptTemplates.renderChartConversationSummary(historyBlock);
                 String summary = chatModel.call(new Prompt(fullPrompt)).getResult().getOutput().getText();
                 if (StrUtil.isEmpty(summary)) {
                     log.warn("Auto summary empty, skip checkpoint update");
@@ -109,7 +95,7 @@ public class ChartEventListener {
                 }
                 String trimSummary = summary.trim();
                 List<Message> compressed = new ArrayList<>();
-                compressed.add(new UserMessage(COMPRESSED_HEAD_USER_MESSAGE_PREFIX + trimSummary));
+                compressed.add(new UserMessage(applicationPromptTemplates.renderChartCompressedUserMessage(trimSummary)));
                 compressed.addAll(tail);
 
                 Map<String, Object> newState = new HashMap<>(again.get().getState());

@@ -1,5 +1,6 @@
 package cn.fish.initDB.service.impl;
 
+import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.service.ContextualizeService;
 import cn.fish.initDB.util.ExplicitSqlUserInput;
@@ -22,25 +23,15 @@ import java.util.Optional;
 @Service
 public class ContextualizeServiceImpl implements ContextualizeService {
 
-    private static final String REWRITE_SYSTEM = """
-            你是「问句补全」助手，服务于数据库对话系统。你会收到一段此前多轮对话摘录，以及用户最新一句输入。
-            任务：把「最新输入」改写成一条**独立可理解**的中文问题或指令；若其中指代词（如「那张表」「同上」「再查一下」）依赖上文，请根据摘录补全实体与意图。
-            要求：
-            - 只输出一行改写结果，不要解释、不要引号、不要 Markdown。
-            - 若最新输入本身已自洽，可原样返回或只做标点/空白修整。
-            - 不要编造摘录中未出现的表名或业务事实。
-            """;
-
-    private static final String USER_BLOCK_HISTORY = "-----对话摘录-----\n";
-    private static final String USER_BLOCK_LATEST = "\n-----最新输入-----\n";
-    private static final String USER_BLOCK_TAIL = "\n-----请只输出改写后的一行-----";
-
     private final ChatModel chatModel;
     private final BaseCheckpointSaver checkpointSaver;
+    private final ApplicationPromptTemplates applicationPromptTemplates;
 
-    public ContextualizeServiceImpl(ChatModel chatModel, BaseCheckpointSaver checkpointSaver) {
+    public ContextualizeServiceImpl(ChatModel chatModel, BaseCheckpointSaver checkpointSaver,
+                                    ApplicationPromptTemplates applicationPromptTemplates) {
         this.chatModel = chatModel;
         this.checkpointSaver = checkpointSaver;
+        this.applicationPromptTemplates = applicationPromptTemplates;
     }
 
     @Override
@@ -67,11 +58,13 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         if (StrUtil.isBlank(historyBlock)) {
             return trimmed;
         }
-        String userBlock = USER_BLOCK_HISTORY + historyBlock + USER_BLOCK_LATEST + trimmed + USER_BLOCK_TAIL;
+        String userBlock = applicationPromptTemplates.renderContextualizeUserBlock(historyBlock, trimmed);
 
         String rawText;
         try {
-            rawText = chatModel.call(new Prompt(List.of(new SystemMessage(REWRITE_SYSTEM), new UserMessage(userBlock))))
+            rawText = chatModel.call(new Prompt(List.of(
+                                   new SystemMessage(applicationPromptTemplates.contextualizeRewriteSystemText()),
+                                   new UserMessage(userBlock))))
                                .getResult()
                                .getOutput()
                                .getText();

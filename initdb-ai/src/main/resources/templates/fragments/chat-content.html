@@ -21,16 +21,6 @@
         <div class="chat-messages" id="chatMessages"></div>
         <div class="input-area">
           <input disabled id="userInput" onkeypress="handleKeyPress(event)" placeholder="请输入你的问题..." type="text">
-          <input accept=".txt" class="file-input-hidden" id="fileInput" onchange="handleFileSelect(this)" type="file">
-          <div class="file-upload-group">
-            <button aria-label="选择文件" class="btn-upload" id="uploadFileBtn" onclick="triggerFileInput()" title="选择文件" type="button"></button>
-            <button aria-label="上传并处理" class="btn-send-file btn-send-file--hidden" disabled id="uploadFileSendBtn" onclick="uploadSelectedFile()" title="上传并处理" type="button"></button>
-            <ul class="file-list" id="fileList">
-              <li class="file-list-item">
-                <span class="file-list-item-text" id="fileNameText"></span>
-              </li>
-            </ul>
-          </div>
           <button disabled id="sendMessageBtn" onclick="sendMessage()" type="button">发送</button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 package cn.fish.initDB.workflow.node;
 
+import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
@@ -24,18 +25,12 @@ public class DbDirectNl2SqlNode implements NodeAction {
     private static final Pattern CODE_FENCE_SQL = Pattern.compile("(?is)```(?:sql)?\\s*([\\s\\S]*?)```");
     private static final Pattern LEADING_SELECT = Pattern.compile("(?is)^\\s*(SELECT\\b[\\s\\S]+)$");
 
-    private static final String NL2SQL_PROMPT = """
-            你是 SQL 生成器。根据用户问题写出**一条**可在关系库执行的 SELECT 语句。
-            要求：仅输出 SQL，不要 Markdown、不要解释；禁止 INSERT/UPDATE/DELETE/DROP 等非查询语句；不要加分号。
-            若信息不足以写出合理查询，输出：SELECT 1 AS placeholder
-
-            用户问题：
-            """;
-
     private final ChatModel chatModel;
+    private final ApplicationPromptTemplates applicationPromptTemplates;
 
-    public DbDirectNl2SqlNode(ChatModel chatModel) {
+    public DbDirectNl2SqlNode(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates) {
         this.chatModel = chatModel;
+        this.applicationPromptTemplates = applicationPromptTemplates;
     }
 
     @Override
@@ -61,7 +56,10 @@ public class DbDirectNl2SqlNode implements NodeAction {
             return normalizeOneStatement(sel.group(1));
         }
         try {
-            String raw = chatModel.call(new Prompt(NL2SQL_PROMPT + text)).getResult().getOutput().getText();
+            String raw = chatModel.call(new Prompt(applicationPromptTemplates.renderDbDirectNl2sql(text)))
+                                  .getResult()
+                                  .getOutput()
+                                  .getText();
             return normalizeOneStatement(stripNoise(raw));
         } catch (Exception e) {
             log.warn("nl2sql model failed", e);

@@ -15,6 +15,7 @@
  */
 package cn.fish.initDB.workflow.tool.impl;
 
+import cn.fish.common.prompt.ApplicationPromptTemplates;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -33,34 +34,12 @@ import java.util.function.BiFunction;
 @Component
 public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, ToolContext, String> {
 
-    private static final String CHECK_PROMPT_TEMPLATE = """
-            你是一个SQL查询验证器。请检查以下SQL查询语句查询是否存在常见错误：
-            
-            ```sql
-            %s
-            ```
-            
-            检查项目：
-            1. 语法错误
-            2. 错误的列名或表名（如果提供了上下文）
-            3. 字符串值缺少引号
-            4. JOIN条件不正确
-            5. GROUP BY子句问题
-            6. 任何潜在的SQL注入漏洞
-            
-            如果查询看起来正确，请准确回复：
-            "校验成功：该查询语句看起来没问题"
-            
-            如果存在问题，请回复：
-            "校验失败:" 后跟问题编号列表及修复建议。
-            
-            请保持回复简洁。
-            """;
-
     private final ChatModel chatModel;
+    private final ApplicationPromptTemplates applicationPromptTemplates;
 
-    public QuerySqlCheckTool(ChatModel chatModel) {
+    public QuerySqlCheckTool(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates) {
         this.chatModel = chatModel;
+        this.applicationPromptTemplates = applicationPromptTemplates;
     }
 
     @Override
@@ -69,7 +48,7 @@ public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, 
         log.info("Query to check: {}", request.query());
 
         try {
-            String promptText = String.format(CHECK_PROMPT_TEMPLATE, request.query());
+            String promptText = applicationPromptTemplates.renderQuerySqlCheck(request.query());
             Prompt prompt = new Prompt(promptText);
             String result = chatModel.call(prompt).getResult().getOutput().getText();
 
