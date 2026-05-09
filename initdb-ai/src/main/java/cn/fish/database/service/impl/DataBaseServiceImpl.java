@@ -10,7 +10,9 @@ import cn.fish.initDB.entity.TableColumn;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @Slf4j
 @Service
@@ -37,7 +40,9 @@ public class DataBaseServiceImpl implements DataBaseService {
     private final DataBaseRepository dataBaseRepository;
     private final AgentDatasourceRepository agentDatasourceRepository;
 
-    public DataBaseServiceImpl(DataBaseRepository dataBaseRepository, AgentDatasourceRepository agentDatasourceRepository) {
+    public DataBaseServiceImpl(
+            DataBaseRepository dataBaseRepository,
+            AgentDatasourceRepository agentDatasourceRepository) {
         this.dataBaseRepository = dataBaseRepository;
         this.agentDatasourceRepository = agentDatasourceRepository;
     }
@@ -131,9 +136,20 @@ public class DataBaseServiceImpl implements DataBaseService {
 
     @Override
     public List<Map<String, Object>> queryTableData(ChatSession chatSession, String sql) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        queryTableDataStreaming(chatSession, sql, rows::add);
+        return rows;
+    }
+
+    @Override
+    public void queryTableDataStreaming(ChatSession chatSession, String sql, Consumer<Map<String, Object>> rowConsumer) {
         DataSource dataSource = getDataSource(chatSession);
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        return jdbcTemplate.queryForList(sql);
+        ColumnMapRowMapper mapper = new ColumnMapRowMapper();
+        int[] rowIndex = {0};
+        jdbcTemplate.query(
+                connection -> connection.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY),
+                (RowCallbackHandler) rs -> rowConsumer.accept(mapper.mapRow(rs, rowIndex[0]++)));
     }
 
     private DataSource getDataSource(ChatSession chatSession) {

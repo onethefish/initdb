@@ -54,9 +54,8 @@ public class DbDirectExecuteQueryNode implements NodeAction {
         }
         String toRun = addLimitIfNeeded(sql);
         try {
-            List<Map<String, Object>> rows = dataBaseService.queryTableData(chatSession, toRun);
-            String tableMd = toMarkdownTable(rows);
             String header = "## 执行的 SQL\n\n```sql\n" + toRun + "\n```\n\n## 查询结果\n\n";
+            String tableMd = buildMarkdownTableStreaming(chatSession, toRun);
             String full = header + tableMd;
             return directExecuteResult(state, full, fluxFromMarkdown(state, full));
         } catch (Exception e) {
@@ -133,34 +132,43 @@ public class DbDirectExecuteQueryNode implements NodeAction {
         return query;
     }
 
-    private static String toMarkdownTable(List<Map<String, Object>> rows) {
-        if (rows == null || rows.isEmpty()) {
+    /** 按行 JDBC 流式读取并拼 Markdown，避免整表 {@link List} 驻留内存。 */
+    private String buildMarkdownTableStreaming(ChatSession chatSession, String sql) {
+        List<String> columns = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        int[] rowCount = {0};
+        dataBaseService.queryTableDataStreaming(chatSession, sql, row -> {
+            if (rowCount[0] == 0) {
+                columns.addAll(row.keySet());
+                appendMarkdownTableHeader(sb, columns);
+            }
+            appendMarkdownTableDataRow(sb, columns, row);
+            rowCount[0]++;
+        });
+        if (rowCount[0] == 0) {
             return "查询成功，结果为空（0 行）。";
         }
-        Set<String> colOrder = new LinkedHashSet<>();
-        for (Map<String, Object> row : rows) {
-            colOrder.addAll(row.keySet());
-        }
-        List<String> columns = new ArrayList<>(colOrder);
-        StringBuilder sb = new StringBuilder();
+        return sb.toString();
+    }
+
+    private static void appendMarkdownTableHeader(StringBuilder sb, List<String> columns) {
         sb.append("| ");
         sb.append(String.join(" | ", columns));
-        sb.append(" |\n");
-        sb.append("|");
+        sb.append(" |\n|");
         sb.append(" --- |".repeat(columns.size()));
         sb.append("\n");
-        for (Map<String, Object> row : rows) {
-            sb.append("| ");
-            for (int j = 0; j < columns.size(); j++) {
-                if (j > 0) {
-                    sb.append(" | ");
-                }
-                Object v = row.get(columns.get(j));
-                sb.append(v == null ? "" : escapePipe(String.valueOf(v)));
+    }
+
+    private static void appendMarkdownTableDataRow(StringBuilder sb, List<String> columns, Map<String, Object> row) {
+        sb.append("| ");
+        for (int j = 0; j < columns.size(); j++) {
+            if (j > 0) {
+                sb.append(" | ");
             }
-            sb.append(" |\n");
+            Object v = row.get(columns.get(j));
+            sb.append(v == null ? "" : escapePipe(String.valueOf(v)));
         }
-        return sb.toString();
+        sb.append(" |\n");
     }
 
     private static String escapePipe(String cell) {
