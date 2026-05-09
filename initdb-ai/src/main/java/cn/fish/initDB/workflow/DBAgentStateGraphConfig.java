@@ -61,11 +61,7 @@ public class DBAgentStateGraphConfig {
             m.put(OverAllState.DEFAULT_INPUT_KEY, new ReplaceStrategy());
             m.put(InitDBConstants.STATE_KEY_MESSAGES, new AppendStrategy());
             m.put(InitDBConstants.STANDALONE, new ReplaceStrategy());
-            m.put(InitDBConstants.STATE_KEY_DB_ROUTE, new ReplaceStrategy());
-            m.put(InitDBConstants.STATE_KEY_SESSION_ID, new ReplaceStrategy());
-            m.put(InitDBConstants.STATE_KEY_GENERATED_SQL, new ReplaceStrategy());
-            m.put(InitDBConstants.STATE_KEY_SQL_GUARD_OK, new ReplaceStrategy());
-            m.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, new ReplaceStrategy());
+            m.put(InitDBConstants.STATE_KEY_DB_BUNDLE, new ReplaceStrategy());
             m.put(InitDBConstants.STATE_KEY_DIRECT_EXECUTE_STREAM, new ReplaceStrategy());
             return m;
         };
@@ -113,7 +109,7 @@ public class DBAgentStateGraphConfig {
      * 条件边必须命中 {@link Map} 的 key；checkpoint 反序列化后类型可能非 String，统一归一化避免走错分支或映射失败。
      */
     private static String intentRouteTarget(OverAllState state) {
-        Object v = state.value(InitDBConstants.STATE_KEY_DB_ROUTE).orElse(InitDBConstants.ROUTE_REACT_VALUE);
+        Object v = DbWorkflowBundle.readCopy(state).getOrDefault(InitDBConstants.STATE_KEY_DB_ROUTE, InitDBConstants.ROUTE_REACT_VALUE);
         if (v == null) {
             return InitDBConstants.ROUTE_REACT_VALUE;
         }
@@ -125,7 +121,7 @@ public class DBAgentStateGraphConfig {
     }
 
     private static String sqlGuardBranch(OverAllState state) {
-        Object ok = state.value(InitDBConstants.STATE_KEY_SQL_GUARD_OK).orElse(Boolean.FALSE);
+        Object ok = DbWorkflowBundle.readCopy(state).getOrDefault(InitDBConstants.STATE_KEY_SQL_GUARD_OK, Boolean.FALSE);
         boolean pass = Boolean.TRUE.equals(ok)
                 || (ok instanceof String s && "true".equalsIgnoreCase(s.trim()));
         return pass ? InitDBConstants.SQL_GUARD_EDGE_OK : InitDBConstants.SQL_GUARD_EDGE_FAIL;

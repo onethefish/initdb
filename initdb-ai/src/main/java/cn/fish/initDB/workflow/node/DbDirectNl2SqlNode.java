@@ -2,6 +2,7 @@ package cn.fish.initDB.workflow.node;
 
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,6 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,9 +38,7 @@ public class DbDirectNl2SqlNode implements NodeAction {
         String standalone = state.value(InitDBConstants.STANDALONE, "").trim();
         String sql = resolveSql(standalone);
         log.info("db direct nl2sql length={}", sql != null ? sql.length() : 0);
-        Map<String, Object> out = new HashMap<>(2);
-        out.put(InitDBConstants.STATE_KEY_GENERATED_SQL, sql);
-        return out;
+        return DbWorkflowBundle.writeBundle(state, b -> b.put(InitDBConstants.STATE_KEY_GENERATED_SQL, sql));
     }
 
     private String resolveSql(String text) {

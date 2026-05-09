@@ -4,6 +4,7 @@ import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.service.DataBaseService;
 import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.GraphResponse;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -18,9 +19,9 @@ import reactor.core.publisher.Flux;
 import java.util.*;
 
 /**
- * 直连链路：执行 {@link InitDBConstants#STATE_KEY_GENERATED_SQL}，
- * 通过嵌入 {@code Flux<GraphResponse<StreamingOutput>>} 流式输出「执行的 SQL」与 Markdown 表格结果，
- * 并写入 {@link InitDBConstants#STATE_KEY_DIRECT_ANSWER} 供落库与兜底。
+ * 直连链路：执行 {@link InitDBConstants#STATE_KEY_GENERATED_SQL}（位于 {@link InitDBConstants#STATE_KEY_DB_BUNDLE} 内），
+ * 通过顶层 {@link InitDBConstants#STATE_KEY_DIRECT_EXECUTE_STREAM} 嵌入流式输出，
+ * 并写入 bundle 内 {@link InitDBConstants#STATE_KEY_DIRECT_ANSWER} 供落库与兜底。
  */
 @Slf4j
 @Component
@@ -41,8 +42,9 @@ public class DbDirectExecuteQueryNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) {
-        String sessionId = state.value(InitDBConstants.STATE_KEY_SESSION_ID, "");
-        String sql = state.value(InitDBConstants.STATE_KEY_GENERATED_SQL, "");
+        Map<String, Object> bundle = DbWorkflowBundle.readCopy(state);
+        String sessionId = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_SESSION_ID, "");
+        String sql = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_GENERATED_SQL, "");
         if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(sql)) {
             String msg = "缺少会话或 SQL，无法执行查询。";
             return directExecuteResult(state, msg, "## 提示\n\n" + msg);
@@ -76,9 +78,11 @@ public class DbDirectExecuteQueryNode implements NodeAction {
 
     private static Map<String, Object> directExecuteResult(
             OverAllState state, String directAnswer, Flux<GraphResponse<NodeOutput>> streamFlux) {
+        Map<String, Object> b = DbWorkflowBundle.readCopy(state);
+        b.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, directAnswer);
         Map<String, Object> out = new LinkedHashMap<>(4);
         out.put(InitDBConstants.STATE_KEY_DIRECT_EXECUTE_STREAM, streamFlux);
-        out.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, directAnswer);
+        out.put(InitDBConstants.STATE_KEY_DB_BUNDLE, b);
         return out;
     }
 

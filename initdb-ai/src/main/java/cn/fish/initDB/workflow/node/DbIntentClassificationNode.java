@@ -2,13 +2,13 @@ package cn.fish.initDB.workflow.node;
 
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.util.ExplicitSqlUserInput;
+import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -24,9 +24,7 @@ public class DbIntentClassificationNode implements NodeAction {
         String standalone = state.value(InitDBConstants.STANDALONE, "");
         String route = classifyRoute(standalone);
         log.debug("db intent route={} for question snippet: {}", route, abbreviate(standalone));
-        Map<String, Object> out = new HashMap<>(2);
-        out.put(InitDBConstants.STATE_KEY_DB_ROUTE, route);
-        return out;
+        return DbWorkflowBundle.writeBundle(state, b -> b.put(InitDBConstants.STATE_KEY_DB_ROUTE, route));
     }
 
     private static String classifyRoute(String standalone) {

@@ -27,7 +27,12 @@ public final class InitDBConstants {
     /** 直连查数：执行并写入展示文本 */
     public static final String NODE_DB_DIRECT_EXECUTE = "db_direct_execute";
 
-    /** 工作流分支：{@link #ROUTE_REACT_VALUE} 或 {@link #ROUTE_DIRECT_DATA_VALUE} */
+    /**
+     * 直连与路由相关字段的嵌套命名空间（顶层仅此一槽，内含 {@link #STATE_KEY_SESSION_ID} 等子键）。
+     */
+    public static final String STATE_KEY_DB_BUNDLE = "db_bundle";
+
+    /** 工作流分支：{@link #ROUTE_REACT_VALUE} 或 {@link #ROUTE_DIRECT_DATA_VALUE}（存于 {@link #STATE_KEY_DB_BUNDLE} 内） */
     public static final String STATE_KEY_DB_ROUTE = "db_route";
     /** 客户端会话 id，供直连节点解析 {@link cn.fish.chart.entity.ChatSession} */
     public static final String STATE_KEY_SESSION_ID = "session_id";
@@ -39,7 +44,7 @@ public final class InitDBConstants {
     public static final String STATE_KEY_DIRECT_ANSWER = "direct_answer";
     /**
      * 直连执行节点嵌入的流（{@code Flux<GraphResponse<StreamingOutput>>}），由 graph-core 展开为 {@link com.alibaba.cloud.ai.graph.streaming.StreamingOutput}。
-     * 必须放在 {@link java.util.LinkedHashMap} 的首项，以便 {@code getEmbedFlux} 稳定识别。
+     * 保留在<strong>顶层</strong> state（不放入 {@link #STATE_KEY_DB_BUNDLE}），且在本节点返回的 {@link Map} 中须置于首项，以便 {@code getEmbedFlux} 稳定识别。
      */
     public static final String STATE_KEY_DIRECT_EXECUTE_STREAM = "direct_execute_stream";
 

@@ -1,6 +1,7 @@
 package cn.fish.initDB.workflow.node;
 
 import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.workflow.DbWorkflowBundle;
 import cn.fish.initDB.workflow.tool.impl.QuerySqlCheckTool;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
@@ -9,7 +10,6 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -29,20 +29,21 @@ public class DbDirectSqlGuardNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) {
-        String sql = state.value(InitDBConstants.STATE_KEY_GENERATED_SQL, "");
-        Map<String, Object> out = new HashMap<>(4);
+        String sql = DbWorkflowBundle.bundleString(DbWorkflowBundle.readCopy(state), InitDBConstants.STATE_KEY_GENERATED_SQL, "");
         if (!StringUtils.hasText(sql)) {
-            out.put(InitDBConstants.STATE_KEY_SQL_GUARD_OK, Boolean.FALSE);
-            out.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, "未生成 SQL，已终止查询。");
-            return out;
+            return DbWorkflowBundle.writeBundle(state, b -> {
+                b.put(InitDBConstants.STATE_KEY_SQL_GUARD_OK, Boolean.FALSE);
+                b.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, "未生成 SQL，已终止查询。");
+            });
         }
         String verdict = querySqlCheckTool.apply(new QuerySqlCheckTool.Request(sql), EMPTY_TOOL_CONTEXT);
         boolean ok = verdict != null && verdict.contains("校验成功");
-        out.put(InitDBConstants.STATE_KEY_SQL_GUARD_OK, ok);
-        if (!ok) {
-            out.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, "## SQL 校验未通过\n\n" + verdict);
-        }
         log.info("db direct sql_guard ok={}", ok);
-        return out;
+        return DbWorkflowBundle.writeBundle(state, b -> {
+            b.put(InitDBConstants.STATE_KEY_SQL_GUARD_OK, ok);
+            if (!ok) {
+                b.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, "## SQL 校验未通过\n\n" + verdict);
+            }
+        });
     }
 }
