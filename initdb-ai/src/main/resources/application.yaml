@@ -49,11 +49,6 @@ logging:
         client: DEBUG
         spec: DEBUG
         server: DEBUG
-## SQL Agent Configuration
-database-agent:
-  max-results: 10
-  # JdbcTemplate 流式行读取时的 ResultSet fetchSize（0 表示不设置）。MySQL 等驱动可据此分批从服务端拉行，避免 queryForList 一次占满内存。
-  jdbc-fetch-size: 256
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl

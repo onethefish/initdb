@@ -33,12 +33,12 @@ public class ApplicationPromptTemplates {
 	private final PromptTemplate chartCompressedUserMessage;
 	private final PromptTemplate dbReactSystem;
 	private final PromptTemplate dbReactDescription;
-	private final PromptTemplate dbReactAgentName;
 	private final PromptTemplate querySqlCheck;
 	private final PromptTemplate agentVectorRagAnswer;
 	private final PromptTemplate contextualizeRewriteSystem;
 	private final PromptTemplate contextualizeUserBlock;
 	private final PromptTemplate dbDirectNl2sql;
+	private final PromptTemplate dbIntentRoute;
 	private final PromptTemplate chartSessionTitle;
 
 	public ApplicationPromptTemplates() {
@@ -46,12 +46,12 @@ public class ApplicationPromptTemplates {
 		this.chartCompressedUserMessage = tpl("chart_compressed_user_message.txt");
 		this.dbReactSystem = tpl("db_react_system.txt");
 		this.dbReactDescription = tpl("db_react_description.txt");
-		this.dbReactAgentName = tpl("db_react_agent_name.txt");
 		this.querySqlCheck = tpl("query_sql_check.txt");
 		this.agentVectorRagAnswer = tpl("agent_vector_rag_answer.txt");
 		this.contextualizeRewriteSystem = tpl("contextualize_rewrite_system.txt");
 		this.contextualizeUserBlock = tpl("contextualize_user_block.txt");
 		this.dbDirectNl2sql = tpl("db_direct_nl2sql.txt");
+		this.dbIntentRoute = tpl("db_intent_route.txt");
 		this.chartSessionTitle = tpl("chart_session_title.txt");
 	}
 
@@ -73,10 +73,6 @@ public class ApplicationPromptTemplates {
 
 	public String dbReactDescriptionText() {
 		return dbReactDescription.render().strip();
-	}
-
-	public String dbReactAgentNameText() {
-		return dbReactAgentName.render().strip();
 	}
 
 	public String renderQuerySqlCheck(String query) {
@@ -101,6 +97,10 @@ public class ApplicationPromptTemplates {
 
 	public String renderDbDirectNl2sql(String question) {
 		return dbDirectNl2sql.render(Map.of("question", question == null ? "" : question));
+	}
+
+	public String renderDbIntentRoute(String standalone) {
+		return dbIntentRoute.render(Map.of("standalone", standalone == null ? "" : standalone));
 	}
 
 	public String renderChartSessionTitle(String snippet) {

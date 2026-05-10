@@ -11,6 +11,8 @@ public final class InitDBConstants {
 
     // --- Spring beans ---
     public static final String DB_REACT_AGENT_BEAN = "dbReactAgent";
+    /** {@link com.alibaba.cloud.ai.graph.agent.ReactAgent} 展示名 */
+    public static final String DB_REACT_AGENT_DISPLAY_NAME = "数据库智能体";
     public static final String DB_CHAT_WORKFLOW_BEAN = "dbChatWorkflowGraph";
 
     // --- Compiled graph / nodes ---

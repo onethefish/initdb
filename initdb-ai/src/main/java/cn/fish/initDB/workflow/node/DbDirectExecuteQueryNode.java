@@ -3,6 +3,9 @@ package cn.fish.initDB.workflow.node;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.service.DataBaseService;
+import cn.fish.database.sql.SelectSqlRowLimiter;
+import cn.fish.database.sql.SqlDialectResolver;
+import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.GraphResponse;
@@ -32,12 +35,15 @@ public class DbDirectExecuteQueryNode implements NodeAction {
 
     private final DataBaseService dataBaseService;
     private final ChatSessionRepository chatSessionRepository;
+    private final AgentDatasourceRepository agentDatasourceRepository;
 
     public DbDirectExecuteQueryNode(
             DataBaseService dataBaseService,
-            ChatSessionRepository chatSessionRepository) {
+            ChatSessionRepository chatSessionRepository,
+            AgentDatasourceRepository agentDatasourceRepository) {
         this.dataBaseService = dataBaseService;
         this.chatSessionRepository = chatSessionRepository;
+        this.agentDatasourceRepository = agentDatasourceRepository;
     }
 
     @Override
@@ -54,7 +60,8 @@ public class DbDirectExecuteQueryNode implements NodeAction {
             String msg = "未找到会话，请先连接数据库。";
             return directExecuteResult(state, msg, "## 提示\n\n" + msg);
         }
-        String toRun = addLimitIfNeeded(sql);
+        String toRun = SelectSqlRowLimiter.ensureSelectRowLimit(
+                sql, maxResults, SqlDialectResolver.fromChatSession(chatSession, agentDatasourceRepository));
         try {
             String header = "## 执行的 SQL\n\n```sql\n" + toRun + "\n```\n\n## 查询结果\n\n";
             String tableMd = buildMarkdownTableStreaming(chatSession, toRun);
@@ -125,15 +132,6 @@ public class DbDirectExecuteQueryNode implements NodeAction {
             i = end;
         }
         return parts;
-    }
-
-    private String addLimitIfNeeded(String query) {
-        String lower = query.toLowerCase();
-        if (!lower.contains(" limit ") && !lower.contains("\nlimit ")) {
-            String q = query.endsWith(";") ? query.substring(0, query.length() - 1) : query;
-            return q + " LIMIT " + maxResults;
-        }
-        return query;
     }
 
     /** 按行 JDBC 流式读取并拼 Markdown，避免整表 {@link List} 驻留内存。 */

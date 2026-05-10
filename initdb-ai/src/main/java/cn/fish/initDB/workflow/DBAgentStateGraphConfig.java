@@ -26,7 +26,7 @@ import static com.alibaba.cloud.ai.graph.action.AsyncEdgeAction.edge_async;
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 
 /**
- * DB Agent 聊天工作流：路由 → 用户明确写出 SELECT/WITH（或整段单个 ```sql 围栏）时走直连校验与执行；否则走「桥接 → ReAct」。
+ * DB Agent 聊天工作流：路由 → 用户明确写出 SELECT/WITH（或整段单个 ```sql 围栏）时直连；否则由意图节点中的模型在「单表明细直连」与「ReAct 对话」间分类，再走 NL2SQL+校验 或 桥接→ReAct。
  * 问句补全见 {@link ContextualizeService}（在 {@link cn.fish.initDB.service.impl.DBAgentServiceImpl} 中图外执行）。
  */
 @Slf4j

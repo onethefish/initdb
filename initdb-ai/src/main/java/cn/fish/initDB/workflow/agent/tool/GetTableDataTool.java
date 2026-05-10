@@ -15,9 +15,12 @@
  */
 package cn.fish.initDB.workflow.agent.tool;
 
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.service.DataBaseService;
-import cn.fish.chart.entity.ChatSession;
+import cn.fish.database.sql.SelectSqlRowLimiter;
+import cn.fish.database.sql.SqlDialectResolver;
+import cn.fish.datasource.repository.AgentDatasourceRepository;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -40,14 +42,20 @@ import java.util.function.BiFunction;
 @Component
 public class GetTableDataTool extends AgentAbstractTool implements BiFunction<GetTableDataTool.Request, ToolContext, String> {
 
+    private static final int DEFAULT_LIMIT = 5;
+    private static final int MAX_LIMIT = 500;
+
     private final DataBaseService dataBaseService;
     private final ChatSessionRepository chatSessionRepository;
-    @Value("${database-agent.max-results:10}")
-    private int maxResults;
+    private final AgentDatasourceRepository agentDatasourceRepository;
 
-    public GetTableDataTool(DataBaseService dataBaseService, ChatSessionRepository chatSessionRepository) {
+    public GetTableDataTool(
+            DataBaseService dataBaseService,
+            ChatSessionRepository chatSessionRepository,
+            AgentDatasourceRepository agentDatasourceRepository) {
         this.dataBaseService = dataBaseService;
         this.chatSessionRepository = chatSessionRepository;
+        this.agentDatasourceRepository = agentDatasourceRepository;
     }
 
     @Override
@@ -55,7 +63,9 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
         log.info("GetTableDataTool::apply");
         String sessionId = getSessionId(toolContext);
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
-        String sql = addLimitIfNeeded(request.query);
+        int rowLimit = resolveRowLimit(request.limit());
+        String sql = SelectSqlRowLimiter.ensureSelectRowLimit(
+                request.query(), rowLimit, SqlDialectResolver.fromChatSession(chatSession, agentDatasourceRepository));
         log.info("sql:{}", sql);
         List<Map<String, Object>> maps = dataBaseService.queryTableData(chatSession, sql);
         String result = JSON.toJSONString(maps);
@@ -64,24 +74,19 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
 
     }
 
-    // 安全兜底
-    private String addLimitIfNeeded(String query) {
-        String lowerQuery = query.toLowerCase();
-        if (!lowerQuery.contains(" limit ") && !lowerQuery.contains("\nlimit ")) {
-            // Remove trailing semicolon if present
-            if (query.endsWith(";")) {
-                query = query.substring(0, query.length() - 1);
-            }
-            return query + " LIMIT " + maxResults;
+    private static int resolveRowLimit(Integer requested) {
+        if (requested == null) {
+            return DEFAULT_LIMIT;
         }
-        return query;
+        return Math.min(MAX_LIMIT, Math.max(1, requested));
     }
 
     public ToolCallback toolCallback() {
         String description = "执行数据库的SQL SELECT查询并返回结果，返回的查询结果为JSON对象格式。" +
                 "如果输出为 [] 表示这张表没数据，请不要重复调用。" +
                 "重要提示：出于安全考虑，仅允许SELECT查询。DML语句（INSERT, UPDATE, DELETE, DROP）将被拒绝。" +
-                "在执行前，请始终使用check_query来验证您的查询。默认情况下，结果限制为 " + maxResults + " 行";
+                "在执行前，请始终使用check_query来验证您的查询。" +
+                "若 SQL 中未包含 LIMIT，默认追加 LIMIT " + DEFAULT_LIMIT + "；需要更多行时可在参数 limit 中指定（1–" + MAX_LIMIT + "）。";
         return FunctionToolCallback.builder("get_table_data", this)
                                    .description(description)
                                    .inputType(Request.class)
@@ -94,15 +99,28 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
         @JsonPropertyDescription("要执行的SQL SELECT查询语句。只允许SELECT语句。")
         private final String query;
 
+        @JsonProperty(value = "limit", required = false)
+        @JsonPropertyDescription("返回的最大行数（可选）。省略时默认 " + DEFAULT_LIMIT + " 行；需要更多数据时传入正整数，最大 " + MAX_LIMIT + "。若 SQL 已含 LIMIT 则忽略此参数。")
+        private final Integer limit;
+
         public Request(@JsonProperty(value = "query", required = true)
-                       @JsonPropertyDescription("要执行的SQL SELECT查询语句。只允许SELECT语句。") String query) {
+                       @JsonPropertyDescription("要执行的SQL SELECT查询语句。只允许SELECT语句。") String query,
+                       @JsonProperty(value = "limit", required = false)
+                       @JsonPropertyDescription("返回的最大行数（可选）。省略时默认 " + DEFAULT_LIMIT + " 行；需要更多数据时传入正整数，最大 " + MAX_LIMIT + "。若 SQL 已含 LIMIT 则忽略此参数。") Integer limit) {
             this.query = query;
+            this.limit = limit;
         }
 
         @JsonProperty(value = "query", required = true)
         @JsonPropertyDescription("要执行的SQL SELECT查询语句。只允许SELECT语句。")
         public String query() {
             return query;
+        }
+
+        @JsonProperty(value = "limit", required = false)
+        @JsonPropertyDescription("返回的最大行数（可选）。省略时默认 " + DEFAULT_LIMIT + " 行；需要更多数据时传入正整数，最大 " + MAX_LIMIT + "。若 SQL 已含 LIMIT 则忽略此参数。")
+        public Integer limit() {
+            return limit;
         }
 
     }

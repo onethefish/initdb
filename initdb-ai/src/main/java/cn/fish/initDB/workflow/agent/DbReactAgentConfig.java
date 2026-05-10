@@ -21,7 +21,7 @@ public class DbReactAgentConfig {
                                    GetTableDataTool getTableDataTool, KnowledgeRetrievalTool knowledgeRetrievalTool,
                                    MemorySaver memorySaver, ApplicationPromptTemplates applicationPromptTemplates) {
         return ReactAgent.builder()
-                         .name(applicationPromptTemplates.dbReactAgentNameText())
+                         .name(InitDBConstants.DB_REACT_AGENT_DISPLAY_NAME)
                          .systemPrompt(applicationPromptTemplates.dbReactSystemText())
                          .description(applicationPromptTemplates.dbReactDescriptionText())
                          .model(chatModel)
