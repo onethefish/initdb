@@ -18,4 +18,7 @@ public interface ChatSessionRepository extends IRepository<ChatSession> {
     void remove(List<ChatSession> chatSessions);
 
     void update(ChatSession session);
+
+    /** 将 {@link ChatSession#getStreamDone()} 对应列原子 +1（旧库 null 按 0 计）。 */
+    void incrementStreamDone(String sessionId);
 }

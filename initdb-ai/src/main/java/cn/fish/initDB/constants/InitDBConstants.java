@@ -95,6 +95,12 @@ public final class InitDBConstants {
     /** 自动会话标题写入库前的最大长度（略小于列宽 255，并避免 UI 过长） */
     public static final int CHAT_SESSION_TITLE_RESULT_MAX_CHARS = 48;
 
+    /**
+     * 非占位会话名时，每隔多少次「对话流正常结束」（{@link cn.fish.initDB.event.ChartAutoSummarizeEvent}）才再次调用模型自动命名；
+     * 占位名仍按首次有内容即命名。
+     */
+    public static final int CHART_SESSION_AUTO_TITLE_EVERY_N_STREAMS = 3;
+
     // --- Knowledge retrieval tool ---
     public static final int KNOWLEDGE_RETRIEVAL_DEFAULT_TOP_K = 1;
 

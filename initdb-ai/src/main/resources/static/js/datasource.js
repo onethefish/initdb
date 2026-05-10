@@ -131,6 +131,7 @@ function renderDatasourceTable() {
                 <div class="table-actions">
                   <button class="ds-row-action ds-row-action--test" type="button" onclick="testDatasourceRow('${ds.id}')">测试</button>
                   <button class="ds-row-action ds-row-action--edit" type="button" onclick="openDatasourceModal('${ds.id}')">编辑</button>
+                  <button class="ds-row-action ds-row-action--session" type="button" onclick="quickCreateChatSession('${ds.id}')">创建会话</button>
                   <button class="ds-row-action ds-row-action--knowledge" type="button" onclick="openKnowledgeMaintenance('${ds.id}')">知识库管理</button>
                   <button class="ds-row-action ds-row-action--delete" type="button" onclick="deleteDatasource('${ds.id}')">删除</button>
                 </div>
@@ -335,6 +336,42 @@ async function deleteDatasource(id) {
     } catch (error) {
         console.error('Delete datasource error:', error);
         notifyErrorUnlessShown(error, '删除数据源失败');
+    }
+}
+
+async function quickCreateChatSession(datasourceId) {
+    if (!datasourceId) {
+        return;
+    }
+    const ds = datasourceList.find(d => d.id === datasourceId);
+    if (!ds) {
+        showErrorDialog({title: '提示', message: '未找到该数据源，请刷新后重试'});
+        return;
+    }
+    if (Number(ds.status) !== 1 || Number(ds.testStatus) !== 1) {
+        showErrorDialog({
+            title: '提示',
+            message: '仅可为已启用且连接测试成功的数据源创建会话，请先在列表中执行「测试」或在编辑后测试连接。'
+        });
+        return;
+    }
+    const rawName = ds.name != null ? String(ds.name).trim() : '';
+    const sessionName = rawName ? `「${rawName}」对话` : '新的对话';
+    try {
+        const data = await Api.post('/chat/create', {
+            sessionName,
+            datasourceId: ds.id
+        });
+        const sid = data && data.sessionId != null ? String(data.sessionId).trim() : '';
+        if (!sid) {
+            showErrorDialog({title: '提示', message: '创建成功但未返回会话编号，请从智能对话页选择会话。'});
+            window.location.assign('/chat');
+            return;
+        }
+        window.location.assign('/chat?session=' + encodeURIComponent(sid));
+    } catch (error) {
+        console.error('Quick create chat session error:', error);
+        notifyErrorUnlessShown(error, '创建会话失败');
     }
 }
 

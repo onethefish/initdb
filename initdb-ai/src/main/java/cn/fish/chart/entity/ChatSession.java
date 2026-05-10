@@ -26,5 +26,10 @@ public class ChatSession extends DbBase {
      */
     private String datasourceId;
 
+    /** 对话流正常结束累计次数（控制自动标题调用频率） */
+    private Integer streamDone;
+
+    /** 上次成功自动命名时的 {@link #streamDone} 取值 */
+    private Integer namedStream;
 
 }

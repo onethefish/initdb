@@ -34,6 +34,29 @@ function saveSessions() {
     );
 }
 
+function readSessionIdFromUrl() {
+    try {
+        const u = new URL(window.location.href);
+        return (u.searchParams.get('session') || '').trim();
+    } catch (_) {
+        return '';
+    }
+}
+
+function stripSessionQueryFromUrl() {
+    try {
+        const u = new URL(window.location.href);
+        if (!u.searchParams.has('session')) {
+            return;
+        }
+        u.searchParams.delete('session');
+        const qs = u.searchParams.toString();
+        history.replaceState(null, '', u.pathname + (qs ? '?' + qs : '') + u.hash);
+    } catch (_) {
+        /* ignore */
+    }
+}
+
 async function loadSessionsFromServer() {
     try {
         const serverSessions = await Api.get('/chat/query/list');
@@ -60,14 +83,21 @@ async function loadSessionsFromServer() {
         if (sessions.length === 0) {
             currentSessionId = null;
             saveSessions();
+            stripSessionQueryFromUrl();
             return;
         }
 
+        const urlSessionId = readSessionIdFromUrl();
         const preferredId =
-            persistedCurrentId && sessions.some(s => s.id === persistedCurrentId)
-                ? persistedCurrentId
-                : sessions[0].id;
+            urlSessionId && sessions.some(s => s.id === urlSessionId)
+                ? urlSessionId
+                : persistedCurrentId && sessions.some(s => s.id === persistedCurrentId)
+                    ? persistedCurrentId
+                    : sessions[0].id;
         switchSession(preferredId);
+        if (urlSessionId) {
+            stripSessionQueryFromUrl();
+        }
     } catch (error) {
         console.error('Failed to load sessions:', error);
         notifyErrorUnlessShown(error, '加载会话列表失败');

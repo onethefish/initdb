@@ -16,9 +16,11 @@ CREATE TABLE agent_datasource
 
 CREATE TABLE chat_session
 (
-    session_id    VARCHAR(32) NOT NULL PRIMARY KEY COMMENT '会话ID',
-    session_name  VARCHAR(255) COMMENT '会话名称',
-    datasource_id VARCHAR(32) COMMENT '创建会话时选的数据源ID'
+    session_id                    VARCHAR(32) NOT NULL PRIMARY KEY COMMENT '会话ID',
+    session_name                  VARCHAR(255) COMMENT '会话名称',
+    datasource_id                 VARCHAR(32) COMMENT '创建会话时选的数据源ID',
+    stream_done   INT NOT NULL DEFAULT 0 COMMENT '对话流正常结束累计次数',
+    named_stream  INT NOT NULL DEFAULT 0 COMMENT '上次成功自动命名时的 stream_done'
 ) COMMENT = '聊天会话表';
 
 CREATE TABLE agent_knowledge

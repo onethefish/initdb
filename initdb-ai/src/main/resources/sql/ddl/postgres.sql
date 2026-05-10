@@ -30,15 +30,19 @@ comment on column agent_datasource.description is '数据源描述信息';
 
 create table chat_session
 (
-    session_id    varchar(32) not null primary key,
-    session_name  varchar(255),
-    datasource_id varchar(32)
+    session_id                     varchar(32) not null primary key,
+    session_name                   varchar(255),
+    datasource_id                  varchar(32),
+    stream_done   integer not null default 0,
+    named_stream  integer not null default 0
 );
 
 comment on table chat_session is '聊天会话表';
 comment on column chat_session.session_id is '会话ID';
 comment on column chat_session.session_name is '会话名称';
 comment on column chat_session.datasource_id is '创建会话时选的数据源ID';
+comment on column chat_session.stream_done is '对话流正常结束累计次数';
+comment on column chat_session.named_stream is '上次成功自动命名时的 stream_done';
 
 CREATE TABLE agent_knowledge
 (

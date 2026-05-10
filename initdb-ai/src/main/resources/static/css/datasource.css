@@ -346,6 +346,18 @@
     color: #2563a8;
 }
 
+.table-actions .ds-row-action--session {
+    border-color: #13c2c2;
+    background: #e6fffb;
+    color: #08979c;
+}
+
+.table-actions .ds-row-action--session:hover {
+    background: #b5f5ec;
+    border-color: #08979c;
+    color: #006d75;
+}
+
 .table-actions .ds-row-action--knowledge {
     border-color: #9254de;
     background: #f9f0ff;

@@ -4,6 +4,7 @@ import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.mapper.ChatSessionMapper;
 import cn.fish.chart.repository.ChatSessionRepository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.repository.CrudRepository;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -57,5 +58,14 @@ public class ChatSessionRepositoryImpl extends CrudRepository<ChatSessionMapper,
     public void update(ChatSession session) {
         updateById(session);
         CHART_SESSION.invalidate(session.getSessionId());
+    }
+
+    @Override
+    public void incrementStreamDone(String sessionId) {
+        LambdaUpdateWrapper<ChatSession> uw = new LambdaUpdateWrapper<>();
+        uw.eq(ChatSession::getSessionId, sessionId)
+          .setSql("stream_done = COALESCE(stream_done, 0) + 1");
+        update(null, uw);
+        CHART_SESSION.invalidate(sessionId);
     }
 }
