@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- 日志目录：可用 logging.file.path 覆盖 -->
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs/initdb-ai"/>
+    <!-- 按天滚动保留天数：本文件默认 3 天；部署时若需覆盖，可在 application 中增加 logging.logback.max-history -->
+    <springProperty scope="context" name="LOG_MAX_HISTORY" source="logging.logback.max-history" defaultValue="3"/>
+
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n%wEx"/>
+
+    <appender name="FILE_ALL" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/initdb-ai-all.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-all.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="FILE_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/initdb-ai-app.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-app.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="FILE_SPRING_AI" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/initdb-ai-spring-ai.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-spring-ai.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="FILE_ALIBABA_AI" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/initdb-ai-spring-alibaba-ai.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-spring-alibaba-ai.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="FILE_CLIENT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/initdb-ai-client.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-client.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 日志级别（原 application.yaml logging.level，统一在此维护） -->
+    <logger name="com.alibaba.cloud.ai.graph" level="INFO"/>
+    <logger name="io.modelcontextprotocol.server" level="DEBUG"/>
+
+    <!-- 项目自身：不向父级传递，避免重复写入全量文件；单独挂上 CONSOLE + FILE_ALL 保持控制台与全量一致 -->
+    <logger name="cn.fish" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_APP"/>
+    </logger>
+
+    <logger name="org.springframework.ai" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SPRING_AI"/>
+    </logger>
+
+    <logger name="com.alibaba.cloud.ai" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_ALIBABA_AI"/>
+    </logger>
+
+    <!-- MCP：client / spec 走独立 client 文件；server 仅级别，输出随 root 全量 -->
+    <logger name="io.modelcontextprotocol.client" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_CLIENT"/>
+    </logger>
+    <logger name="io.modelcontextprotocol.spec" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_CLIENT"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+    </root>
+</configuration>

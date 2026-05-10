@@ -41,14 +41,10 @@ spring:
   thymeleaf:
     cache: false
 logging:
-  level:
-    cn.fish: DEBUG
-    com.alibaba.cloud.ai.graph: INFO
-    io:
-      modelcontextprotocol:
-        client: DEBUG
-        spec: DEBUG
-        server: DEBUG
+  # 日志配置在 resources/conf 下时需显式指定（根目录的 logback-spring.xml 才会被自动发现）
+  config: classpath:conf/logback-spring.xml
+  file:
+    path: logs/initdb-ai
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
