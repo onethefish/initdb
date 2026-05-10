@@ -1,8 +1,11 @@
 package cn.fish.initDB.event.listen;
 
+import cn.fish.chart.entity.ChatSession;
+import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
+import cn.fish.initDB.workflow.agent.tool.AgentAbstractTool;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
@@ -18,7 +21,13 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -28,14 +37,19 @@ public class ChartEventListener {
     private final BaseCheckpointSaver baseCheckpointSaver;
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
+    private final ChatSessionRepository chatSessionRepository;
 
     private static final ConcurrentHashMap<String, Object> SESSION_LOCKS = new ConcurrentHashMap<>();
 
-    public ChartEventListener(ChatModel chatModel, BaseCheckpointSaver baseCheckpointSaver,
-                              ApplicationPromptTemplates applicationPromptTemplates) {
+    public ChartEventListener(
+            ChatModel chatModel,
+            BaseCheckpointSaver baseCheckpointSaver,
+            ApplicationPromptTemplates applicationPromptTemplates,
+            ChatSessionRepository chatSessionRepository) {
         this.chatModel = chatModel;
         this.baseCheckpointSaver = baseCheckpointSaver;
         this.applicationPromptTemplates = applicationPromptTemplates;
+        this.chatSessionRepository = chatSessionRepository;
     }
 
     private static Object lockForThread(String threadId) {
@@ -122,6 +136,104 @@ public class ChartEventListener {
                 log.warn("Failed to auto summarize / compress checkpoint", e);
             }
         }
+    }
+
+    /**
+     * 在每次对话流结束后（与压缩摘要同一事件）尝试自动命名：仅当库中仍为「新的对话…」等占位名时，
+     * 根据 checkpoint 内前几条消息调用模型生成标题并写回 {@code chat_session}。
+     * 不与 {@link #autoSummarizeEvent} 共用同一把 {@link #SESSION_LOCKS}，避免压缩持锁期间阻塞命名。
+     */
+    @Async("initDbExecutor")
+    @EventListener
+    public void autoNameSessionAfterChartEvent(ChartAutoSummarizeEvent event) {
+        RunnableConfig config = event.getConfig();
+        String threadId = config.threadId().orElse(null);
+        if (threadId == null) {
+            return;
+        }
+        String sessionId = AgentAbstractTool.stripSubGraphCheckpointThreadSuffix(threadId);
+        try {
+            ChatSession session = chatSessionRepository.queryUnique(sessionId);
+            if (session == null) {
+                return;
+            }
+            if (!isPlaceholderSessionName(session.getSessionName())) {
+                return;
+            }
+            Optional<Checkpoint> latestOpt = baseCheckpointSaver.get(config);
+            if (latestOpt.isEmpty()) {
+                return;
+            }
+            List<Message> messages = copyMessagesFromState(latestOpt.get().getState());
+            String snippet = buildSnippetForSessionTitle(messages);
+            if (StrUtil.isBlank(snippet)) {
+                return;
+            }
+            String prompt = applicationPromptTemplates.renderChartSessionTitle(snippet);
+            String rawTitle = chatModel.call(new Prompt(prompt)).getResult().getOutput().getText();
+            String title = sanitizeSessionTitle(rawTitle);
+            if (StrUtil.isBlank(title) || title.length() < 2) {
+                log.warn("Auto session title empty or too short, skip sessionId={}", sessionId);
+                return;
+            }
+            String currentName = StrUtil.trimToEmpty(session.getSessionName());
+            if (title.equals(currentName)) {
+                return;
+            }
+            session.setSessionName(title);
+            chatSessionRepository.update(session);
+            log.info("Auto session title set sessionId={} title={}", sessionId, title);
+        } catch (Exception e) {
+            log.warn("Failed to auto-name session sessionId={}", sessionId, e);
+        }
+    }
+
+    private static boolean isPlaceholderSessionName(String sessionName) {
+        String n = StrUtil.trimToEmpty(sessionName);
+        if (n.isEmpty()) {
+            return true;
+        }
+        return StrUtil.startWith(n, InitDBConstants.CHAT_SESSION_AUTO_NAME_PLACEHOLDER_PREFIX);
+    }
+
+    private static String buildSnippetForSessionTitle(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return "";
+        }
+        int n = Math.min(messages.size(), 10);
+        String block = buildHistoryText(messages.subList(0, n));
+        block = StrUtil.trim(block);
+        if (block.isEmpty()) {
+            return "";
+        }
+        int max = InitDBConstants.CHAT_SESSION_TITLE_SNIPPET_MAX_CHARS;
+        if (block.length() > max) {
+            return block.substring(0, max) + InitDBConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
+        }
+        return block;
+    }
+
+    private static String sanitizeSessionTitle(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String t = raw.strip();
+        int nl = t.indexOf('\n');
+        if (nl >= 0) {
+            t = t.substring(0, nl).strip();
+        }
+        t = StrUtil.removePrefix(t, "「");
+        t = StrUtil.removeSuffix(t, "」");
+        t = t.strip();
+        while (t.length() >= 2
+                && ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("'") && t.endsWith("'")))) {
+            t = t.substring(1, t.length() - 1).strip();
+        }
+        int cap = InitDBConstants.CHAT_SESSION_TITLE_RESULT_MAX_CHARS;
+        if (t.length() > cap) {
+            t = t.substring(0, cap).strip();
+        }
+        return t;
     }
 
     @SuppressWarnings("unchecked")

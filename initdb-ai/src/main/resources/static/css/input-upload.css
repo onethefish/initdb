@@ -3,6 +3,13 @@
     border-top: 1px solid var(--color-border-light);
     background-color: var(--color-panel-bg);
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.input-area-row {
+    display: flex;
     align-items: center;
     gap: 10px;
 }
@@ -37,4 +44,97 @@
 .input-area #sendMessageBtn:disabled {
     background-color: #a0cfff;
     cursor: not-allowed;
+}
+
+.input-area #contextualizeBtn {
+    padding: 12px 16px;
+    border: 1px solid var(--color-border-light, #ddd);
+    border-radius: var(--radius-sm);
+    background-color: #fff;
+    color: var(--color-text, #333);
+    cursor: pointer;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.input-area #contextualizeBtn:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.input-area #contextualizeBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.standalone-preview-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.standalone-preview-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.standalone-preview-label {
+    font-size: 13px;
+    color: var(--color-text-muted, #666);
+    flex: 1;
+    min-width: 120px;
+}
+
+.standalone-preview-fill-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    background-color: #fff;
+    color: var(--color-primary);
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.standalone-preview-fill-btn:hover {
+    background-color: var(--color-primary);
+    color: #fff;
+}
+
+.input-shortcuts-hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--color-text-muted, #777);
+}
+
+.input-shortcuts-hint kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-family: inherit;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f5f5f5;
+    box-shadow: 0 1px 0 #ddd;
+}
+
+.standalone-preview-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 44px;
+}
+
+.standalone-preview-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
 }

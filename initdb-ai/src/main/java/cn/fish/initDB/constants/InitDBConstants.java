@@ -86,6 +86,15 @@ public final class InitDBConstants {
 
     public static final String CHART_SUMMARY_TRUNCATED_SUFFIX = "\n...[truncated]";
 
+    /** 与前端默认会话名前缀一致；仅此类占位名称由 {@link cn.fish.initDB.event.listen.ChartEventListener} 自动覆盖 */
+    public static final String CHAT_SESSION_AUTO_NAME_PLACEHOLDER_PREFIX = "新的对话";
+
+    /** 送入标题模型的对话片段上限（字符） */
+    public static final int CHAT_SESSION_TITLE_SNIPPET_MAX_CHARS = 1_800;
+
+    /** 自动会话标题写入库前的最大长度（略小于列宽 255，并避免 UI 过长） */
+    public static final int CHAT_SESSION_TITLE_RESULT_MAX_CHARS = 48;
+
     // --- Knowledge retrieval tool ---
     public static final int KNOWLEDGE_RETRIEVAL_DEFAULT_TOP_K = 1;
 

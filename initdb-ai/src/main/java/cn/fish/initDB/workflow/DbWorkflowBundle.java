@@ -22,7 +22,6 @@ public final class DbWorkflowBundle {
     /**
      * 读取当前 bundle 的可变副本（浅拷贝 Map）；缺省子键时回填旧版顶层 state。
      */
-    @SuppressWarnings("unchecked")
     public static Map<String, Object> readCopy(OverAllState state) {
         Map<String, Object> b = new LinkedHashMap<>(8);
         state.value(InitDBConstants.STATE_KEY_DB_BUNDLE)

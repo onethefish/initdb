@@ -52,4 +52,10 @@ public class ChatSessionRepositoryImpl extends CrudRepository<ChatSessionMapper,
             CHART_SESSION.invalidate(chatSession.getSessionId());
         }
     }
+
+    @Override
+    public void update(ChatSession session) {
+        updateById(session);
+        CHART_SESSION.invalidate(session.getSessionId());
+    }
 }

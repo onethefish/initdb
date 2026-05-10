@@ -74,6 +74,64 @@ async function loadSessionsFromServer() {
     }
 }
 
+const SESSION_NAME_PULL_DELAY_MS = 2000;
+const SESSION_NAME_PULL_MAX_ATTEMPTS = 3;
+
+function delayMs(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * 仅根据服务端列表更新本地 {@link sessions} 的展示名称（不改 messages / config / 当前选中会话）。
+ * 供异步会话重命名后侧边栏刷新；失败由调用方捕获。
+ */
+async function refreshSessionNamesFromServer() {
+    const serverSessions = await Api.get('/chat/query/list');
+    if (!Array.isArray(serverSessions)) {
+        return;
+    }
+    const nameById = new Map(
+        serverSessions.map(s => {
+            const id = s.sessionId;
+            const name = s.sessionName != null ? String(s.sessionName) : '';
+            return [id, name];
+        })
+    );
+    let anyChanged = false;
+    for (const local of sessions) {
+        if (!nameById.has(local.id)) {
+            continue;
+        }
+        const nextName = nameById.get(local.id);
+        const prevName = local.name != null ? String(local.name) : '';
+        if (nextName !== prevName) {
+            local.name = nextName;
+            anyChanged = true;
+        }
+    }
+    if (anyChanged) {
+        renderSessionList();
+        saveSessions();
+    }
+}
+
+/**
+ * 流结束后延迟拉取会话名：每隔 {@link SESSION_NAME_PULL_DELAY_MS} 尝试一次，最多 {@link SESSION_NAME_PULL_MAX_ATTEMPTS} 次。
+ * 不 await，避免阻塞发送按钮恢复。
+ */
+function scheduleSessionNamePullAfterChatStream() {
+    void (async () => {
+        for (let attempt = 0; attempt < SESSION_NAME_PULL_MAX_ATTEMPTS; attempt++) {
+            await delayMs(SESSION_NAME_PULL_DELAY_MS);
+            try {
+                await refreshSessionNamesFromServer();
+            } catch (e) {
+                console.warn('refreshSessionNamesFromServer failed', e);
+            }
+        }
+    })();
+}
+
 function renderSessionList() {
     const sessionListElement = document.getElementById('sessionList');
     sessionListElement.innerHTML = '';
@@ -131,10 +189,77 @@ async function deleteSession(sessionId) {
 
         document.getElementById('chatContainer').style.display = 'none';
         document.getElementById('welcomeScreen').style.display = 'flex';
+        resetContextualizePreview();
     }
 
     renderSessionList();
     saveSessions();
+}
+
+function resetContextualizePreview() {
+    const wrap = document.getElementById('standalonePreviewWrap');
+    const ta = document.getElementById('standalonePreviewInput');
+    if (ta) {
+        ta.value = '';
+    }
+    if (wrap) {
+        wrap.style.display = 'none';
+    }
+}
+
+function applyStandaloneToUserInput() {
+    const ta = document.getElementById('standalonePreviewInput');
+    const input = document.getElementById('userInput');
+    if (!ta || !input) {
+        return;
+    }
+    const text = ta.value.trim();
+    if (!text) {
+        showErrorDialog({title: '提示', message: '补全内容为空'});
+        return;
+    }
+    input.value = text;
+    resetContextualizePreview();
+    input.focus();
+}
+
+async function previewContextualize() {
+    const input = document.getElementById('userInput');
+    const message = input.value.trim();
+    if (!message) {
+        showErrorDialog({title: '提示', message: '请先输入问题'});
+        return;
+    }
+    if (!currentSessionId) {
+        showErrorDialog({title: '提示', message: '请先创建并选择一个对话'});
+        return;
+    }
+    const btn = document.getElementById('contextualizeBtn');
+    if (btn) {
+        btn.disabled = true;
+    }
+    try {
+        // ContextualizeController：ResponseResult<String>，Api.post 解包后为补全后的字符串
+        const data = await Api.post('/db/chat/contextualize', {message, sessionId: currentSessionId});
+        const rewrite =
+            typeof data === 'string' ? data : data && typeof data.rewrite === 'string' ? data.rewrite : '';
+        const wrap = document.getElementById('standalonePreviewWrap');
+        const ta = document.getElementById('standalonePreviewInput');
+        if (ta) {
+            ta.value = rewrite;
+        }
+        if (wrap) {
+            wrap.style.display = 'flex';
+        }
+    } catch (error) {
+        console.error('previewContextualize:', error);
+        notifyErrorUnlessShown(error, '补全会话失败');
+    } finally {
+        const inputEl = document.getElementById('userInput');
+        if (btn) {
+            btn.disabled = !!(inputEl && inputEl.disabled);
+        }
+    }
 }
 
 async function loadChatDatasourceOptions() {
@@ -202,6 +327,7 @@ async function deleteModal() {
     renderSessionList();
     document.getElementById('chatContainer').style.display = 'none';
     document.getElementById('welcomeScreen').style.display = 'flex';
+    resetContextualizePreview();
 }
 
 function closeModal() {
@@ -257,9 +383,14 @@ async function createNewSession() {
 function setSendButtonDisabled(disabled) {
     const btn = document.getElementById('sendMessageBtn');
     if (btn) btn.disabled = !!disabled;
+    const ctxBtn = document.getElementById('contextualizeBtn');
+    if (ctxBtn) ctxBtn.disabled = !!disabled;
+    const fillBtn = document.getElementById('standaloneFillBtn');
+    if (fillBtn) fillBtn.disabled = !!disabled;
 }
 
 function switchSession(sessionId) {
+    resetContextualizePreview();
     currentSessionId = sessionId;
     const session = sessions.find(s => s.id === sessionId);
 
@@ -373,6 +504,7 @@ async function sendMessage() {
     const userMsg = {role: 'user', content: message};
     sessions[sessionIndex].messages.push(userMsg);
     addMessageToDOM('user', message);
+
     inputElement.value = '';
 
     inputElement.disabled = true;
@@ -464,6 +596,8 @@ async function sendMessage() {
             ? {role: 'bot', contextualize: contextualizeText, content: answerAccum}
             : {role: 'bot', content: answerAccum};
         sessions[sessionIndex].messages.push(botMsg);
+        resetContextualizePreview();
+        scheduleSessionNamePullAfterChatStream();
     } catch (error) {
         console.error('Error:', error);
         const errorMsg = {role: 'bot', content: `错误: ${error.message}`};
@@ -478,8 +612,70 @@ async function sendMessage() {
     saveSessions();
 }
 
-function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-        sendMessage();
+function handleUserInputKeydown(event) {
+    if (event.key !== 'Enter') {
+        return;
     }
+    if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        if (isStandalonePreviewVisible()) {
+            const ta = document.getElementById('standalonePreviewInput');
+            if (ta && ta.value.trim()) {
+                applyStandaloneToUserInput();
+            }
+        }
+        return;
+    }
+    event.preventDefault();
+    sendMessage();
+}
+
+function isStandalonePreviewVisible() {
+    const wrap = document.getElementById('standalonePreviewWrap');
+    if (!wrap) {
+        return false;
+    }
+    const d = wrap.style.display;
+    return d === 'flex' || d === 'block';
+}
+
+function handleChatContainerKeydown(event) {
+    if (event.key === 'F2') {
+        const ctxBtn = document.getElementById('contextualizeBtn');
+        if (ctxBtn && !ctxBtn.disabled && currentSessionId) {
+            event.preventDefault();
+            void previewContextualize();
+        }
+        return;
+    }
+
+    const fillCombo = (event.ctrlKey || event.metaKey) && event.key === 'Enter';
+    if (!fillCombo) {
+        return;
+    }
+    if (!isStandalonePreviewVisible()) {
+        return;
+    }
+    const ta = document.getElementById('standalonePreviewInput');
+    if (!ta || !ta.value.trim()) {
+        return;
+    }
+    const tag = (event.target && event.target.tagName) || '';
+    if (tag === 'TEXTAREA') {
+        event.preventDefault();
+        applyStandaloneToUserInput();
+    }
+}
+
+function initChatKeyboardShortcuts() {
+    const chatContainer = document.getElementById('chatContainer');
+    if (chatContainer) {
+        chatContainer.addEventListener('keydown', handleChatContainerKeydown);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initChatKeyboardShortcuts);
+} else {
+    initChatKeyboardShortcuts();
 }

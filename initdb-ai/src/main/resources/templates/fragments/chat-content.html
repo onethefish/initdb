@@ -20,8 +20,19 @@
         <div class="chat-header" id="currentSessionHeader"></div>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="input-area">
-          <input disabled id="userInput" onkeypress="handleKeyPress(event)" placeholder="请输入你的问题..." type="text">
-          <button disabled id="sendMessageBtn" onclick="sendMessage()" type="button">发送</button>
+          <div class="input-area-row">
+            <input disabled id="userInput" onkeydown="handleUserInputKeydown(event)" placeholder="请输入你的问题..." type="text">
+            <button disabled id="contextualizeBtn" onclick="previewContextualize()" title="根据当前会话历史补全问句（快捷键 F2）" type="button">补全会话</button>
+            <button disabled id="sendMessageBtn" onclick="sendMessage()" title="发送（快捷键 Enter）" type="button">发送</button>
+          </div>
+          <p class="input-shortcuts-hint" id="inputShortcutsHint"><kbd>Enter</kbd> 发送 · <kbd>F2</kbd> 补全会话 · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 填入输入框（Mac 为 <kbd>⌘</kbd>+<kbd>Enter</kbd>）</p>
+          <div class="standalone-preview-wrap" id="standalonePreviewWrap" style="display: none">
+            <div class="standalone-preview-toolbar">
+              <label class="standalone-preview-label" for="standalonePreviewInput">补全后的问句（可编辑）</label>
+              <button class="standalone-preview-fill-btn" id="standaloneFillBtn" onclick="applyStandaloneToUserInput()" title="将补全结果写入上方输入框（快捷键 Ctrl+Enter，Mac 为 ⌘+Enter）" type="button">填入输入框</button>
+            </div>
+            <textarea class="standalone-preview-input" id="standalonePreviewInput" rows="2" spellcheck="false"></textarea>
+          </div>
         </div>
       </div>
     </div>

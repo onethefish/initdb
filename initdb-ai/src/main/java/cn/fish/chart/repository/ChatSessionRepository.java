@@ -16,4 +16,6 @@ public interface ChatSessionRepository extends IRepository<ChatSession> {
     void remove(ChatSession chatSession);
 
     void remove(List<ChatSession> chatSessions);
+
+    void update(ChatSession session);
 }

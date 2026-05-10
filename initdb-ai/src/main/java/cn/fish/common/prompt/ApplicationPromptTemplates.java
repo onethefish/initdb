@@ -39,6 +39,7 @@ public class ApplicationPromptTemplates {
 	private final PromptTemplate contextualizeRewriteSystem;
 	private final PromptTemplate contextualizeUserBlock;
 	private final PromptTemplate dbDirectNl2sql;
+	private final PromptTemplate chartSessionTitle;
 
 	public ApplicationPromptTemplates() {
 		this.chartConversationSummary = tpl("chart_conversation_summary.txt");
@@ -51,6 +52,7 @@ public class ApplicationPromptTemplates {
 		this.contextualizeRewriteSystem = tpl("contextualize_rewrite_system.txt");
 		this.contextualizeUserBlock = tpl("contextualize_user_block.txt");
 		this.dbDirectNl2sql = tpl("db_direct_nl2sql.txt");
+		this.chartSessionTitle = tpl("chart_session_title.txt");
 	}
 
 	private static PromptTemplate tpl(String fileName) {
@@ -99,5 +101,9 @@ public class ApplicationPromptTemplates {
 
 	public String renderDbDirectNl2sql(String question) {
 		return dbDirectNl2sql.render(Map.of("question", question == null ? "" : question));
+	}
+
+	public String renderChartSessionTitle(String snippet) {
+		return chartSessionTitle.render(Map.of("snippet", snippet == null ? "" : snippet));
 	}
 }

@@ -35,6 +35,8 @@ public class DBAgentController extends BaseController {
         return dbAgentService.chatStream(chatRequest);
     }
 
+
+
 //    @GetMapping("/chat")
     //    public ResponseResult<ChatResponse> chatGet(@RequestParam("message") String message,
     //                                                @RequestParam(value = "sessionId", required = false) String sessionId) {

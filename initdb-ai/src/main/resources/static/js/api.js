@@ -161,8 +161,9 @@
     }
 
     /**
-     * JSON POST，响应体为 NDJSON（每行一个 JSON：p=contextualize|answer，t=文本片段），由调用方用 ReadableStream 读取。
+     * JSON POST，响应体为 NDJSON（每行一个 JSON：p=answer，t=文本片段），由调用方用 ReadableStream 读取。
      * 与 {@code DBAgentController} {@code /db/chat/stream}（produces application/x-ndjson）对齐。
+     * 问句补全预览为 {@code POST /db/chat/contextualize}（{@code ContextualizeController}，JSON 中解包后为字符串）。
      */
     async function streamPost(url, body) {
         return fetch(url, {

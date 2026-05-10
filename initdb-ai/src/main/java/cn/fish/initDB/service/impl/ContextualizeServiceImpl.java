@@ -1,5 +1,6 @@
 package cn.fish.initDB.service.impl;
 
+import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.service.ContextualizeService;
@@ -13,6 +14,7 @@ import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +41,9 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         if (StrUtil.isBlank(rawMessage)) {
             return rawMessage;
         }
+        if (!StringUtils.hasText(sessionId)) {
+            throw new CommonException("sessionId 不能为空");
+        }
         String trimmed = rawMessage.trim();
         if (ExplicitSqlUserInput.matches(trimmed)) {
             log.debug("Skip contextualize rewrite: explicit SQL input");
@@ -63,8 +68,8 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         String rawText;
         try {
             rawText = chatModel.call(new Prompt(List.of(
-                                   new SystemMessage(applicationPromptTemplates.contextualizeRewriteSystemText()),
-                                   new UserMessage(userBlock))))
+                                       new SystemMessage(applicationPromptTemplates.contextualizeRewriteSystemText()),
+                                       new UserMessage(userBlock))))
                                .getResult()
                                .getOutput()
                                .getText();

@@ -35,7 +35,7 @@ public abstract class AgentAbstractTool {
      * 与 {@link com.alibaba.cloud.ai.graph.internal.node.ResumableSubGraphAction#subGraphId} 生成的后缀对齐：
      * {@code original + "_" + InitDBConstants#SUBGRAPH_THREAD_MARKER + nodeId}。
      */
-    static String stripSubGraphCheckpointThreadSuffix(String threadId) {
+    public static String stripSubGraphCheckpointThreadSuffix(String threadId) {
         if (threadId == null || threadId.isEmpty()) {
             return threadId;
         }
