@@ -3,6 +3,9 @@ server:
 spring:
   application:
     name: initDB-AI
+  web:
+    resources:
+      static-locations: classpath:/web/static/
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     url: ${DATASOURCE_URL:jdbc:postgresql://127.0.0.1:5432/init_db?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai}
@@ -39,6 +42,7 @@ spring:
             service-name: db-mcp-server     ## 指定服务名称
             service-register: false
   thymeleaf:
+    prefix: classpath:/web/templates/
     cache: false
 logging:
   # 日志配置在 resources/conf 下时需显式指定（根目录的 logback-spring.xml 才会被自动发现）
