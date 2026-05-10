@@ -45,10 +45,8 @@ spring:
     prefix: classpath:/web/templates/
     cache: false
 logging:
-  # 日志配置在 resources/conf 下时需显式指定（根目录的 logback-spring.xml 才会被自动发现）
-  config: classpath:conf/logback-spring.xml
-  file:
-    path: logs/initdb-ai
+  # 日志配置在 resources/conf 下时需显式指定（根目录的 logback.xml 才会被自动发现）
+  config: classpath:conf/logback.xml
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl

@@ -3,70 +3,64 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <!-- 日志目录：可用 logging.file.path 覆盖 -->
-    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs/initdb-ai"/>
-    <!-- 按天滚动保留天数：本文件默认 3 天；部署时若需覆盖，可在 application 中增加 logging.logback.max-history -->
+    <!-- 日志目录默认在此维护；部署时若需覆盖，可在任意 Spring 配置中设置 logging.file.path（不必改本文件） -->
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
+    <!--
+      归档策略（与各 RollingFileAppender 的 fileNamePattern / maxHistory 一致）：
+      - 按自然日滚动：当日写 ${LOG_PATH}/*.log，跨日后上一日内容压缩到 ${LOG_PATH}/archive/*.yyyy-MM-dd.log.gz（即「满 1 个日历日后进入 archive」）。
+      - maxHistory=3：归档目录中最多保留约 3 份按日切分的压缩文件，更早的由 Logback 在滚动时删除。
+      覆盖保留天数：在 Spring 配置中设置 logging.logback.max-history（不必改本文件）。
+    -->
     <springProperty scope="context" name="LOG_MAX_HISTORY" source="logging.logback.max-history" defaultValue="3"/>
 
     <property name="FILE_LOG_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n%wEx"/>
 
     <appender name="FILE_ALL" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/initdb-ai-all.log</file>
+        <file>${LOG_PATH}/default.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-all.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/archive/default.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
         </rollingPolicy>
     </appender>
 
     <appender name="FILE_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/initdb-ai-app.log</file>
+        <file>${LOG_PATH}/app.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-app.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/archive/app.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
         </rollingPolicy>
     </appender>
 
-    <appender name="FILE_SPRING_AI" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/initdb-ai-spring-ai.log</file>
+    <!-- Spring AI + Spring AI Alibaba 共用同一滚动文件 -->
+    <appender name="FILE_AI" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/spring-ai.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-spring-ai.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
-            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
-        </rollingPolicy>
-    </appender>
-
-    <appender name="FILE_ALIBABA_AI" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/initdb-ai-spring-alibaba-ai.log</file>
-        <encoder>
-            <pattern>${FILE_LOG_PATTERN}</pattern>
-            <charset>UTF-8</charset>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-spring-alibaba-ai.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/archive/spring-ai.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
         </rollingPolicy>
     </appender>
 
     <appender name="FILE_CLIENT" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/initdb-ai-client.log</file>
+        <file>${LOG_PATH}/client.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/archive/initdb-ai-client.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/archive/client.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
         </rollingPolicy>
     </appender>
@@ -85,13 +79,13 @@
     <logger name="org.springframework.ai" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_SPRING_AI"/>
+        <appender-ref ref="FILE_AI"/>
     </logger>
 
     <logger name="com.alibaba.cloud.ai" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ALIBABA_AI"/>
+        <appender-ref ref="FILE_AI"/>
     </logger>
 
     <!-- MCP：client / spec 走独立 client 文件；server 仅级别，输出随 root 全量 -->
