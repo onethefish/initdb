@@ -1,6 +1,6 @@
 package cn.fish.initDB.util;
 
-import org.springframework.util.StringUtils;
+import cn.hutool.core.util.StrUtil;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,7 +25,7 @@ public final class ExplicitSqlUserInput {
      * ① 整条就是一个 ``` / ```sql 围栏且内部为 SELECT/WITH；② 或未围栏时整条（可带头注释）即一条 SELECT/WITH。
      */
     public static boolean matches(String raw) {
-        if (!StringUtils.hasText(raw)) {
+        if (StrUtil.isBlank(raw)) {
             return false;
         }
         String trimmed = raw.trim();
@@ -38,7 +38,7 @@ public final class ExplicitSqlUserInput {
     }
 
     private static boolean isStandaloneSelectOrWithBody(String sqlBody) {
-        if (!StringUtils.hasText(sqlBody)) {
+        if (StrUtil.isBlank(sqlBody)) {
             return false;
         }
         return STANDALONE_SELECT_OR_WITH.matcher(sqlBody).matches();

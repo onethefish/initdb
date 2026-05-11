@@ -6,6 +6,7 @@ import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.initDB.util.DbChatGraphStream;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.NodeOutput;
@@ -81,11 +82,11 @@ public class DBAgentServiceImpl implements DBAgentService {
 
     private static String resolveStandalone(ChatRequest chatRequest) {
         String fromClient = StrUtil.trimToNull(chatRequest.getStandalone());
-        if (fromClient != null) {
+        if (ObjectUtil.isNotNull(fromClient)) {
             return clampStandaloneBody(fromClient);
         }
         String fromMessage = StrUtil.trimToNull(chatRequest.getMessage());
-        return fromMessage != null ? clampStandaloneBody(fromMessage) : "";
+        return ObjectUtil.isNotNull(fromMessage) ? clampStandaloneBody(fromMessage) : "";
     }
 
     private static String clampStandaloneBody(String s) {
@@ -106,7 +107,7 @@ public class DBAgentServiceImpl implements DBAgentService {
     }
 
     private static Flux<String> createErrorFlux(Throwable e, String sessionId) {
-        if (e instanceof IllegalStateException && e.getMessage() != null && e.getMessage().contains("Empty flux detected")) {
+        if (e instanceof IllegalStateException && StrUtil.isNotEmpty(e.getMessage()) && e.getMessage().contains("Empty flux detected")) {
             log.warn("LLM stream empty for sessionId={}: {}", sessionId, e.getMessage());
             return Flux.just(DbChatGraphStream.streamLineSafe(InitDBConstants.STREAM_PART_ANSWER,
                     InitDBConstants.CHAT_STREAM_ERR_EMPTY_FLUX_PREFIX + e.getMessage()));

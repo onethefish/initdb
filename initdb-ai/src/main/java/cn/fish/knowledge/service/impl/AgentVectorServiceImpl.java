@@ -7,6 +7,7 @@ import cn.fish.knowledge.entity.AgentKnowledgeVO;
 import cn.fish.knowledge.repository.VectorStoreRepository;
 import cn.fish.knowledge.service.AgentVectorService;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -117,14 +118,14 @@ public class AgentVectorServiceImpl implements AgentVectorService {
         }
 
         Map<String, Object> extra = vo.getVectorMetadataEq();
-        if (extra != null && !extra.isEmpty()) {
+        if (CollUtil.isNotEmpty(extra)) {
             for (Map.Entry<String, Object> e : extra.entrySet()) {
                 String key = e.getKey();
                 if (StrUtil.isBlank(key) || usedKeys.contains(key)) {
                     continue;
                 }
                 Object value = e.getValue();
-                if (value == null) {
+                if (ObjectUtil.isNull(value)) {
                     continue;
                 }
                 if (value instanceof String s && StrUtil.isBlank(s)) {

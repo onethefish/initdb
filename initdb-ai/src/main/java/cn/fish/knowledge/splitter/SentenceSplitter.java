@@ -16,11 +16,12 @@
 
 package cn.fish.knowledge.splitter;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TextSplitter;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -87,11 +88,11 @@ public class SentenceSplitter extends TextSplitter {
 
 	@Override
 	public List<Document> apply(List<Document> documents) {
-		if (CollectionUtils.isEmpty(documents))
+		if (CollUtil.isEmpty(documents))
 			return new ArrayList<>();
 		List<Document> result = new ArrayList<>();
 		for (Document doc : documents) {
-			if (StringUtils.hasText(doc.getText())) {
+			if (StrUtil.isNotBlank(doc.getText())) {
 				result.addAll(splitDocument(doc));
 			}
 		}
@@ -170,7 +171,7 @@ public class SentenceSplitter extends TextSplitter {
 
 		String text = content.toString();
 		Document chunkDoc = new Document(text);
-		if (originalDoc.getMetadata() != null) {
+		if (ObjectUtil.isNotNull(originalDoc.getMetadata())) {
 			chunkDoc.getMetadata().putAll(originalDoc.getMetadata());
 		}
 		chunkDoc.getMetadata().put("chunk_index", result.size());
@@ -206,7 +207,7 @@ public class SentenceSplitter extends TextSplitter {
 
 		while (matcher.find()) {
 			String sentence = matcher.group(1).trim();
-			if (StringUtils.hasText(sentence)) {
+			if (StrUtil.isNotBlank(sentence)) {
 				sentences.add(sentence);
 			}
 			lastEnd = matcher.end();
@@ -214,7 +215,7 @@ public class SentenceSplitter extends TextSplitter {
 
 		if (lastEnd < text.length()) {
 			String remaining = text.substring(lastEnd).trim();
-			if (StringUtils.hasText(remaining)) {
+			if (StrUtil.isNotBlank(remaining)) {
 				// 如果剩余部分本身就超大，也需要切
 				if (remaining.length() > this.chunkSize) {
 					sentences.addAll(splitLongSentence(remaining));
@@ -269,7 +270,7 @@ public class SentenceSplitter extends TextSplitter {
 
 	// 判断是否包含汉字 (用于拼接空格判断)
 	private boolean isChinese(String str) {
-		if (str == null || str.isEmpty())
+		if (StrUtil.isEmpty(str))
 			return false;
 		// 简单判断首字符是否为汉字即可满足大部分拼接场景
 		int codePoint = str.codePointAt(0);

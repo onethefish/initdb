@@ -1,6 +1,8 @@
 package cn.fish.initDB.workflow.agent.tool;
 
 import cn.fish.initDB.constants.InitDBConstants;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.tools.ToolContextConstants;
 import org.springframework.ai.chat.model.ToolContext;
@@ -19,11 +21,11 @@ public abstract class AgentAbstractTool {
 
     public String getSessionId(ToolContext toolContext) {
         Map<String, Object> context = toolContext.getContext();
-        if (context == null) {
+        if (ObjectUtil.isNull(context)) {
             throw new IllegalStateException("ToolContext has no context map");
         }
         RunnableConfig runnableConfig = (RunnableConfig) context.get(ToolContextConstants.AGENT_CONFIG_CONTEXT_KEY);
-        if (runnableConfig == null) {
+        if (ObjectUtil.isNull(runnableConfig)) {
             throw new IllegalStateException("ToolContext missing " + ToolContextConstants.AGENT_CONFIG_CONTEXT_KEY);
         }
         String threadId = runnableConfig.threadId()
@@ -36,7 +38,7 @@ public abstract class AgentAbstractTool {
      * {@code original + "_" + InitDBConstants#SUBGRAPH_THREAD_MARKER + nodeId}。
      */
     public static String stripSubGraphCheckpointThreadSuffix(String threadId) {
-        if (threadId == null || threadId.isEmpty()) {
+        if (StrUtil.isEmpty(threadId)) {
             return threadId;
         }
         int idx = threadId.indexOf(InitDBConstants.SUBGRAPH_THREAD_MARKER);

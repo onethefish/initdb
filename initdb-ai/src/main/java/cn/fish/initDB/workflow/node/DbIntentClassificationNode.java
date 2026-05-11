@@ -9,8 +9,9 @@ import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -42,7 +43,7 @@ public class DbIntentClassificationNode implements NodeAction {
     }
 
     private String classifyRoute(String standalone) {
-        if (!StringUtils.hasText(standalone)) {
+        if (StrUtil.isBlank(standalone)) {
             return InitDBConstants.ROUTE_REACT_VALUE;
         }
         if (ExplicitSqlUserInput.matches(standalone)) {
@@ -64,7 +65,7 @@ public class DbIntentClassificationNode implements NodeAction {
     }
 
     private static String parseLlmRouteLabel(String raw) {
-        if (!StringUtils.hasText(raw)) {
+        if (StrUtil.isBlank(raw)) {
             return InitDBConstants.ROUTE_REACT_VALUE;
         }
         Matcher m = ROUTE_TOKEN.matcher(raw);
@@ -85,7 +86,7 @@ public class DbIntentClassificationNode implements NodeAction {
     }
 
     private static String abbreviate(String s) {
-        if (s == null) {
+        if (ObjectUtil.isNull(s)) {
             return "";
         }
         return s.length() <= 120 ? s : s.substring(0, 120) + "...";

@@ -13,7 +13,6 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.AssistantMessage.ToolCall;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.EnumSet;
@@ -126,7 +125,7 @@ public final class DbChatGraphStream {
             return Optional.empty();
         }
         String node = nodeOutput.node();
-        if (!StringUtils.hasText(node)) {
+        if (StrUtil.isBlank(node)) {
             return Optional.empty();
         }
         OverAllState st = nodeOutput.state();
@@ -173,9 +172,9 @@ public final class DbChatGraphStream {
         String names = am.getToolCalls().stream()
                            .filter(Objects::nonNull)
                            .map(ToolCall::name)
-                           .filter(StringUtils::hasText)
+                           .filter(StrUtil::isNotBlank)
                            .collect(Collectors.joining("，"));
-        if (!StringUtils.hasText(names)) {
+        if (StrUtil.isBlank(names)) {
             names = "（未命名工具）";
         }
         if (names.length() > 200) {
@@ -191,7 +190,7 @@ public final class DbChatGraphStream {
     private static String streamSegmentKey(StreamingOutput<?> streamingOutput) {
         String node = streamingOutput.node();
         OutputType ot = streamingOutput.getOutputType();
-        if (!StringUtils.hasText(node) && ot == null) {
+        if (StrUtil.isBlank(node) && ot == null) {
             return null;
         }
         return (node != null ? node : "") + '\0' + (ot != null ? ot.name() : "");
@@ -223,7 +222,7 @@ public final class DbChatGraphStream {
     }
 
     private static String appendQuestionSnippetLine(String head, String standaloneOneLine) {
-        if (!StringUtils.hasText(standaloneOneLine)) {
+        if (StrUtil.isBlank(standaloneOneLine)) {
             return head + "…";
         }
         return head + "；当前问句摘要：「" + standaloneOneLine + "」…";
@@ -234,7 +233,7 @@ public final class DbChatGraphStream {
             return "";
         }
         String raw = state.value(InitDBConstants.STANDALONE, "");
-        if (!StringUtils.hasText(raw)) {
+        if (StrUtil.isBlank(raw)) {
             return "";
         }
         String oneLine = raw.replace('\n', ' ').replace('\r', ' ').replaceAll("\\s+", " ").trim();
@@ -297,7 +296,7 @@ public final class DbChatGraphStream {
     }
 
     private static String traceNodeDisplayLabel(String node) {
-        if (!StringUtils.hasText(node)) {
+        if (StrUtil.isBlank(node)) {
             return "工作流";
         }
         if (GRAPH_INTERNAL_AGENT_MODEL_NODE.equals(node)) {
@@ -312,14 +311,14 @@ public final class DbChatGraphStream {
                 return Flux.empty();
             }
             String delta = streamingTextDelta(streamingOutput);
-            if (!StringUtils.hasText(delta)) {
+            if (StrUtil.isBlank(delta)) {
                 return Flux.empty();
             }
             return Flux.just(delta);
         }
         return DbWorkflowBundle.directAnswerFrom(nodeOutput)
                                .map(DbChatGraphStream::coerceToTrimmedString)
-                               .filter(StringUtils::hasText)
+                               .filter(StrUtil::isNotBlank)
                                .map(Flux::just)
                                .orElseGet(Flux::empty);
     }
@@ -354,7 +353,7 @@ public final class DbChatGraphStream {
             return assistantVisibleText(am);
         }
         if (msg != null) {
-            return msg.getText() != null ? msg.getText() : "";
+            return StrUtil.nullToEmpty(msg.getText());
         }
         return "";
     }
@@ -400,7 +399,7 @@ public final class DbChatGraphStream {
         if (am.hasToolCalls() && StrUtil.isBlank(am.getText())) {
             return "";
         }
-        return am.getText() != null ? am.getText() : "";
+        return StrUtil.nullToEmpty(am.getText());
     }
 
     public static String streamLineSafe(String part, String text) {
@@ -414,7 +413,7 @@ public final class DbChatGraphStream {
     private static String streamLine(String part, String text) throws JsonProcessingException {
         Map<String, String> m = new LinkedHashMap<>(2);
         m.put(InitDBConstants.NDJSON_KEY_PART, part);
-        m.put(InitDBConstants.NDJSON_KEY_TEXT, text == null ? "" : text);
+        m.put(InitDBConstants.NDJSON_KEY_TEXT, StrUtil.nullToEmpty(text));
         return STREAM_JSON.writeValueAsString(m) + "\n";
     }
 }

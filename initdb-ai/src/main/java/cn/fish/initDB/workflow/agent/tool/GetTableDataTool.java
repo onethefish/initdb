@@ -21,6 +21,7 @@ import cn.fish.database.service.DataBaseService;
 import cn.fish.database.sql.SelectSqlRowLimiter;
 import cn.fish.database.sql.SqlDialectResolver;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -75,7 +76,7 @@ public class GetTableDataTool extends AgentAbstractTool implements BiFunction<Ge
     }
 
     private static int resolveRowLimit(Integer requested) {
-        if (requested == null) {
+        if (ObjectUtil.isNull(requested)) {
             return DEFAULT_LIMIT;
         }
         return Math.min(MAX_LIMIT, Math.max(1, requested));

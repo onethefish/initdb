@@ -3,7 +3,8 @@ package cn.fish.database.sql;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
-import org.springframework.util.StringUtils;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 
 /**
  * 根据数据源配置或 JDBC URL 推断 {@link SqlDialect}。
@@ -14,11 +15,11 @@ public final class SqlDialectResolver {
     }
 
     public static SqlDialect fromChatSession(ChatSession session, AgentDatasourceRepository repository) {
-        if (session == null || !StringUtils.hasText(session.getDatasourceId()) || repository == null) {
+        if (ObjectUtil.isNull(session) || StrUtil.isBlank(session.getDatasourceId()) || ObjectUtil.isNull(repository)) {
             return SqlDialect.UNKNOWN;
         }
         AgentDatasource ds = repository.getById(session.getDatasourceId());
-        if (ds == null) {
+        if (ObjectUtil.isNull(ds)) {
             return SqlDialect.UNKNOWN;
         }
         return fromTypeAndUrl(ds.getType(), ds.getConnectionUrl());
@@ -33,7 +34,7 @@ public final class SqlDialectResolver {
     }
 
     public static SqlDialect fromType(String type) {
-        if (!StringUtils.hasText(type)) {
+        if (StrUtil.isBlank(type)) {
             return SqlDialect.UNKNOWN;
         }
         return switch (type.trim().toLowerCase()) {
@@ -49,7 +50,7 @@ public final class SqlDialectResolver {
     }
 
     public static SqlDialect fromJdbcUrl(String url) {
-        if (!StringUtils.hasText(url)) {
+        if (StrUtil.isBlank(url)) {
             return SqlDialect.UNKNOWN;
         }
         String u = url.trim().toLowerCase();

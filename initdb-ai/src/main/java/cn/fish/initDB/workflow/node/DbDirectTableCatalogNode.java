@@ -11,9 +11,10 @@ import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -38,19 +39,19 @@ public class DbDirectTableCatalogNode implements NodeAction {
     public Map<String, Object> apply(OverAllState state) {
         Map<String, Object> bundle = DbWorkflowBundle.readCopy(state);
         String sessionId = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_SESSION_ID, "");
-        if (!StringUtils.hasText(sessionId)) {
+        if (StrUtil.isBlank(sessionId)) {
             return fail(state, "缺少会话标识，无法加载表清单。");
         }
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
-        if (chatSession == null) {
+        if (ObjectUtil.isNull(chatSession)) {
             return fail(state, "未找到会话，请先连接数据库。");
         }
         try {
             List<Table> tables = dataBaseService.queryTableList(chatSession);
             JSONArray arr = new JSONArray();
-            if (tables != null) {
+            if (ObjectUtil.isNotNull(tables)) {
                 for (Table t : tables) {
-                    if (t == null || !StringUtils.hasText(t.getTableName())) {
+                    if (ObjectUtil.isNull(t) || StrUtil.isBlank(t.getTableName())) {
                         continue;
                     }
                     JSONObject o = new JSONObject(new LinkedHashMap<>(4));

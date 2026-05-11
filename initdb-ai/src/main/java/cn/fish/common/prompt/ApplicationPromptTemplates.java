@@ -15,6 +15,8 @@
  */
 package cn.fish.common.prompt;
 
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -60,11 +62,11 @@ public class ApplicationPromptTemplates {
 	}
 
 	public String renderChartConversationSummary(String history) {
-		return chartConversationSummary.render(Map.of("history", history == null ? "" : history));
+		return chartConversationSummary.render(Map.of("history", StrUtil.nullToEmpty(history)));
 	}
 
 	public String renderChartCompressedUserMessage(String summary) {
-		return chartCompressedUserMessage.render(Map.of("summary", summary == null ? "" : summary));
+		return chartCompressedUserMessage.render(Map.of("summary", StrUtil.nullToEmpty(summary)));
 	}
 
 	public String dbReactSystemText() {
@@ -76,13 +78,13 @@ public class ApplicationPromptTemplates {
 	}
 
 	public String renderQuerySqlCheck(String query) {
-		return querySqlCheck.render(Map.of("query", query == null ? "" : query));
+		return querySqlCheck.render(Map.of("query", StrUtil.nullToEmpty(query)));
 	}
 
 	public String renderAgentVectorRagAnswer(String context, String query) {
 		return agentVectorRagAnswer.render(Map.of(
-				"context", context == null ? "" : context,
-				"query", query == null ? "" : query));
+				"context", StrUtil.nullToEmpty(context),
+				"query", StrUtil.nullToEmpty(query)));
 	}
 
 	public String contextualizeRewriteSystemText() {
@@ -91,21 +93,21 @@ public class ApplicationPromptTemplates {
 
 	public String renderContextualizeUserBlock(String historyBlock, String latestInput) {
 		return contextualizeUserBlock.render(Map.of(
-				"historyBlock", historyBlock == null ? "" : historyBlock,
-				"latestInput", latestInput == null ? "" : latestInput));
+				"historyBlock", StrUtil.nullToEmpty(historyBlock),
+				"latestInput", StrUtil.nullToEmpty(latestInput)));
 	}
 
 	public String renderDbDirectNl2sql(String question, String tableCatalogJson) {
 		return dbDirectNl2sql.render(Map.of(
-				"question", question == null ? "" : question,
-				"table_catalog", tableCatalogJson == null ? "[]" : tableCatalogJson));
+				"question", StrUtil.nullToEmpty(question),
+				"table_catalog", ObjectUtil.defaultIfNull(tableCatalogJson, "[]")));
 	}
 
 	public String renderDbIntentRoute(String standalone) {
-		return dbIntentRoute.render(Map.of("standalone", standalone == null ? "" : standalone));
+		return dbIntentRoute.render(Map.of("standalone", StrUtil.nullToEmpty(standalone)));
 	}
 
 	public String renderChartSessionTitle(String snippet) {
-		return chartSessionTitle.render(Map.of("snippet", snippet == null ? "" : snippet));
+		return chartSessionTitle.render(Map.of("snippet", StrUtil.nullToEmpty(snippet)));
 	}
 }

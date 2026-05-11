@@ -15,6 +15,7 @@
  */
 package cn.fish.knowledge.splitter;
 
+import cn.hutool.core.util.StrUtil;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -55,7 +56,7 @@ public class SemanticTextSplitter extends TextSplitter {
 
 	@Override
 	public List<String> splitText(String text) {
-		if (text == null || text.trim().isEmpty()) {
+		if (StrUtil.isBlank(text)) {
 			return List.of();
 		}
 

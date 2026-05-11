@@ -14,9 +14,10 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.*;
@@ -51,12 +52,12 @@ public class DbDirectExecuteQueryNode implements NodeAction {
         Map<String, Object> bundle = DbWorkflowBundle.readCopy(state);
         String sessionId = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_SESSION_ID, "");
         String sql = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_GENERATED_SQL, "");
-        if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(sql)) {
+        if (StrUtil.isBlank(sessionId) || StrUtil.isBlank(sql)) {
             String msg = "缺少会话或 SQL，无法执行查询。";
             return directExecuteResult(state, msg, "## 提示\n\n" + msg);
         }
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
-        if (chatSession == null) {
+        if (ObjectUtil.isNull(chatSession)) {
             String msg = "未找到会话，请先连接数据库。";
             return directExecuteResult(state, msg, "## 提示\n\n" + msg);
         }
@@ -99,7 +100,7 @@ public class DbDirectExecuteQueryNode implements NodeAction {
             parts.add(wrapChunk(state, piece));
         }
         if (parts.isEmpty()) {
-            parts.add(wrapChunk(state, StringUtils.hasText(markdown) ? markdown : "（无内容）"));
+            parts.add(wrapChunk(state, StrUtil.isNotBlank(markdown) ? markdown : "（无内容）"));
         }
         return Flux.fromIterable(parts);
     }
@@ -116,7 +117,7 @@ public class DbDirectExecuteQueryNode implements NodeAction {
 
     private static List<String> chunkMarkdown(String md, int maxChars) {
         List<String> parts = new ArrayList<>();
-        if (md == null || md.isEmpty()) {
+        if (StrUtil.isEmpty(md)) {
             return parts;
         }
         int i = 0;
@@ -168,7 +169,7 @@ public class DbDirectExecuteQueryNode implements NodeAction {
                 sb.append(" | ");
             }
             Object v = row.get(columns.get(j));
-            sb.append(v == null ? "" : escapePipe(String.valueOf(v)));
+            sb.append(ObjectUtil.isNull(v) ? "" : escapePipe(String.valueOf(v)));
         }
         sb.append(" |\n");
     }

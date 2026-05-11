@@ -15,10 +15,11 @@
  */
 package cn.fish.initDB.workflow.agent.tool;
 
+import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.service.DataBaseService;
-import cn.fish.chart.entity.ChatSession;
 import cn.fish.initDB.entity.Table;
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
@@ -31,7 +32,6 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -55,23 +55,40 @@ public class GetTableSchemaTool extends AgentAbstractTool implements BiFunction<
         log.info("GetTableSchemaTool::apply");
         String sessionId = getSessionId(toolContext);
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
-        List<String> tableNames = Arrays.stream(request.tables().split(","))
-                                        .map(String::trim).
-                                        filter(trim -> !trim.isEmpty()).
-                                        map(this::sanitizeTableName)
-                                        .toList();
+        List<String> tableNames = new ArrayList<>();
+        List<String> rejected = new ArrayList<>();
+        for (String part : request.tables().split(",")) {
+            String raw = part.trim();
+            if (raw.isEmpty()) {
+                continue;
+            }
+            try {
+                tableNames.add(sanitizeTableName(raw));
+            } catch (IllegalArgumentException ex) {
+                log.warn("get_table_schema rejected non-physical name: {}", raw);
+                rejected.add(raw);
+            }
+        }
+        if (!rejected.isEmpty() && tableNames.isEmpty()) {
+            return "以下不是合法物理表名（仅允许字母、数字、下划线，且须与 get_all_tables 返回的 tableName 字段一致；中文说明 remarks 不能作为表名传入）："
+                    + String.join("、", rejected)
+                    + "。请先在 get_all_tables 的 JSON 中按 remarks 找到用户所指表，再仅使用对应 tableName 调用本工具。";
+        }
         if (tableNames.isEmpty()) {
             return "No table names provided. Please specify table names separated by commas.";
         }
         List<Table> tables = new ArrayList<>();
         for (String tableName : tableNames) {
             Table table = dataBaseService.queryTableSchema(chatSession, tableName);
-            if (table != null) {
+            if (ObjectUtil.isNotNull(table)) {
                 tables.add(table);
             }
         }
         String result = JSON.toJSONString(tables, JSONWriter.Feature.IgnoreEmpty);
         log.info("Found {} tables: {}", tables.size(), result);
+        if (!rejected.isEmpty()) {
+            result = result + "\n\n【提示】以下输入已忽略（请改用 get_all_tables 中的 tableName，勿用中文 remarks 作表名）：" + String.join("、", rejected);
+        }
         return result;
 
     }
@@ -86,7 +103,7 @@ public class GetTableSchemaTool extends AgentAbstractTool implements BiFunction<
     }
 
     public ToolCallback toolCallback() {
-        String description = "获取数据库中表的详细信息。在返回给用户信息前，使用此工具来获取具体表的详细信息。此工具的返回结果是JSON格式的表详细信息，输入应为逗号分隔的表名列表。例如：'user,order,products'";
+        String description = "获取数据库中表的详细信息。输入 tables 须为 get_all_tables 返回的 JSON 里每个对象的 tableName（物理表名），逗号分隔，例如 agent,chat_session。remarks 中的中文说明不能作为本参数传入。";
         return FunctionToolCallback.builder("get_table_schema", this)
                                    .description(description)
                                    .inputType(Request.class)
@@ -96,16 +113,16 @@ public class GetTableSchemaTool extends AgentAbstractTool implements BiFunction<
     @JsonClassDescription("获取指定表结构的请求")
     public static final class Request {
         @JsonProperty(value = "tables", required = true)
-        @JsonPropertyDescription("要获取结构的表名列表，使用逗号分隔。例如：'users, orders, products'")
+        @JsonPropertyDescription("仅物理表名：get_all_tables 返回的 tableName，逗号分隔，如 agent,chat_session。禁止传入中文 remarks 当表名。")
         private final String tables;
 
         public Request(@JsonProperty(value = "tables", required = true)
-                       @JsonPropertyDescription("要获取结构的表名列表，使用逗号分隔。例如：'users, orders, products'") String tables) {
+                       @JsonPropertyDescription("仅物理表名：get_all_tables 的 tableName，逗号分隔。禁止中文说明。") String tables) {
             this.tables = tables;
         }
 
         @JsonProperty(value = "tables", required = true)
-        @JsonPropertyDescription("要获取结构的表名列表，使用逗号分隔。例如：'users, orders, products'")
+        @JsonPropertyDescription("get_all_tables 的 tableName，逗号分隔。禁止中文 remarks。")
         public String tables() {
             return tables;
         }

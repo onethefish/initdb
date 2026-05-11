@@ -5,6 +5,7 @@ import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.service.ContextualizeService;
 import cn.fish.initDB.util.ExplicitSqlUserInput;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
@@ -14,8 +15,6 @@ import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,7 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         if (StrUtil.isBlank(rawMessage)) {
             return rawMessage;
         }
-        if (!StringUtils.hasText(sessionId)) {
+        if (StrUtil.isBlank(sessionId)) {
             throw new CommonException("sessionId 不能为空");
         }
         String trimmed = rawMessage.trim();
@@ -99,7 +98,7 @@ public class ContextualizeServiceImpl implements ContextualizeService {
     }
 
     private static List<Message> copyMessagesFromState(Map<String, Object> checkpointState) {
-        if (checkpointState == null) {
+        if (ObjectUtil.isNull(checkpointState)) {
             return List.of();
         }
         Object raw = checkpointState.get(InitDBConstants.STATE_KEY_MESSAGES);

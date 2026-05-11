@@ -15,6 +15,7 @@
  */
 package cn.fish.knowledge.splitter;
 
+import cn.hutool.core.util.StrUtil;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.transformer.splitter.TextSplitter;
@@ -58,7 +59,7 @@ public class ParagraphTextSplitter extends TextSplitter {
 
     @Override
     public List<String> splitText(String text) {
-        if (text == null || text.trim().isEmpty()) {
+        if (StrUtil.isBlank(text)) {
             return List.of();
         }
 
@@ -148,7 +149,7 @@ public class ParagraphTextSplitter extends TextSplitter {
      * 从已完成的块中提取 overlap 内容 策略：尝试智能贴合段落边界，如果找不到段落边界，则硬截取
      */
     private StringBuilder extractOverlap(String chunk) {
-        if (paragraphOverlapChars <= 0 || chunk == null || chunk.isEmpty()) {
+        if (paragraphOverlapChars <= 0 || StrUtil.isEmpty(chunk)) {
             return new StringBuilder();
         }
 

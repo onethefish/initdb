@@ -1,5 +1,6 @@
 package cn.fish.database.sql;
 
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.LongValue;
@@ -31,7 +32,7 @@ public final class SelectSqlRowLimiter {
      * @return 可能已改写后的 SQL（尽量保留是否以分号结尾）
      */
     public static String ensureSelectRowLimit(String sql, int maxRows, SqlDialect dialect) {
-        if (sql == null || sql.isBlank() || maxRows < 1) {
+        if (StrUtil.isBlank(sql) || maxRows < 1) {
             return sql;
         }
         String trimmed = sql.trim();

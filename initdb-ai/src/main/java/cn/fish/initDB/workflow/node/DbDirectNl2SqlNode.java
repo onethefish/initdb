@@ -3,13 +3,14 @@ package cn.fish.initDB.workflow.node;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -39,12 +40,12 @@ public class DbDirectNl2SqlNode implements NodeAction {
         String catalogJson = DbWorkflowBundle.bundleString(
                 DbWorkflowBundle.readCopy(state), InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, "[]");
         String sql = resolveSql(standalone, catalogJson);
-        log.info("db direct nl2sql length={}", sql != null ? sql.length() : 0);
+        log.info("db direct nl2sql length={}", StrUtil.length(sql));
         return DbWorkflowBundle.writeBundle(state, b -> b.put(InitDBConstants.STATE_KEY_GENERATED_SQL, sql));
     }
 
     private String resolveSql(String text, String tableCatalogJson) {
-        if (!StringUtils.hasText(text)) {
+        if (StrUtil.isBlank(text)) {
             return "SELECT 1 AS placeholder";
         }
         Matcher fence = CODE_FENCE_SQL.matcher(text);
@@ -68,7 +69,7 @@ public class DbDirectNl2SqlNode implements NodeAction {
     }
 
     private static String stripNoise(String raw) {
-        if (raw == null) {
+        if (ObjectUtil.isNull(raw)) {
             return "SELECT 1 AS placeholder";
         }
         Matcher fence = CODE_FENCE_SQL.matcher(raw);
@@ -79,7 +80,7 @@ public class DbDirectNl2SqlNode implements NodeAction {
     }
 
     private static String normalizeOneStatement(String sql) {
-        if (sql == null) {
+        if (ObjectUtil.isNull(sql)) {
             return "SELECT 1 AS placeholder";
         }
         String s = sql.trim();

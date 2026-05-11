@@ -16,6 +16,7 @@
 package cn.fish.knowledge.converter;
 
 import cn.fish.knowledge.entity.AgentKnowledge;
+import cn.hutool.core.util.ObjectUtil;
 import cn.fish.knowledge.entity.AgentKnowledgeDTO;
 import cn.fish.knowledge.enums.EmbeddingStatus;
 import cn.fish.knowledge.enums.KnowledgeType;
@@ -38,7 +39,7 @@ public class AgentKnowledgeConverter {
         knowledge.setEmbeddingStatus(EmbeddingStatus.PENDING.getCode()); // 初始状态为待处理
 
         // 如果是文档类型，设置文件相关信息
-        if (agentKnowledgeDto.getFile() != null && !agentKnowledgeDto.getFile().isEmpty()) {
+        if (ObjectUtil.isNotNull(agentKnowledgeDto.getFile()) && !agentKnowledgeDto.getFile().isEmpty()) {
             knowledge.setFileId(fileId);
             knowledge.setFileSize(agentKnowledgeDto.getFile().getSize());
             knowledge.setFileType(agentKnowledgeDto.getFile().getContentType());

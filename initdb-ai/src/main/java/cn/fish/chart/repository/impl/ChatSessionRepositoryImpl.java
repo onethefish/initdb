@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.repository.CrudRepository;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.apache.commons.lang3.StringUtils;
+import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -31,7 +31,7 @@ public class ChatSessionRepositoryImpl extends CrudRepository<ChatSessionMapper,
     @Override
     public List<ChatSession> queryList(ChatSession chatSession) {
         LambdaQueryWrapper<ChatSession> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.like(StringUtils.isNotBlank(chatSession.getSessionName()), ChatSession::getSessionName, chatSession.getSessionName());
+        queryWrapper.like(StrUtil.isNotBlank(chatSession.getSessionName()), ChatSession::getSessionName, chatSession.getSessionName());
         return list(queryWrapper);
     }
 

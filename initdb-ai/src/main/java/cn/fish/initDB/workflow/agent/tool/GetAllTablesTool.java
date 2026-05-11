@@ -66,7 +66,7 @@ public class GetAllTablesTool extends AgentAbstractTool implements BiFunction<Ge
 
 
     public ToolCallback toolCallback() {
-        String description = "列出数据库中所有可用的表。在返回给用户信息前，请先使用此工具了解有哪些表，然后根据你的分析输出合适的结果。此工具的返回结果是JSON格式的表对象列表，tableName是表编码，remarks是表说明";
+        String description = "列出数据库中所有可用的表。返回 JSON 数组，每项含 tableName（物理表名，SQL 与 get_table_schema 必须用此字段）与 remarks（中文说明，仅注释不可当表名）。用户用中文称呼表时，须用 remarks 对照后选用对应 tableName。";
         return FunctionToolCallback.builder("get_all_tables", this)
                                    .description(description)
                                    .inputType(Request.class)
