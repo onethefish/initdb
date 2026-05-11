@@ -15,7 +15,6 @@
  */
 package cn.fish.initDB.workflow.agent.tool;
 
-import cn.fish.initDB.constants.InitDBConstants;
 import cn.hutool.core.util.ObjectUtil;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
@@ -56,7 +55,7 @@ public class KnowledgeRetrievalTool extends AgentAbstractTool implements BiFunct
     public List<Document> apply(Request request, ToolContext toolContext) {
         log.info("KnowledgeRetrievalTool::apply");
         String sessionId = getSessionId(toolContext);
-        int topK = ObjectUtil.defaultIfNull(request.topK(), InitDBConstants.KNOWLEDGE_RETRIEVAL_DEFAULT_TOP_K);
+        int topK = ObjectUtil.defaultIfNull(request.topK(), 1);
         ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
         FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
         Filter.Expression expression = filterExpressionBuilder.eq(DocumentMetadataConstant.DATASOURCE_ID, chatSession.getDatasourceId())

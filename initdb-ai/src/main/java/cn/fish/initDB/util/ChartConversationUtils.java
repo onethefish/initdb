@@ -1,6 +1,7 @@
 package cn.fish.initDB.util;
 
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
+import cn.fish.initDB.constants.ContextualizeChartConstants;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -28,7 +29,7 @@ public final class ChartConversationUtils {
         if (n.isEmpty()) {
             return true;
         }
-        return StrUtil.startWith(n, InitDBConstants.CHAT_SESSION_AUTO_NAME_PLACEHOLDER_PREFIX);
+        return StrUtil.startWith(n, "新的对话");
     }
 
     public static String buildSnippetForSessionTitle(List<Message> messages) {
@@ -41,9 +42,9 @@ public final class ChartConversationUtils {
         if (block.isEmpty()) {
             return "";
         }
-        int max = InitDBConstants.CHAT_SESSION_TITLE_SNIPPET_MAX_CHARS;
+        int max = 1_800;
         if (block.length() > max) {
-            return block.substring(0, max) + InitDBConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
+            return block.substring(0, max) + ContextualizeChartConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
         }
         return block;
     }
@@ -64,7 +65,7 @@ public final class ChartConversationUtils {
                 && ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("'") && t.endsWith("'")))) {
             t = t.substring(1, t.length() - 1).strip();
         }
-        int cap = InitDBConstants.CHAT_SESSION_TITLE_RESULT_MAX_CHARS;
+        int cap = 48;
         if (t.length() > cap) {
             t = t.substring(0, cap).strip();
         }
@@ -76,7 +77,7 @@ public final class ChartConversationUtils {
         if (ObjectUtil.isNull(state)) {
             return List.of();
         }
-        Object raw = state.get(InitDBConstants.STATE_KEY_MESSAGES);
+        Object raw = state.get(WorkflowConstants.STATE_KEY_MESSAGES);
         if (!(raw instanceof List<?> list)) {
             return List.of();
         }
@@ -105,7 +106,7 @@ public final class ChartConversationUtils {
     }
 
     /**
-     * 在「保留最近 {@link InitDBConstants#CHART_KEEP_RECENT_MESSAGES} 条」基础上向左扩展切分点，避免：
+     * 在「保留最近 {@code keepRecent} 条」基础上向左扩展切分点，避免：
      * <ul>
      *   <li>后缀以 {@link ToolResponseMessage} 开头（工具结果失去对应的 assistant tool_calls）；</li>
      *   <li>后缀内某条带 tool_calls 的 {@link AssistantMessage} 所需的 tool response 被切到 head 中。</li>

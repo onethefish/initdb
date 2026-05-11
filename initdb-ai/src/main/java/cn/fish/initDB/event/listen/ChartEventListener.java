@@ -3,7 +3,8 @@ package cn.fish.initDB.event.listen;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
+import cn.fish.initDB.constants.ContextualizeChartConstants;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.fish.initDB.util.ChartConversationUtils;
 import cn.fish.initDB.workflow.agent.tool.AgentAbstractTool;
@@ -78,11 +79,11 @@ public class ChartEventListener {
                 Checkpoint latest = latestOpt.get();
                 String checkpointIdAtStart = latest.getId();
                 List<Message> messages = ChartConversationUtils.copyMessagesFromState(latest.getState());
-                if (messages.size() < InitDBConstants.CHART_COMPRESS_MIN_MESSAGES) {
+                if (messages.size() < 12) {
                     return;
                 }
                 int split = ChartConversationUtils.resolveCompressSplitIndex(
-                        messages, InitDBConstants.CHART_KEEP_RECENT_MESSAGES);
+                        messages, 6);
                 if (split < 1) {
                     log.info(
                             "Skip compress: no tool-safe split (would orphan ToolResponse or truncate tool round), thread={}",
@@ -93,9 +94,9 @@ public class ChartEventListener {
                 List<Message> tail = new ArrayList<>(messages.subList(split, messages.size()));
 
                 String historyBlock = ChartConversationUtils.buildHistoryText(head);
-                if (historyBlock.length() > InitDBConstants.CHART_MAX_CHARS_FOR_SUMMARY_INPUT) {
-                    historyBlock = historyBlock.substring(0, InitDBConstants.CHART_MAX_CHARS_FOR_SUMMARY_INPUT)
-                            + InitDBConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
+                if (historyBlock.length() > 14_000) {
+                    historyBlock = historyBlock.substring(0, 14_000)
+                            + ContextualizeChartConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
                 }
                 String fullPrompt = applicationPromptTemplates.renderChartConversationSummary(historyBlock);
                 String summary = chatModel.call(new Prompt(fullPrompt)).getResult().getOutput().getText();
@@ -120,7 +121,7 @@ public class ChartEventListener {
                 compressed.addAll(tail);
 
                 Map<String, Object> newState = new HashMap<>(again.get().getState());
-                newState.put(InitDBConstants.STATE_KEY_MESSAGES, compressed);
+                newState.put(WorkflowConstants.STATE_KEY_MESSAGES, compressed);
 
                 Checkpoint updated = Checkpoint.builder()
                                                .id(again.get().getId())
@@ -149,7 +150,7 @@ public class ChartEventListener {
      * 在每次对话流结束后（与压缩摘要同一事件）尝试自动命名：
      * <ul>
      *   <li>占位名（「新的对话…」）时，首次有可用片段即调用模型；</li>
-     *   <li>否则每隔 {@link InitDBConstants#CHART_SESSION_AUTO_TITLE_EVERY_N_STREAMS} 次流结束才再次调用模型，避免每轮都打标题。</li>
+     *   <li>否则每隔 3 次流结束才再次调用模型，避免每轮都打标题。</li>
      * </ul>
      * 根据 checkpoint 内前几条消息生成标题并写回 {@code chat_session}。
      * 不与 {@link #autoSummarizeEvent} 共用 {@link #SESSION_LOCKS}，避免压缩持锁期间阻塞命名；同会话命名用 {@link #SESSION_TITLE_LOCKS} 串行。
@@ -174,7 +175,7 @@ public class ChartEventListener {
                 int lastTitleAt = ObjectUtil.defaultIfNull(session.getNamedStream(), 0);
                 boolean placeholder = ChartConversationUtils.isPlaceholderSessionName(session.getSessionName());
                 boolean shouldCallModel =
-                        placeholder || (completed - lastTitleAt >= InitDBConstants.CHART_SESSION_AUTO_TITLE_EVERY_N_STREAMS);
+                        placeholder || (completed - lastTitleAt >= 3);
                 if (!shouldCallModel) {
                     return;
                 }

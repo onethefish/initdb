@@ -1,7 +1,7 @@
 package cn.fish.initDB.workflow.node;
 
 import cn.fish.common.prompt.ApplicationPromptTemplates;
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -23,6 +23,9 @@ import java.util.regex.Pattern;
 @Component
 public class DbDirectNl2SqlNode implements NodeAction {
 
+    // StateGraph 节点 id，勿改字符串以免破坏 checkpoint / 流式帧匹配
+    public static final String GRAPH_NODE_ID = "db_direct_nl2sql";
+
     private static final Pattern CODE_FENCE_SQL = Pattern.compile("(?is)```(?:sql)?\\s*([\\s\\S]*?)```");
     private static final Pattern LEADING_SELECT = Pattern.compile("(?is)^\\s*(SELECT\\b[\\s\\S]+)$");
 
@@ -36,12 +39,12 @@ public class DbDirectNl2SqlNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) {
-        String standalone = state.value(InitDBConstants.STANDALONE, "").trim();
+        String standalone = state.value(WorkflowConstants.STANDALONE, "").trim();
         String catalogJson = DbWorkflowBundle.bundleString(
-                DbWorkflowBundle.readCopy(state), InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, "[]");
+                DbWorkflowBundle.readCopy(state), WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG_JSON, "[]");
         String sql = resolveSql(standalone, catalogJson);
         log.info("db direct nl2sql length={}", StrUtil.length(sql));
-        return DbWorkflowBundle.writeBundle(state, b -> b.put(InitDBConstants.STATE_KEY_GENERATED_SQL, sql));
+        return DbWorkflowBundle.writeBundle(state, b -> b.put(WorkflowConstants.DB_BUNDLE_KEY_GENERATED_SQL, sql));
     }
 
     private String resolveSql(String text, String tableCatalogJson) {

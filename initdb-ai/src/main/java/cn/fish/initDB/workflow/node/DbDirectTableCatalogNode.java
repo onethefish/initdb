@@ -3,7 +3,7 @@ package cn.fish.initDB.workflow.node;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.service.DataBaseService;
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -27,6 +27,9 @@ import java.util.Map;
 @Component
 public class DbDirectTableCatalogNode implements NodeAction {
 
+    // StateGraph 节点 id，勿改字符串以免破坏 checkpoint / 流式帧匹配
+    public static final String GRAPH_NODE_ID = "db_direct_table_catalog";
+
     private final DataBaseService dataBaseService;
     private final ChatSessionRepository chatSessionRepository;
 
@@ -38,7 +41,7 @@ public class DbDirectTableCatalogNode implements NodeAction {
     @Override
     public Map<String, Object> apply(OverAllState state) {
         Map<String, Object> bundle = DbWorkflowBundle.readCopy(state);
-        String sessionId = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_SESSION_ID, "");
+        String sessionId = DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_SESSION_ID, "");
         if (StrUtil.isBlank(sessionId)) {
             return fail(state, "缺少会话标识，无法加载表清单。");
         }
@@ -63,8 +66,8 @@ public class DbDirectTableCatalogNode implements NodeAction {
             String json = JSON.toJSONString(arr);
             log.info("db direct table_catalog tables={}", arr.size());
             return DbWorkflowBundle.writeBundle(state, b -> {
-                b.put(InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, json);
-                b.put(InitDBConstants.STATE_KEY_DIRECT_CATALOG_OK, Boolean.TRUE);
+                b.put(WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG_JSON, json);
+                b.put(WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG, Boolean.TRUE);
             });
         } catch (Exception e) {
             log.error("db direct table_catalog failed", e);
@@ -75,9 +78,9 @@ public class DbDirectTableCatalogNode implements NodeAction {
     private static Map<String, Object> fail(OverAllState state, String msg) {
         String md = "## 提示\n\n" + msg;
         return DbWorkflowBundle.writeBundle(state, b -> {
-            b.put(InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, "[]");
-            b.put(InitDBConstants.STATE_KEY_DIRECT_CATALOG_OK, Boolean.FALSE);
-            b.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, md);
+            b.put(WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG_JSON, "[]");
+            b.put(WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG, Boolean.FALSE);
+            b.put(WorkflowConstants.DB_BUNDLE_KEY_DIRECT_ANSWER, md);
         });
     }
 }

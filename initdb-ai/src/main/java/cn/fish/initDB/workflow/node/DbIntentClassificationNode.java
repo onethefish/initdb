@@ -1,7 +1,8 @@
 package cn.fish.initDB.workflow.node;
 
 import cn.fish.common.prompt.ApplicationPromptTemplates;
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
+import cn.fish.initDB.constants.ContextualizeChartConstants;
 import cn.fish.initDB.util.ExplicitSqlUserInput;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -24,6 +25,9 @@ import java.util.regex.Pattern;
 @Component
 public class DbIntentClassificationNode implements NodeAction {
 
+    // 父图 StateGraph 节点 id，勿改字符串以免破坏 checkpoint / 流式帧匹配
+    public static final String GRAPH_NODE_ID = "db_intent_classification";
+
     private static final Pattern ROUTE_TOKEN = Pattern.compile("\\b(DIRECT|REACT)\\b", Pattern.CASE_INSENSITIVE);
 
     private final ChatModel chatModel;
@@ -36,18 +40,18 @@ public class DbIntentClassificationNode implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) {
-        String standalone = state.value(InitDBConstants.STANDALONE, "");
-        String route = classifyRoute(standalone);
-        log.debug("db intent route={} for question snippet: {}", route, abbreviate(standalone));
-        return DbWorkflowBundle.writeBundle(state, b -> b.put(InitDBConstants.STATE_KEY_DB_ROUTE, route));
+        String standalone = state.value(WorkflowConstants.STANDALONE, "");
+        boolean useDirectData = classifyUseDirectData(standalone);
+        log.debug("db intent useDirectData={} for question snippet: {}", useDirectData, abbreviate(standalone));
+        return DbWorkflowBundle.writeBundle(state, b -> b.put(WorkflowConstants.DB_BUNDLE_KEY_ROUTE, useDirectData));
     }
 
-    private String classifyRoute(String standalone) {
+    private boolean classifyUseDirectData(String standalone) {
         if (StrUtil.isBlank(standalone)) {
-            return InitDBConstants.ROUTE_REACT_VALUE;
+            return false;
         }
         if (ExplicitSqlUserInput.matches(standalone)) {
-            return InitDBConstants.ROUTE_DIRECT_DATA_VALUE;
+            return true;
         }
         String body = clampStandalone(standalone.trim());
         try {
@@ -55,30 +59,28 @@ public class DbIntentClassificationNode implements NodeAction {
                                   .getResult()
                                   .getOutput()
                                   .getText();
-            String route = parseLlmRouteLabel(raw);
-            log.debug("db intent llm raw={} -> {}", abbreviate(raw), route);
-            return route;
+            boolean useDirect = parseLlmWantsDirectData(raw);
+            log.debug("db intent llm raw={} -> {}", abbreviate(raw), useDirect);
+            return useDirect;
         } catch (Exception e) {
             log.warn("db intent route LLM failed, fallback react: {}", e.toString());
-            return InitDBConstants.ROUTE_REACT_VALUE;
+            return false;
         }
     }
 
-    private static String parseLlmRouteLabel(String raw) {
+    private static boolean parseLlmWantsDirectData(String raw) {
         if (StrUtil.isBlank(raw)) {
-            return InitDBConstants.ROUTE_REACT_VALUE;
+            return false;
         }
         Matcher m = ROUTE_TOKEN.matcher(raw);
         if (m.find()) {
-            return "DIRECT".equalsIgnoreCase(m.group(1))
-                    ? InitDBConstants.ROUTE_DIRECT_DATA_VALUE
-                    : InitDBConstants.ROUTE_REACT_VALUE;
+            return "DIRECT".equalsIgnoreCase(m.group(1));
         }
-        return InitDBConstants.ROUTE_REACT_VALUE;
+        return false;
     }
 
     private static String clampStandalone(String s) {
-        int max = InitDBConstants.CONTEXTUALIZE_BODY_MAX_CHARS;
+        int max = ContextualizeChartConstants.CONTEXTUALIZE_BODY_MAX_CHARS;
         if (s.length() <= max) {
             return s;
         }

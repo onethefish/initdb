@@ -6,7 +6,7 @@ import cn.fish.database.service.DataBaseService;
 import cn.fish.database.sql.SelectSqlRowLimiter;
 import cn.fish.database.sql.SqlDialectResolver;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.GraphResponse;
 import com.alibaba.cloud.ai.graph.NodeOutput;
@@ -23,13 +23,16 @@ import reactor.core.publisher.Flux;
 import java.util.*;
 
 /**
- * 直连链路：执行 {@link InitDBConstants#STATE_KEY_GENERATED_SQL}（位于 {@link InitDBConstants#STATE_KEY_DB_BUNDLE} 内），
- * 通过顶层 {@link InitDBConstants#STATE_KEY_DIRECT_EXECUTE_STREAM} 嵌入流式输出，
- * 并写入 bundle 内 {@link InitDBConstants#STATE_KEY_DIRECT_ANSWER} 供落库与兜底。
+ * 直连链路：执行 {@link WorkflowConstants#DB_BUNDLE_KEY_GENERATED_SQL}（位于 {@link WorkflowConstants#STATE_KEY_DB_BUNDLE} 内），
+ * 通过顶层 {@link WorkflowConstants#STATE_KEY_DIRECT_EXECUTE_STREAM} 嵌入流式输出，
+ * 并写入 bundle 内 {@link WorkflowConstants#DB_BUNDLE_KEY_DIRECT_ANSWER} 供落库与兜底。
  */
 @Slf4j
 @Component
 public class DbDirectExecuteQueryNode implements NodeAction {
+
+    // StateGraph 节点 id，勿改字符串以免破坏 checkpoint / 流式帧匹配
+    public static final String GRAPH_NODE_ID = "db_direct_execute";
 
     private static final int MARKDOWN_CHUNK_CHARS = 900;
     private static final int maxResults = 500;
@@ -50,8 +53,8 @@ public class DbDirectExecuteQueryNode implements NodeAction {
     @Override
     public Map<String, Object> apply(OverAllState state) {
         Map<String, Object> bundle = DbWorkflowBundle.readCopy(state);
-        String sessionId = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_SESSION_ID, "");
-        String sql = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_GENERATED_SQL, "");
+        String sessionId = DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_SESSION_ID, "");
+        String sql = DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_GENERATED_SQL, "");
         if (StrUtil.isBlank(sessionId) || StrUtil.isBlank(sql)) {
             String msg = "缺少会话或 SQL，无法执行查询。";
             return directExecuteResult(state, msg, "## 提示\n\n" + msg);
@@ -77,7 +80,7 @@ public class DbDirectExecuteQueryNode implements NodeAction {
     }
 
     /**
-     * 成功或失败均写入 {@link InitDBConstants#STATE_KEY_DIRECT_ANSWER} 与嵌入 Flux，避免仅 state 无流式帧时前端无展示。
+     * 成功或失败均写入 {@link WorkflowConstants#DB_BUNDLE_KEY_DIRECT_ANSWER} 与嵌入 Flux，避免仅 state 无流式帧时前端无展示。
      */
     private static Map<String, Object> directExecuteResult(OverAllState state, String directAnswer, String streamMarkdown) {
         Flux<GraphResponse<NodeOutput>> flux = fluxFromMarkdown(state, streamMarkdown);
@@ -87,10 +90,11 @@ public class DbDirectExecuteQueryNode implements NodeAction {
     private static Map<String, Object> directExecuteResult(
             OverAllState state, String directAnswer, Flux<GraphResponse<NodeOutput>> streamFlux) {
         Map<String, Object> b = DbWorkflowBundle.readCopy(state);
-        b.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, directAnswer);
+        b.put(WorkflowConstants.DB_BUNDLE_KEY_DIRECT_ANSWER, directAnswer);
+        DbWorkflowBundle.stripLegacyBundleKeys(b);
         Map<String, Object> out = new LinkedHashMap<>(4);
-        out.put(InitDBConstants.STATE_KEY_DIRECT_EXECUTE_STREAM, streamFlux);
-        out.put(InitDBConstants.STATE_KEY_DB_BUNDLE, b);
+        out.put(WorkflowConstants.STATE_KEY_DIRECT_EXECUTE_STREAM, streamFlux);
+        out.put(WorkflowConstants.STATE_KEY_DB_BUNDLE, b);
         return out;
     }
 
@@ -108,7 +112,7 @@ public class DbDirectExecuteQueryNode implements NodeAction {
     private static GraphResponse<NodeOutput> wrapChunk(OverAllState state, String text) {
         StreamingOutput<String> out = new StreamingOutput<>(
                 text,
-                InitDBConstants.NODE_DB_DIRECT_EXECUTE,
+                GRAPH_NODE_ID,
                 "",
                 state,
                 OutputType.GRAPH_NODE_STREAMING);

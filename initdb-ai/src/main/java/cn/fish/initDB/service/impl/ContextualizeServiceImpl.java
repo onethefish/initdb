@@ -2,7 +2,8 @@ package cn.fish.initDB.service.impl;
 
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
+import cn.fish.initDB.constants.ContextualizeChartConstants;
 import cn.fish.initDB.service.ContextualizeService;
 import cn.fish.initDB.util.ExplicitSqlUserInput;
 import cn.hutool.core.util.ObjectUtil;
@@ -85,8 +86,8 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         if (nl > 0) {
             cleaned = cleaned.substring(0, nl).trim();
         }
-        if (cleaned.length() > InitDBConstants.CONTEXTUALIZE_BODY_MAX_CHARS) {
-            cleaned = cleaned.substring(0, InitDBConstants.CONTEXTUALIZE_BODY_MAX_CHARS);
+        if (cleaned.length() > ContextualizeChartConstants.CONTEXTUALIZE_BODY_MAX_CHARS) {
+            cleaned = cleaned.substring(0, ContextualizeChartConstants.CONTEXTUALIZE_BODY_MAX_CHARS);
         }
         log.info("Question contextualize result: {}", cleaned);
         return cleaned;
@@ -101,7 +102,7 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         if (ObjectUtil.isNull(checkpointState)) {
             return List.of();
         }
-        Object raw = checkpointState.get(InitDBConstants.STATE_KEY_MESSAGES);
+        Object raw = checkpointState.get(WorkflowConstants.STATE_KEY_MESSAGES);
         if (!(raw instanceof List<?> list)) {
             return List.of();
         }
@@ -117,13 +118,13 @@ public class ContextualizeServiceImpl implements ContextualizeService {
     private static String buildHistoryBlock(List<Message> messages) {
         StringBuilder sb = new StringBuilder();
         int n = messages.size();
-        int start = Math.max(0, n - InitDBConstants.CONTEXTUALIZE_MAX_PRIOR_MESSAGES);
+        int start = Math.max(0, n - ContextualizeChartConstants.CONTEXTUALIZE_MAX_PRIOR_MESSAGES);
         for (int i = start; i < n; i++) {
             sb.append(messageToLine(messages.get(i))).append('\n');
         }
         String s = sb.toString();
-        if (s.length() > InitDBConstants.CONTEXTUALIZE_MAX_HISTORY_CHARS) {
-            return s.substring(s.length() - InitDBConstants.CONTEXTUALIZE_MAX_HISTORY_CHARS);
+        if (s.length() > ContextualizeChartConstants.CONTEXTUALIZE_MAX_HISTORY_CHARS) {
+            return s.substring(s.length() - ContextualizeChartConstants.CONTEXTUALIZE_MAX_HISTORY_CHARS);
         }
         return s;
     }

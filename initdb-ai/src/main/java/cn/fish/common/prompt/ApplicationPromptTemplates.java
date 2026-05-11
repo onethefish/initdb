@@ -21,6 +21,7 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -62,11 +63,15 @@ public class ApplicationPromptTemplates {
 	}
 
 	public String renderChartConversationSummary(String history) {
-		return chartConversationSummary.render(Map.of("history", StrUtil.nullToEmpty(history)));
+		Map<String, Object> model = new HashMap<>(2);
+		model.put("history", StrUtil.nullToEmpty(history));
+		return chartConversationSummary.render(model);
 	}
 
 	public String renderChartCompressedUserMessage(String summary) {
-		return chartCompressedUserMessage.render(Map.of("summary", StrUtil.nullToEmpty(summary)));
+		Map<String, Object> model = new HashMap<>(2);
+		model.put("summary", StrUtil.nullToEmpty(summary));
+		return chartCompressedUserMessage.render(model);
 	}
 
 	public String dbReactSystemText() {
@@ -78,13 +83,16 @@ public class ApplicationPromptTemplates {
 	}
 
 	public String renderQuerySqlCheck(String query) {
-		return querySqlCheck.render(Map.of("query", StrUtil.nullToEmpty(query)));
+		Map<String, Object> model = new HashMap<>(2);
+		model.put("query", StrUtil.nullToEmpty(query));
+		return querySqlCheck.render(model);
 	}
 
 	public String renderAgentVectorRagAnswer(String context, String query) {
-		return agentVectorRagAnswer.render(Map.of(
-				"context", StrUtil.nullToEmpty(context),
-				"query", StrUtil.nullToEmpty(query)));
+		Map<String, Object> model = new HashMap<>(4);
+		model.put("context", StrUtil.nullToEmpty(context));
+		model.put("query", StrUtil.nullToEmpty(query));
+		return agentVectorRagAnswer.render(model);
 	}
 
 	public String contextualizeRewriteSystemText() {
@@ -92,22 +100,28 @@ public class ApplicationPromptTemplates {
 	}
 
 	public String renderContextualizeUserBlock(String historyBlock, String latestInput) {
-		return contextualizeUserBlock.render(Map.of(
-				"historyBlock", StrUtil.nullToEmpty(historyBlock),
-				"latestInput", StrUtil.nullToEmpty(latestInput)));
+		Map<String, Object> model = new HashMap<>(4);
+		model.put("historyBlock", StrUtil.nullToEmpty(historyBlock));
+		model.put("latestInput", StrUtil.nullToEmpty(latestInput));
+		return contextualizeUserBlock.render(model);
 	}
 
 	public String renderDbDirectNl2sql(String question, String tableCatalogJson) {
-		return dbDirectNl2sql.render(Map.of(
-				"question", StrUtil.nullToEmpty(question),
-				"table_catalog", ObjectUtil.defaultIfNull(tableCatalogJson, "[]")));
+		Map<String, Object> model = new HashMap<>(4);
+		model.put("question", StrUtil.nullToEmpty(question));
+		model.put("table_catalog", ObjectUtil.defaultIfNull(tableCatalogJson, "[]"));
+		return dbDirectNl2sql.render(model);
 	}
 
 	public String renderDbIntentRoute(String standalone) {
-		return dbIntentRoute.render(Map.of("standalone", StrUtil.nullToEmpty(standalone)));
+		Map<String, Object> model = new HashMap<>(2);
+		model.put("standalone", StrUtil.nullToEmpty(standalone));
+		return dbIntentRoute.render(model);
 	}
 
 	public String renderChartSessionTitle(String snippet) {
-		return chartSessionTitle.render(Map.of("snippet", StrUtil.nullToEmpty(snippet)));
+		Map<String, Object> model = new HashMap<>(2);
+		model.put("snippet", StrUtil.nullToEmpty(snippet));
+		return chartSessionTitle.render(model);
 	}
 }

@@ -1,6 +1,7 @@
 package cn.fish.initDB.service.impl;
 
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
+import cn.fish.initDB.constants.ContextualizeChartConstants;
 import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.fish.initDB.service.DBAgentService;
@@ -30,7 +31,7 @@ public class DBAgentServiceImpl implements DBAgentService {
     private final ApplicationEventPublisher eventPublisher;
 
     public DBAgentServiceImpl(
-            @Qualifier(InitDBConstants.DB_CHAT_WORKFLOW_BEAN) CompiledGraph dbChatWorkflow,
+            @Qualifier(WorkflowConstants.DB_CHAT_WORKFLOW_BEAN) CompiledGraph dbChatWorkflow,
             ApplicationEventPublisher eventPublisher) {
         this.dbChatWorkflow = dbChatWorkflow;
         this.eventPublisher = eventPublisher;
@@ -40,7 +41,8 @@ public class DBAgentServiceImpl implements DBAgentService {
     public Flux<String> chatStream(ChatRequest chatRequest) {
         String sessionId = chatRequest.getSessionId();
         if (StrUtil.isEmpty(sessionId)) {
-            return Flux.just(DbChatGraphStream.streamLineSafe(InitDBConstants.STREAM_PART_ANSWER, InitDBConstants.CHAT_STREAM_ERR_SESSION_NULL));
+            return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER,
+                    "Sorry, an error occurred: sessionId is null"));
         }
         /*
          * 会话问句补全不在本接口执行（见 /db/chat/contextualize）；图内 NodeAction（含 chatModel.call）为阻塞调用。
@@ -56,8 +58,8 @@ public class DBAgentServiceImpl implements DBAgentService {
                 String effectiveStandalone = resolveStandalone(chatRequest);
 
                 Map<String, Object> inputs = new LinkedHashMap<>(8);
-                inputs.put(InitDBConstants.STANDALONE, effectiveStandalone);
-                inputs.put(InitDBConstants.STATE_KEY_DB_BUNDLE, DbWorkflowBundle.newInitialBundle(sessionId));
+                inputs.put(WorkflowConstants.STANDALONE, effectiveStandalone);
+                inputs.put(WorkflowConstants.STATE_KEY_DB_BUNDLE, DbWorkflowBundle.newInitialBundle(sessionId));
 
                 Flux<NodeOutput> stream = dbChatWorkflow.stream(inputs, config);
                 AtomicReference<String> streamTraceSegmentKey = new AtomicReference<>(null);
@@ -71,7 +73,8 @@ public class DBAgentServiceImpl implements DBAgentService {
                 return answerFlux
                            .switchIfEmpty(Flux.defer(() -> {
                                log.warn("chatStream emitted no text for sessionId={}, model may have returned empty tokens", sessionId);
-                               return Flux.just(DbChatGraphStream.streamLineSafe(InitDBConstants.STREAM_PART_ANSWER, InitDBConstants.CHAT_STREAM_ERR_EMPTY_MODEL));
+                               return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER,
+                                       "未收到模型的文本输出，请重试。若多次出现，请检查模型 API、配额及网络；若刚做过对话压缩，可新建会话再试。"));
                            }))
                            .onErrorResume(e -> createErrorFlux(e, sessionId));
             } catch (Exception e) {
@@ -94,7 +97,7 @@ public class DBAgentServiceImpl implements DBAgentService {
             return "";
         }
         String t = s.trim();
-        int max = InitDBConstants.CONTEXTUALIZE_BODY_MAX_CHARS;
+        int max = ContextualizeChartConstants.CONTEXTUALIZE_BODY_MAX_CHARS;
         if (t.length() > max) {
             return t.substring(0, max);
         }
@@ -103,17 +106,17 @@ public class DBAgentServiceImpl implements DBAgentService {
 
     private static Flux<String> createErrorFlux(Throwable e) {
         log.error("chatStream setup failed", e);
-        return Flux.just(DbChatGraphStream.streamLineSafe(InitDBConstants.STREAM_PART_ANSWER, InitDBConstants.CHAT_STREAM_ERR_SETUP_PREFIX + e.getMessage()));
+        return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER, "对话启动失败: " + e.getMessage()));
     }
 
     private static Flux<String> createErrorFlux(Throwable e, String sessionId) {
         if (e instanceof IllegalStateException && StrUtil.isNotEmpty(e.getMessage()) && e.getMessage().contains("Empty flux detected")) {
             log.warn("LLM stream empty for sessionId={}: {}", sessionId, e.getMessage());
-            return Flux.just(DbChatGraphStream.streamLineSafe(InitDBConstants.STREAM_PART_ANSWER,
-                    InitDBConstants.CHAT_STREAM_ERR_EMPTY_FLUX_PREFIX + e.getMessage()));
+            return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER,
+                    "模型流式通道无有效内容（API 无结果、内容审核或上下文异常等）。请稍后重试，或新建会话。 详情：" + e.getMessage()));
         }
         log.error("chatStream failed sessionId={}", sessionId, e);
-        return Flux.just(DbChatGraphStream.streamLineSafe(InitDBConstants.STREAM_PART_ANSWER, InitDBConstants.CHAT_STREAM_ERR_FAILED_PREFIX + e.getMessage()));
+        return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER, "对话生成失败: " + e.getMessage()));
     }
 
 }

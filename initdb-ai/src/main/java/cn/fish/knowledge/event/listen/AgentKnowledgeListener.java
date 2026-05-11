@@ -26,6 +26,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,7 +92,9 @@ public class AgentKnowledgeListener {
             String content = current.getContent();
             String question = current.getQuestion();
             String chatContent = StrUtil.format("问题：{}\n,回答:{} \n", question, content);
-            Document document = new Document(chatContent, Map.of("question", current.getQuestion()));
+            Map<String, Object> metadata = new HashMap<>(2);
+            metadata.put("question", current.getQuestion());
+            Document document = new Document(chatContent, metadata);
             // 不用分割 单个内容非常少
             List<Document> result = DocumentConverter.convertAgentKnowledgeDocumentsWithMetadata(CollUtil.newArrayList(document), current);
             vectorStoreRepository.add(result);

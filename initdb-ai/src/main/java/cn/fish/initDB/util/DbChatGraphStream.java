@@ -1,7 +1,14 @@
 package cn.fish.initDB.util;
 
-import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
+import cn.fish.initDB.workflow.agent.DbReactAgentConfig;
+import cn.fish.initDB.workflow.node.DbAgentInputBridgeNode;
+import cn.fish.initDB.workflow.node.DbDirectExecuteQueryNode;
+import cn.fish.initDB.workflow.node.DbDirectNl2SqlNode;
+import cn.fish.initDB.workflow.node.DbDirectSqlGuardNode;
+import cn.fish.initDB.workflow.node.DbDirectTableCatalogNode;
+import cn.fish.initDB.workflow.node.DbIntentClassificationNode;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
@@ -27,11 +34,11 @@ import java.util.stream.Collectors;
 /**
  * DB 聊天工作流 {@link com.alibaba.cloud.ai.graph.CompiledGraph#stream} 的应答侧处理：
  * {@link OutputType} 白名单、从 {@link StreamingOutput} 抽取用户可见文本、NDJSON 行封装（与 {@code static/js/chat.js} 协议一致）。
- * 工作流阶段说明使用 {@link InitDBConstants#STREAM_PART_TRACE}，与正文 {@link InitDBConstants#STREAM_PART_ANSWER} 分离。
+ * 工作流阶段说明使用 {@link WorkflowConstants#STREAM_PART_TRACE}，与正文 {@link WorkflowConstants#STREAM_PART_ANSWER} 分离。
  */
 public final class DbChatGraphStream {
 
-    /** ReAct 子图内模型流式帧的 {@link NodeOutput#node()} 占位名，与外层 {@link InitDBConstants#NODE_DB_REACT} 不同 */
+    // ReAct 子图内模型流式帧的 node() 占位名，与外层 DbReactAgentConfig.GRAPH_NODE_ID 不同
     private static final String GRAPH_INTERNAL_AGENT_MODEL_NODE = "_AGENT_MODEL_";
 
     /** 思考过程里展示的当前问句摘要长度上限（避免 NDJSON 过大） */
@@ -48,11 +55,11 @@ public final class DbChatGraphStream {
     }
 
     /**
-     * 单帧 → 零或多行 NDJSON，{@code p} 固定为 {@link InitDBConstants#STREAM_PART_ANSWER}。
+     * 单帧 → 零或多行 NDJSON，{@code p} 固定为 {@link WorkflowConstants#STREAM_PART_ANSWER}。
      */
     public static Flux<String> mapNodeToAnswerNdjsonLines(NodeOutput nodeOutput) {
         return mapNodeToAnswerDeltas(nodeOutput)
-                .map(delta -> streamLineSafe(InitDBConstants.STREAM_PART_ANSWER, delta));
+                .map(delta -> streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER, delta));
     }
 
     /**
@@ -101,7 +108,7 @@ public final class DbChatGraphStream {
         if (!(nodeOutput instanceof StreamingOutput<?> streamingOutput)) {
             return Optional.empty();
         }
-        if (!allowsStreamingOutput(streamingOutput)) {
+        if (allowsStreamingOutput(streamingOutput)) {
             return Optional.empty();
         }
         String key = streamSegmentKey(streamingOutput);
@@ -114,7 +121,7 @@ public final class DbChatGraphStream {
         }
         lastSegmentKey.set(key);
         String line = describeStreamSegment(streamingOutput);
-        return Optional.of(streamLineSafe(InitDBConstants.STREAM_PART_TRACE, line));
+        return Optional.of(streamLineSafe(WorkflowConstants.STREAM_PART_TRACE, line));
     }
 
     /**
@@ -140,14 +147,14 @@ public final class DbChatGraphStream {
             return Optional.empty();
         }
         lastStructuralKey.set(dedupeKey);
-        return lineOpt.map(l -> streamLineSafe(InitDBConstants.STREAM_PART_TRACE, l));
+        return lineOpt.map(l -> streamLineSafe(WorkflowConstants.STREAM_PART_TRACE, l));
     }
 
     /**
      * 模型流式帧上出现 {@link AssistantMessage#getToolCalls()} 时追加说明（与「模型输出正文」区分）。
      */
     public static Optional<String> tryEmitToolTraceNdjsonLine(StreamingOutput<?> streamingOutput, AtomicReference<String> lastToolSignature) {
-        if (!allowsStreamingOutput(streamingOutput) || streamingOutput.getOutputType() != OutputType.AGENT_MODEL_STREAMING) {
+        if (allowsStreamingOutput(streamingOutput) || streamingOutput.getOutputType() != OutputType.AGENT_MODEL_STREAMING) {
             return Optional.empty();
         }
         var msg = streamingOutput.message();
@@ -180,8 +187,8 @@ public final class DbChatGraphStream {
         if (names.length() > 200) {
             names = names.substring(0, 200) + "…";
         }
-        String line = "【" + InitDBConstants.DB_REACT_AGENT_DISPLAY_NAME + "】调用工具：" + names;
-        return Optional.of(streamLineSafe(InitDBConstants.STREAM_PART_TRACE, line));
+        String line = "【" + WorkflowConstants.DB_REACT_AGENT_DISPLAY_NAME + "】调用工具：" + names;
+        return Optional.of(streamLineSafe(WorkflowConstants.STREAM_PART_TRACE, line));
     }
 
     /**
@@ -201,13 +208,13 @@ public final class DbChatGraphStream {
         OutputType ot = streamingOutput.getOutputType();
         OverAllState st = streamingOutput.state();
         String q = standaloneOneLineForTrace(st);
-        if (InitDBConstants.NODE_DB_DIRECT_EXECUTE.equals(node) && ot == OutputType.GRAPH_NODE_STREAMING) {
+        if (DbDirectExecuteQueryNode.GRAPH_NODE_ID.equals(node) && ot == OutputType.GRAPH_NODE_STREAMING) {
             String head = "【直连执行】正在生成答复（含 SQL 与结果表格）";
             return appendQuestionSnippetLine(head, q);
         }
         if (ot == OutputType.AGENT_MODEL_STREAMING
-                && (InitDBConstants.NODE_DB_REACT.equals(node) || GRAPH_INTERNAL_AGENT_MODEL_NODE.equals(node))) {
-            String head = "【" + InitDBConstants.DB_REACT_AGENT_DISPLAY_NAME + "】正在组织自然语言回答";
+                && (DbReactAgentConfig.GRAPH_NODE_ID.equals(node) || GRAPH_INTERNAL_AGENT_MODEL_NODE.equals(node))) {
+            String head = "【" + WorkflowConstants.DB_REACT_AGENT_DISPLAY_NAME + "】正在组织自然语言回答";
             return appendQuestionSnippetLine(head, q);
         }
         if (ot == OutputType.AGENT_MODEL_STREAMING) {
@@ -232,7 +239,7 @@ public final class DbChatGraphStream {
         if (ObjectUtil.isNull(state)) {
             return "";
         }
-        String raw = state.value(InitDBConstants.STANDALONE, "");
+        String raw = state.value(WorkflowConstants.STANDALONE, "");
         if (StrUtil.isBlank(raw)) {
             return "";
         }
@@ -244,21 +251,21 @@ public final class DbChatGraphStream {
     }
 
     private static Optional<String> buildStructuralTraceLine(String node, Map<String, Object> bundle) {
-        if (InitDBConstants.NODE_DB_INTENT.equals(node)) {
-            String route = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_DB_ROUTE, "");
+        if (DbIntentClassificationNode.GRAPH_NODE_ID.equals(node)) {
+            String route = DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_ROUTE, "");
             return Optional.of("【意图识别】问句已分析，本轮分支：" + routeTraceLabel(route));
         }
-        if (InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE.equals(node)) {
-            return Optional.of("【会话衔接】已进入「" + InitDBConstants.DB_REACT_AGENT_DISPLAY_NAME + "」推理链路（结合上下文与工具查数）…");
+        if (DbAgentInputBridgeNode.GRAPH_NODE_ID.equals(node)) {
+            return Optional.of("【会话衔接】已进入「" + WorkflowConstants.DB_REACT_AGENT_DISPLAY_NAME + "」推理链路（结合上下文与工具查数）…");
         }
-        if (InitDBConstants.NODE_DB_DIRECT_TABLE_CATALOG.equals(node)) {
+        if (DbDirectTableCatalogNode.GRAPH_NODE_ID.equals(node)) {
             return Optional.of("【直连数据】已加载当前库表清单（表名与注释），准备生成 SQL…");
         }
-        if (InitDBConstants.NODE_DB_DIRECT_NL2SQL.equals(node)) {
+        if (DbDirectNl2SqlNode.GRAPH_NODE_ID.equals(node)) {
             return Optional.of("【直连数据】正在根据问句生成可执行 SQL…");
         }
-        if (InitDBConstants.NODE_DB_DIRECT_SQL_GUARD.equals(node)) {
-            Object okObj = bundle.get(InitDBConstants.STATE_KEY_SQL_GUARD_OK);
+        if (DbDirectSqlGuardNode.GRAPH_NODE_ID.equals(node)) {
+            Object okObj = bundle.get(WorkflowConstants.DB_BUNDLE_KEY_SQL_GUARD);
             boolean ok = Boolean.TRUE.equals(okObj)
                     || (okObj instanceof String s && "true".equalsIgnoreCase(s.trim()));
             return Optional.of(ok
@@ -269,27 +276,35 @@ public final class DbChatGraphStream {
     }
 
     private static String structuralPayloadKey(String node, Map<String, Object> bundle) {
-        if (InitDBConstants.NODE_DB_INTENT.equals(node)) {
-            return DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_DB_ROUTE, "");
+        if (DbIntentClassificationNode.GRAPH_NODE_ID.equals(node)) {
+            return DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_ROUTE, "");
         }
-        if (InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE.equals(node)) {
-            return DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_DB_ROUTE, "");
+        if (DbAgentInputBridgeNode.GRAPH_NODE_ID.equals(node)) {
+            return DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_ROUTE, "");
         }
-        if (InitDBConstants.NODE_DB_DIRECT_TABLE_CATALOG.equals(node)) {
-            return String.valueOf(DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, "").length());
+        if (DbDirectTableCatalogNode.GRAPH_NODE_ID.equals(node)) {
+            return String.valueOf(DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG_JSON, "").length());
         }
-        if (InitDBConstants.NODE_DB_DIRECT_NL2SQL.equals(node)) {
-            return String.valueOf(DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_GENERATED_SQL, "").hashCode());
+        if (DbDirectNl2SqlNode.GRAPH_NODE_ID.equals(node)) {
+            return String.valueOf(DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_GENERATED_SQL, "").hashCode());
         }
-        if (InitDBConstants.NODE_DB_DIRECT_SQL_GUARD.equals(node)) {
-            return String.valueOf(bundle.get(InitDBConstants.STATE_KEY_SQL_GUARD_OK))
-                    + "|" + DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_GENERATED_SQL, "").length();
+        if (DbDirectSqlGuardNode.GRAPH_NODE_ID.equals(node)) {
+            return String.valueOf(bundle.get(WorkflowConstants.DB_BUNDLE_KEY_SQL_GUARD))
+                    + "|" + DbWorkflowBundle.bundleString(bundle, WorkflowConstants.DB_BUNDLE_KEY_GENERATED_SQL, "").length();
         }
         return "";
     }
 
+    /** 与 bundle 内 {@link WorkflowConstants#DB_BUNDLE_KEY_ROUTE} 一致：{@code true}/旧版 {@code direct_data} 为直连 */
+    private static boolean isDirectDataRouteToken(String routeTrimmed) {
+        if (StrUtil.isBlank(routeTrimmed)) {
+            return false;
+        }
+        return "true".equalsIgnoreCase(routeTrimmed) || "direct_data".equalsIgnoreCase(routeTrimmed);
+    }
+
     private static String routeTraceLabel(String route) {
-        if (InitDBConstants.ROUTE_DIRECT_DATA_VALUE.equals(String.valueOf(route).trim())) {
+        if (isDirectDataRouteToken(String.valueOf(route).trim())) {
             return "直连取数（表清单 → 生成 SQL → 校验 → 执行）";
         }
         return "对话分析（ReAct，智能体推理与工具）";
@@ -300,14 +315,14 @@ public final class DbChatGraphStream {
             return "工作流";
         }
         if (GRAPH_INTERNAL_AGENT_MODEL_NODE.equals(node)) {
-            return InitDBConstants.DB_REACT_AGENT_DISPLAY_NAME;
+            return WorkflowConstants.DB_REACT_AGENT_DISPLAY_NAME;
         }
         return node;
     }
 
     private static Flux<String> mapNodeToAnswerDeltas(NodeOutput nodeOutput) {
         if (nodeOutput instanceof StreamingOutput<?> streamingOutput) {
-            if (!allowsStreamingOutput(streamingOutput)) {
+            if (allowsStreamingOutput(streamingOutput)) {
                 return Flux.empty();
             }
             String delta = streamingTextDelta(streamingOutput);
@@ -325,7 +340,7 @@ public final class DbChatGraphStream {
 
     private static boolean allowsStreamingOutput(StreamingOutput<?> streamingOutput) {
         OutputType ot = streamingOutput.getOutputType();
-        return ObjectUtil.isNotNull(ot) && STREAM_TEXT_OUTPUT_TYPES.contains(ot);
+        return !ObjectUtil.isNotNull(ot) || !STREAM_TEXT_OUTPUT_TYPES.contains(ot);
     }
 
     private static String coerceToTrimmedString(Object v) {
@@ -406,14 +421,14 @@ public final class DbChatGraphStream {
         try {
             return streamLine(part, text);
         } catch (JsonProcessingException e) {
-            return InitDBConstants.CHAT_STREAM_JSON_SERIALIZE_FAILED;
+            return "{\"p\":\"answer\",\"t\":\"流封装失败\"}\n";
         }
     }
 
     private static String streamLine(String part, String text) throws JsonProcessingException {
         Map<String, String> m = new LinkedHashMap<>(2);
-        m.put(InitDBConstants.NDJSON_KEY_PART, part);
-        m.put(InitDBConstants.NDJSON_KEY_TEXT, StrUtil.nullToEmpty(text));
+        m.put("p", part);
+        m.put("t", StrUtil.nullToEmpty(text));
         return STREAM_JSON.writeValueAsString(m) + "\n";
     }
 }
