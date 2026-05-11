@@ -36,21 +36,21 @@
             </includes>
         </fileSet>
 
-        <fileSet>
+        <!-- <fileSet>
             <directory>src/main/resources/i18n</directory>
             <outputDirectory>./i18n</outputDirectory>
             <includes>
                 <include>*.properties</include>
             </includes>
-        </fileSet>
+        </fileSet> -->
 
-        <fileSet>
+        <!-- <fileSet>
             <directory>src/main/resources</directory>
             <outputDirectory>./</outputDirectory>
             <includes>
                 <include>Dockerfile</include>
             </includes>
-        </fileSet>
+        </fileSet> -->
 
         <fileSet>
             <fileMode>775</fileMode>
