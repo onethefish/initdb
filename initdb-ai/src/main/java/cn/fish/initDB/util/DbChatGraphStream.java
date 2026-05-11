@@ -2,6 +2,7 @@ package cn.fish.initDB.util;
 
 import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -18,7 +19,6 @@ import reactor.core.publisher.Flux;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -105,11 +105,11 @@ public final class DbChatGraphStream {
             return Optional.empty();
         }
         String key = streamSegmentKey(streamingOutput);
-        if (key == null) {
+        if (ObjectUtil.isNull(key)) {
             return Optional.empty();
         }
         String prev = lastSegmentKey.get();
-        if (Objects.equals(prev, key)) {
+        if (ObjectUtil.equal(prev, key)) {
             return Optional.empty();
         }
         lastSegmentKey.set(key);
@@ -136,7 +136,7 @@ public final class DbChatGraphStream {
         }
         String dedupeKey = "struct:" + node + ":" + structuralPayloadKey(node, bundle);
         String prev = lastStructuralKey.get();
-        if (Objects.equals(prev, dedupeKey)) {
+        if (ObjectUtil.equal(prev, dedupeKey)) {
             return Optional.empty();
         }
         lastStructuralKey.set(dedupeKey);
@@ -156,7 +156,7 @@ public final class DbChatGraphStream {
         }
         StringBuilder sig = new StringBuilder();
         for (ToolCall tc : am.getToolCalls()) {
-            if (tc == null) {
+            if (ObjectUtil.isNull(tc)) {
                 continue;
             }
             sig.append(tc.id()).append(':').append(tc.name()).append(';');
@@ -165,12 +165,12 @@ public final class DbChatGraphStream {
             return Optional.empty();
         }
         String sigStr = sig.toString();
-        if (Objects.equals(lastToolSignature.get(), sigStr)) {
+        if (ObjectUtil.equal(lastToolSignature.get(), sigStr)) {
             return Optional.empty();
         }
         lastToolSignature.set(sigStr);
         String names = am.getToolCalls().stream()
-                           .filter(Objects::nonNull)
+                           .filter(ObjectUtil::isNotNull)
                            .map(ToolCall::name)
                            .filter(StrUtil::isNotBlank)
                            .collect(Collectors.joining("，"));
@@ -190,14 +190,14 @@ public final class DbChatGraphStream {
     private static String streamSegmentKey(StreamingOutput<?> streamingOutput) {
         String node = streamingOutput.node();
         OutputType ot = streamingOutput.getOutputType();
-        if (StrUtil.isBlank(node) && ot == null) {
+        if (StrUtil.isBlank(node) && ObjectUtil.isNull(ot)) {
             return null;
         }
-        return (node != null ? node : "") + '\0' + (ot != null ? ot.name() : "");
+        return StrUtil.nullToEmpty(node) + '\0' + (ObjectUtil.isNull(ot) ? "" : ot.name());
     }
 
     private static String describeStreamSegment(StreamingOutput<?> streamingOutput) {
-        String node = streamingOutput.node() != null ? streamingOutput.node() : "";
+        String node = StrUtil.nullToEmpty(streamingOutput.node());
         OutputType ot = streamingOutput.getOutputType();
         OverAllState st = streamingOutput.state();
         String q = standaloneOneLineForTrace(st);
@@ -218,7 +218,7 @@ public final class DbChatGraphStream {
             String head = "【" + traceNodeDisplayLabel(node) + "】节点流式输出中";
             return appendQuestionSnippetLine(head, q);
         }
-        return appendQuestionSnippetLine("【" + traceNodeDisplayLabel(node) + "】" + (ot != null ? ot.name() : "streaming"), q);
+        return appendQuestionSnippetLine("【" + traceNodeDisplayLabel(node) + "】" + (ObjectUtil.isNull(ot) ? "streaming" : ot.name()), q);
     }
 
     private static String appendQuestionSnippetLine(String head, String standaloneOneLine) {
@@ -229,7 +229,7 @@ public final class DbChatGraphStream {
     }
 
     private static String standaloneOneLineForTrace(OverAllState state) {
-        if (state == null) {
+        if (ObjectUtil.isNull(state)) {
             return "";
         }
         String raw = state.value(InitDBConstants.STANDALONE, "");
@@ -325,11 +325,11 @@ public final class DbChatGraphStream {
 
     private static boolean allowsStreamingOutput(StreamingOutput<?> streamingOutput) {
         OutputType ot = streamingOutput.getOutputType();
-        return ot != null && STREAM_TEXT_OUTPUT_TYPES.contains(ot);
+        return ObjectUtil.isNotNull(ot) && STREAM_TEXT_OUTPUT_TYPES.contains(ot);
     }
 
     private static String coerceToTrimmedString(Object v) {
-        if (v == null) {
+        if (ObjectUtil.isNull(v)) {
             return "";
         }
         return String.valueOf(v).trim();
@@ -352,14 +352,14 @@ public final class DbChatGraphStream {
         if (msg instanceof AssistantMessage am) {
             return assistantVisibleText(am);
         }
-        if (msg != null) {
+        if (ObjectUtil.isNotNull(msg)) {
             return StrUtil.nullToEmpty(msg.getText());
         }
         return "";
     }
 
     private static String originDataToVisibleText(Object origin) {
-        if (origin == null) {
+        if (ObjectUtil.isNull(origin)) {
             return "";
         }
         if (origin instanceof ChatResponse cr) {
@@ -393,7 +393,7 @@ public final class DbChatGraphStream {
     }
 
     private static String assistantVisibleText(AssistantMessage am) {
-        if (am == null) {
+        if (ObjectUtil.isNull(am)) {
             return "";
         }
         if (am.hasToolCalls() && StrUtil.isBlank(am.getText())) {

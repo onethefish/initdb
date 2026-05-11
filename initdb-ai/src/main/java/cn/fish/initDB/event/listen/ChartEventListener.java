@@ -7,6 +7,7 @@ import cn.fish.initDB.constants.InitDBConstants;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.fish.initDB.util.ChartConversationUtils;
 import cn.fish.initDB.workflow.agent.tool.AgentAbstractTool;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
@@ -65,7 +66,7 @@ public class ChartEventListener {
     public void autoSummarizeEvent(ChartAutoSummarizeEvent event) {
         RunnableConfig config = event.getConfig();
         String threadId = config.threadId().orElse(null);
-        if (threadId == null) {
+        if (ObjectUtil.isNull(threadId)) {
             return;
         }
         synchronized (lockForThread(threadId)) {
@@ -105,7 +106,7 @@ public class ChartEventListener {
 
                 Optional<Checkpoint> again = baseCheckpointSaver.get(config);
                 if (again.isEmpty()
-                        || !checkpointIdAtStart.equals(again.get().getId())
+                        || !ObjectUtil.equal(checkpointIdAtStart, again.get().getId())
                         || ChartConversationUtils.copyMessagesFromState(again.get().getState()).size()
                                 != messages.size()) {
                     log.info(
@@ -158,7 +159,7 @@ public class ChartEventListener {
     public void autoNameSessionAfterChartEvent(ChartAutoSummarizeEvent event) {
         RunnableConfig config = event.getConfig();
         String threadId = config.threadId().orElse(null);
-        if (threadId == null) {
+        if (ObjectUtil.isNull(threadId)) {
             return;
         }
         String sessionId = AgentAbstractTool.stripSubGraphCheckpointThreadSuffix(threadId);
@@ -166,11 +167,11 @@ public class ChartEventListener {
             try {
                 chatSessionRepository.incrementStreamDone(sessionId);
                 ChatSession session = chatSessionRepository.queryUnique(sessionId);
-                if (session == null) {
+                if (ObjectUtil.isNull(session)) {
                     return;
                 }
-                int completed = session.getStreamDone() == null ? 0 : session.getStreamDone();
-                int lastTitleAt = session.getNamedStream() == null ? 0 : session.getNamedStream();
+                int completed = ObjectUtil.defaultIfNull(session.getStreamDone(), 0);
+                int lastTitleAt = ObjectUtil.defaultIfNull(session.getNamedStream(), 0);
                 boolean placeholder = ChartConversationUtils.isPlaceholderSessionName(session.getSessionName());
                 boolean shouldCallModel =
                         placeholder || (completed - lastTitleAt >= InitDBConstants.CHART_SESSION_AUTO_TITLE_EVERY_N_STREAMS);
@@ -194,7 +195,7 @@ public class ChartEventListener {
                     return;
                 }
                 String currentName = StrUtil.trimToEmpty(session.getSessionName());
-                if (title.equals(currentName)) {
+                if (ObjectUtil.equal(title, currentName)) {
                     session.setNamedStream(completed);
                     chatSessionRepository.update(session);
                     return;

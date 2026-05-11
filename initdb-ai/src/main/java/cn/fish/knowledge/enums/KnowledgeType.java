@@ -15,6 +15,7 @@
  */
 package cn.fish.knowledge.enums;
 
+import cn.hutool.core.util.ObjectUtil;
 import lombok.Getter;
 
 /**
@@ -49,7 +50,7 @@ public enum KnowledgeType {
 
     public static String getValueByCode(String code) {
         for (KnowledgeType status : values()) {
-            if (status.getCode().equals(code)) {
+            if (ObjectUtil.equal(status.getCode(), code)) {
                 return status.getValue();
             }
         }

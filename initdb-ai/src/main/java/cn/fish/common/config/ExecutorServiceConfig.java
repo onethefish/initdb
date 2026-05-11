@@ -1,5 +1,6 @@
 package cn.fish.common.config;
 
+import cn.hutool.core.util.ObjectUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.annotation.Bean;
@@ -48,7 +49,7 @@ public class ExecutorServiceConfig implements DisposableBean {
 
     @Override
     public void destroy() {
-        if (initDbExecutor != null && !initDbExecutor.isShutdown()) {
+        if (ObjectUtil.isNotNull(initDbExecutor) && !initDbExecutor.isShutdown()) {
             log.info("Shutting down initDb executor...");
 
             // 记录关闭前的状态，便于排查问题

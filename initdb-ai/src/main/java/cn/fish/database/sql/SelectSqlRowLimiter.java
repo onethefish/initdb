@@ -1,5 +1,6 @@
 package cn.fish.database.sql;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.JSQLParserException;
@@ -57,11 +58,11 @@ public final class SelectSqlRowLimiter {
     }
 
     private static boolean hasExistingRowCap(Select select) {
-        if (select.getLimit() != null || select.getFetch() != null || select.getLimitBy() != null) {
+        if (ObjectUtil.isNotNull(select.getLimit()) || ObjectUtil.isNotNull(select.getFetch()) || ObjectUtil.isNotNull(select.getLimitBy())) {
             return true;
         }
         if (select instanceof PlainSelect plain) {
-            return plain.getTop() != null || plain.getFirst() != null;
+            return ObjectUtil.isNotNull(plain.getTop()) || ObjectUtil.isNotNull(plain.getFirst());
         }
         return false;
     }

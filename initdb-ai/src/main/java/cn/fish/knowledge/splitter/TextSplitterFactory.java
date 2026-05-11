@@ -16,6 +16,7 @@
 package cn.fish.knowledge.splitter;
 
 import cn.fish.knowledge.enums.SplitterType;
+import cn.hutool.core.util.ObjectUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.transformer.splitter.TextSplitter;
@@ -40,7 +41,7 @@ public class TextSplitterFactory {
         // 1. 尝试直接获取
         TextSplitter splitter = splitterMap.get(type);
         // 2. 如果没找到，尝返回默认
-        if (splitter == null) {
+        if (ObjectUtil.isNull(splitter)) {
             log.warn("Splitter type '{}' not found, falling back to default 'token'", type);
             return splitterMap.get(SplitterType.TOKEN.getCode());
         }

@@ -15,6 +15,7 @@
  */
 package cn.fish.knowledge.splitter;
 
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -225,7 +226,7 @@ public class SemanticTextSplitter extends TextSplitter {
 	}
 
 	private double cosineSimilarity(float[] vec1, float[] vec2) {
-		if (vec1 == null || vec2 == null || vec1.length != vec2.length)
+		if (ObjectUtil.isNull(vec1) || ObjectUtil.isNull(vec2) || vec1.length != vec2.length)
 			return 0.0;
 		double dot = 0.0, norm1 = 0.0, norm2 = 0.0;
 		for (int i = 0; i < vec1.length; i++) {

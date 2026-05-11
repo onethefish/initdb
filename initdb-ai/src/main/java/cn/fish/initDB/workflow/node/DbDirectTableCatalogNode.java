@@ -56,7 +56,7 @@ public class DbDirectTableCatalogNode implements NodeAction {
                     }
                     JSONObject o = new JSONObject(new LinkedHashMap<>(4));
                     o.put("tableName", t.getTableName());
-                    o.put("remarks", t.getRemarks() != null ? t.getRemarks() : "");
+                    o.put("remarks", StrUtil.nullToEmpty(t.getRemarks()));
                     arr.add(o);
                 }
             }

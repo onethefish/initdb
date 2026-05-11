@@ -15,6 +15,7 @@
  */
 package cn.fish.knowledge.enums;
 
+import cn.hutool.core.util.ObjectUtil;
 import lombok.Getter;
 
 @Getter
@@ -35,7 +36,7 @@ public enum EmbeddingStatus {
 
     public static String getValueByCode(Integer code) {
         for (EmbeddingStatus status : values()) {
-            if (status.getCode().equals(code)) {
+            if (ObjectUtil.equal(status.getCode(), code)) {
                 return status.getValue();
             }
         }

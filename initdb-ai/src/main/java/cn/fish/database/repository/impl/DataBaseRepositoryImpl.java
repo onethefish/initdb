@@ -2,6 +2,7 @@ package cn.fish.database.repository.impl;
 
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.database.repository.DataBaseRepository;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -80,7 +81,7 @@ public class DataBaseRepositoryImpl implements DataBaseRepository {
     }
 
     private static void dataSourceClose(DataSource dataSource) {
-        if (dataSource == null) {
+        if (ObjectUtil.isNull(dataSource)) {
             return;
         }
         if (dataSource instanceof HikariDataSource hikariDataSource) {

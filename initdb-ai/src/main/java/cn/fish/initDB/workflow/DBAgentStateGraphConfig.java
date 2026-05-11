@@ -1,6 +1,7 @@
 package cn.fish.initDB.workflow;
 
 import cn.fish.initDB.constants.InitDBConstants;
+import cn.hutool.core.util.ObjectUtil;
 import cn.fish.initDB.service.ContextualizeService;
 import cn.fish.initDB.workflow.node.DbAgentInputBridgeNode;
 import cn.fish.initDB.workflow.node.DbDirectExecuteQueryNode;
@@ -121,7 +122,7 @@ public class DBAgentStateGraphConfig {
      */
     private static String intentRouteTarget(OverAllState state) {
         Object v = DbWorkflowBundle.readCopy(state).getOrDefault(InitDBConstants.STATE_KEY_DB_ROUTE, InitDBConstants.ROUTE_REACT_VALUE);
-        if (v == null) {
+        if (ObjectUtil.isNull(v)) {
             return InitDBConstants.ROUTE_REACT_VALUE;
         }
         String s = String.valueOf(v).trim();

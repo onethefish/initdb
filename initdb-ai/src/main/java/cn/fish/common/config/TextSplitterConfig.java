@@ -1,6 +1,7 @@
 package cn.fish.common.config;
 
 import cn.fish.common.properties.TextSplitterProperties;
+import cn.hutool.core.util.ArrayUtil;
 import cn.fish.knowledge.splitter.ParagraphTextSplitter;
 import cn.fish.knowledge.splitter.SemanticTextSplitter;
 import cn.fish.knowledge.splitter.SentenceSplitter;
@@ -34,7 +35,7 @@ public class TextSplitterConfig {
         TextSplitterProperties.RecursiveTextSplitterConfig config = textSplitterProps.getRecursive();
         // RecursiveCharacterTextSplitter
         String[] separators = config.getSeparators();
-        if (separators != null && separators.length > 0) {
+        if (ArrayUtil.isNotEmpty(separators)) {
             return new RecursiveCharacterTextSplitter(textSplitterProps.getChunkSize(), separators);
         }
         else {

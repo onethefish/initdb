@@ -1,6 +1,7 @@
 package cn.fish.initDB.workflow;
 
 import cn.fish.initDB.constants.InitDBConstants;
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import java.util.LinkedHashMap;
@@ -29,7 +30,7 @@ public final class DbWorkflowBundle {
              .ifPresent(raw -> {
                  Map<?, ?> src = (Map<?, ?>) raw;
                  for (Map.Entry<?, ?> e : src.entrySet()) {
-                     if (e.getKey() != null) {
+                     if (ObjectUtil.isNotNull(e.getKey())) {
                          b.put(String.valueOf(e.getKey()), e.getValue());
                      }
                  }
@@ -53,7 +54,7 @@ public final class DbWorkflowBundle {
 
     public static String bundleString(Map<String, Object> bundle, String key, String defaultVal) {
         Object v = bundle.get(key);
-        if (v == null) {
+        if (ObjectUtil.isNull(v)) {
             return defaultVal;
         }
         return String.valueOf(v);
@@ -85,7 +86,7 @@ public final class DbWorkflowBundle {
         OverAllState st = nodeOutput.state();
         Map<String, Object> b = readCopy(st);
         Object v = b.get(InitDBConstants.STATE_KEY_DIRECT_ANSWER);
-        if (v != null) {
+        if (ObjectUtil.isNotNull(v)) {
             return Optional.of(v);
         }
         return st.value(InitDBConstants.STATE_KEY_DIRECT_ANSWER);

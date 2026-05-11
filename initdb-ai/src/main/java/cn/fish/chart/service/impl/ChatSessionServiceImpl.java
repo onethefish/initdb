@@ -7,6 +7,7 @@ import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
@@ -46,10 +47,10 @@ public class ChatSessionServiceImpl implements ChatSessionService {
             throw new CommonException("请选择数据源");
         }
         AgentDatasource ds = agentDatasourceRepository.getById(chatSession.getDatasourceId());
-        if (ds == null) {
+        if (ObjectUtil.isNull(ds)) {
             throw new CommonException("数据源不存在");
         }
-        if (!Integer.valueOf(1).equals(ds.getStatus()) || !Integer.valueOf(1).equals(ds.getTestStatus())) {
+        if (!ObjectUtil.equal(1, ds.getStatus()) || !ObjectUtil.equal(1, ds.getTestStatus())) {
             throw new CommonException("仅可选择已启用且连接测试成功的数据源，请先在数据源管理中配置并测试");
         }
         if (StrUtil.isBlank(ds.getConnectionUrl()) || StrUtil.isBlank(ds.getUsername())) {

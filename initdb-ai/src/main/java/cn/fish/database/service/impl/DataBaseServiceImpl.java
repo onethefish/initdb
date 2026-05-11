@@ -7,6 +7,7 @@ import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
+import cn.hutool.core.util.ObjectUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
@@ -156,7 +157,7 @@ public class DataBaseServiceImpl implements DataBaseService {
         String sessionId = chatSession.getSessionId();
         DataSource result = dataBaseRepository.get(sessionId);
         // 重新加载数据源
-        if (result == null) {
+        if (ObjectUtil.isNull(result)) {
             String datasourceId = chatSession.getDatasourceId();
             AgentDatasource byId = agentDatasourceRepository.getById(datasourceId);
             result = dataBaseRepository.add(sessionId, byId.getConnectionUrl(), byId.getUsername(), byId.getPassword());
