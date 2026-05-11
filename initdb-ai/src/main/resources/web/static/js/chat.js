@@ -5,6 +5,9 @@ let sessions = [];
 let currentSessionId = null;
 let sessionNameSuffixCounter = 1;
 
+/** 智能对话流式输出进行中：仅禁用发送相关按钮，输入框可继续编辑下一条 */
+let isDbChatStreaming = false;
+
 const DB_SESSIONS_STORAGE_KEY = 'dbSessions';
 
 function readPersistedState() {
@@ -285,9 +288,9 @@ async function previewContextualize() {
         console.error('previewContextualize:', error);
         notifyErrorUnlessShown(error, '补全会话失败');
     } finally {
-        const inputEl = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendMessageBtn');
         if (btn) {
-            btn.disabled = !!(inputEl && inputEl.disabled);
+            btn.disabled = !!(sendBtn && sendBtn.disabled);
         }
     }
 }
@@ -542,6 +545,7 @@ async function sendMessage() {
     const message = inputElement.value.trim();
 
     if (!message) return;
+    if (isDbChatStreaming) return;
 
     if (!currentSessionId) {
         showErrorDialog({title: '提示', message: '请先创建并选择一个对话'});
@@ -557,7 +561,7 @@ async function sendMessage() {
 
     inputElement.value = '';
 
-    inputElement.disabled = true;
+    isDbChatStreaming = true;
     setSendButtonDisabled(true);
 
     try {
@@ -666,7 +670,7 @@ async function sendMessage() {
         sessions[sessionIndex].messages.push(errorMsg);
         addMessageToDOM('bot', `错误: ${error.message}`);
     } finally {
-        inputElement.disabled = false;
+        isDbChatStreaming = false;
         setSendButtonDisabled(false);
         inputElement.focus();
     }
@@ -686,6 +690,10 @@ function handleUserInputKeydown(event) {
                 applyStandaloneToUserInput();
             }
         }
+        return;
+    }
+    if (isDbChatStreaming) {
+        event.preventDefault();
         return;
     }
     event.preventDefault();
