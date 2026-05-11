@@ -22,6 +22,8 @@ public final class InitDBConstants {
 
     /** 意图：走原 ReAct 对话 */
     public static final String NODE_DB_INTENT = "db_intent_classification";
+    /** 直连查数：拉取当前库表清单（tableName + remarks） */
+    public static final String NODE_DB_DIRECT_TABLE_CATALOG = "db_direct_table_catalog";
     /** 直连查数：生成 SQL */
     public static final String NODE_DB_DIRECT_NL2SQL = "db_direct_nl2sql";
     /** 直连查数：校验 SQL */
@@ -38,6 +40,10 @@ public final class InitDBConstants {
     public static final String STATE_KEY_DB_ROUTE = "db_route";
     /** 客户端会话 id，供直连节点解析 {@link cn.fish.chart.entity.ChatSession} */
     public static final String STATE_KEY_SESSION_ID = "session_id";
+    /** 直连：JSON 数组，元素含 {@code tableName}、{@code remarks}，供 NL2SQL 约束 {@code FROM} */
+    public static final String STATE_KEY_DIRECT_TABLE_CATALOG_JSON = "direct_table_catalog_json";
+    /** 直连：表清单是否已成功加载（否时 direct_answer 含提示，条件边走向 END） */
+    public static final String STATE_KEY_DIRECT_CATALOG_OK = "direct_catalog_ok";
     /** 直连链路生成的单条 SQL */
     public static final String STATE_KEY_GENERATED_SQL = "generated_sql";
     /** 直连：SQL 是否通过校验（供条件边读取） */
@@ -56,6 +62,11 @@ public final class InitDBConstants {
     public static final String SQL_GUARD_EDGE_OK = "sql_guard_ok";
     public static final String SQL_GUARD_EDGE_FAIL = "sql_guard_fail";
 
+    /** 直连表清单条件边：成功 → NL2SQL */
+    public static final String DIRECT_CATALOG_EDGE_OK = "direct_catalog_ok";
+    /** 直连表清单条件边：失败 → END */
+    public static final String DIRECT_CATALOG_EDGE_FAIL = "direct_catalog_fail";
+
     /**
      * 父/子图 checkpoint threadId 中用于还原业务 sessionId 的片段
      */
@@ -69,6 +80,8 @@ public final class InitDBConstants {
     public static final String NDJSON_KEY_PART = "p";
     public static final String NDJSON_KEY_TEXT = "t";
     public static final String STREAM_PART_CONTEXTUALIZE = "contextualize";
+    /** 工作流可观测（与 {@link #STREAM_PART_ANSWER} 分离，前端展示为「思考过程」） */
+    public static final String STREAM_PART_TRACE = "trace";
     public static final String STREAM_PART_ANSWER = "answer";
 
     public static final String CHAT_STREAM_JSON_SERIALIZE_FAILED =

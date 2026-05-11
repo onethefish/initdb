@@ -36,12 +36,14 @@ public class DbDirectNl2SqlNode implements NodeAction {
     @Override
     public Map<String, Object> apply(OverAllState state) {
         String standalone = state.value(InitDBConstants.STANDALONE, "").trim();
-        String sql = resolveSql(standalone);
+        String catalogJson = DbWorkflowBundle.bundleString(
+                DbWorkflowBundle.readCopy(state), InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, "[]");
+        String sql = resolveSql(standalone, catalogJson);
         log.info("db direct nl2sql length={}", sql != null ? sql.length() : 0);
         return DbWorkflowBundle.writeBundle(state, b -> b.put(InitDBConstants.STATE_KEY_GENERATED_SQL, sql));
     }
 
-    private String resolveSql(String text) {
+    private String resolveSql(String text, String tableCatalogJson) {
         if (!StringUtils.hasText(text)) {
             return "SELECT 1 AS placeholder";
         }
@@ -54,7 +56,7 @@ public class DbDirectNl2SqlNode implements NodeAction {
             return normalizeOneStatement(sel.group(1));
         }
         try {
-            String raw = chatModel.call(new Prompt(applicationPromptTemplates.renderDbDirectNl2sql(text)))
+            String raw = chatModel.call(new Prompt(applicationPromptTemplates.renderDbDirectNl2sql(text, tableCatalogJson)))
                                   .getResult()
                                   .getOutput()
                                   .getText();

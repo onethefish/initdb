@@ -6,6 +6,7 @@ import cn.fish.initDB.workflow.node.DbAgentInputBridgeNode;
 import cn.fish.initDB.workflow.node.DbDirectExecuteQueryNode;
 import cn.fish.initDB.workflow.node.DbDirectNl2SqlNode;
 import cn.fish.initDB.workflow.node.DbDirectSqlGuardNode;
+import cn.fish.initDB.workflow.node.DbDirectTableCatalogNode;
 import cn.fish.initDB.workflow.node.DbIntentClassificationNode;
 import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -26,7 +27,7 @@ import static com.alibaba.cloud.ai.graph.action.AsyncEdgeAction.edge_async;
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 
 /**
- * DB Agent 聊天工作流：路由 → 用户明确写出 SELECT/WITH（或整段单个 ```sql 围栏）时直连；否则由意图节点中的模型在「单表明细直连」与「ReAct 对话」间分类，再走 NL2SQL+校验 或 桥接→ReAct。
+ * DB Agent 聊天工作流：路由 → 用户明确写出 SELECT/WITH（或整段单个 ```sql 围栏）时直连；否则由意图节点中的模型在「单表明细直连」与「ReAct 对话」间分类，再走 表清单→NL2SQL→校验 或 桥接→ReAct。
  * 问句补全见 {@link ContextualizeService}（在 {@link cn.fish.initDB.service.impl.DBAgentServiceImpl} 中图外执行）。
  */
 @Slf4j
@@ -38,12 +39,13 @@ public class DBAgentStateGraphConfig {
             @Qualifier(InitDBConstants.DB_REACT_AGENT_BEAN) ReactAgent dbReactAgent,
             MemorySaver memorySaver,
             DbIntentClassificationNode dbIntentClassificationNode,
+            DbDirectTableCatalogNode dbDirectTableCatalogNode,
             DbDirectNl2SqlNode dbDirectNl2SqlNode,
             DbDirectSqlGuardNode dbDirectSqlGuardNode,
             DbDirectExecuteQueryNode dbDirectExecuteQueryNode) {
         try {
-            return buildDbChatWorkflow(dbReactAgent, memorySaver, dbIntentClassificationNode, dbDirectNl2SqlNode,
-                    dbDirectSqlGuardNode, dbDirectExecuteQueryNode);
+            return buildDbChatWorkflow(dbReactAgent, memorySaver, dbIntentClassificationNode, dbDirectTableCatalogNode,
+                    dbDirectNl2SqlNode, dbDirectSqlGuardNode, dbDirectExecuteQueryNode);
         } catch (GraphStateException e) {
             throw new IllegalStateException("db_chat_workflow compile failed", e);
         }
@@ -53,6 +55,7 @@ public class DBAgentStateGraphConfig {
             ReactAgent dbReactAgent,
             MemorySaver memorySaver,
             DbIntentClassificationNode intentClassificationNode,
+            DbDirectTableCatalogNode directTableCatalogNode,
             DbDirectNl2SqlNode directNl2SqlNode,
             DbDirectSqlGuardNode directSqlGuardNode,
             DbDirectExecuteQueryNode directExecuteQueryNode) throws GraphStateException {
@@ -69,6 +72,7 @@ public class DBAgentStateGraphConfig {
         stateGraph.addNode(InitDBConstants.NODE_DB_INTENT, node_async(intentClassificationNode));
         stateGraph.addNode(InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE, node_async(new DbAgentInputBridgeNode()));
         stateGraph.addNode(InitDBConstants.NODE_DB_REACT, dbReactAgent.getAndCompileGraph());
+        stateGraph.addNode(InitDBConstants.NODE_DB_DIRECT_TABLE_CATALOG, node_async(directTableCatalogNode));
         stateGraph.addNode(InitDBConstants.NODE_DB_DIRECT_NL2SQL, node_async(directNl2SqlNode));
         stateGraph.addNode(InitDBConstants.NODE_DB_DIRECT_SQL_GUARD, node_async(directSqlGuardNode));
         stateGraph.addNode(InitDBConstants.NODE_DB_DIRECT_EXECUTE, node_async(directExecuteQueryNode));
@@ -79,12 +83,19 @@ public class DBAgentStateGraphConfig {
                 edge_async(DBAgentStateGraphConfig::intentRouteTarget),
                 Map.of(
                         InitDBConstants.ROUTE_REACT_VALUE, InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE,
-                        InitDBConstants.ROUTE_DIRECT_DATA_VALUE, InitDBConstants.NODE_DB_DIRECT_NL2SQL
+                        InitDBConstants.ROUTE_DIRECT_DATA_VALUE, InitDBConstants.NODE_DB_DIRECT_TABLE_CATALOG
                 ));
 
         stateGraph.addEdge(InitDBConstants.NODE_DB_AGENT_INPUT_BRIDGE, InitDBConstants.NODE_DB_REACT);
         stateGraph.addEdge(InitDBConstants.NODE_DB_REACT, StateGraph.END);
 
+        stateGraph.addConditionalEdges(
+                InitDBConstants.NODE_DB_DIRECT_TABLE_CATALOG,
+                edge_async(DBAgentStateGraphConfig::directCatalogBranch),
+                Map.of(
+                        InitDBConstants.DIRECT_CATALOG_EDGE_OK, InitDBConstants.NODE_DB_DIRECT_NL2SQL,
+                        InitDBConstants.DIRECT_CATALOG_EDGE_FAIL, StateGraph.END
+                ));
         stateGraph.addEdge(InitDBConstants.NODE_DB_DIRECT_NL2SQL, InitDBConstants.NODE_DB_DIRECT_SQL_GUARD);
         stateGraph.addConditionalEdges(
                 InitDBConstants.NODE_DB_DIRECT_SQL_GUARD,
@@ -125,5 +136,12 @@ public class DBAgentStateGraphConfig {
         boolean pass = Boolean.TRUE.equals(ok)
                 || (ok instanceof String s && "true".equalsIgnoreCase(s.trim()));
         return pass ? InitDBConstants.SQL_GUARD_EDGE_OK : InitDBConstants.SQL_GUARD_EDGE_FAIL;
+    }
+
+    private static String directCatalogBranch(OverAllState state) {
+        Object ok = DbWorkflowBundle.readCopy(state).getOrDefault(InitDBConstants.STATE_KEY_DIRECT_CATALOG_OK, Boolean.FALSE);
+        boolean pass = Boolean.TRUE.equals(ok)
+                || (ok instanceof String s && "true".equalsIgnoreCase(s.trim()));
+        return pass ? InitDBConstants.DIRECT_CATALOG_EDGE_OK : InitDBConstants.DIRECT_CATALOG_EDGE_FAIL;
     }
 }

@@ -39,6 +39,8 @@ public final class DbWorkflowBundle {
         overlayLegacyTopLevel(state, b, InitDBConstants.STATE_KEY_GENERATED_SQL);
         overlayLegacyTopLevel(state, b, InitDBConstants.STATE_KEY_SQL_GUARD_OK);
         overlayLegacyTopLevel(state, b, InitDBConstants.STATE_KEY_DIRECT_ANSWER);
+        overlayLegacyTopLevel(state, b, InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON);
+        overlayLegacyTopLevel(state, b, InitDBConstants.STATE_KEY_DIRECT_CATALOG_OK);
         return b;
     }
 
@@ -71,6 +73,8 @@ public final class DbWorkflowBundle {
         b.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, "");
         b.put(InitDBConstants.STATE_KEY_GENERATED_SQL, "");
         b.put(InitDBConstants.STATE_KEY_SQL_GUARD_OK, Boolean.FALSE);
+        b.put(InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, "[]");
+        b.put(InitDBConstants.STATE_KEY_DIRECT_CATALOG_OK, Boolean.FALSE);
         return b;
     }
 

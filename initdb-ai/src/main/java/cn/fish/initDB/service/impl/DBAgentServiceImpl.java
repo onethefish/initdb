@@ -19,6 +19,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
@@ -58,10 +59,14 @@ public class DBAgentServiceImpl implements DBAgentService {
                 inputs.put(InitDBConstants.STATE_KEY_DB_BUNDLE, DbWorkflowBundle.newInitialBundle(sessionId));
 
                 Flux<NodeOutput> stream = dbChatWorkflow.stream(inputs, config);
+                AtomicReference<String> streamTraceSegmentKey = new AtomicReference<>(null);
+                AtomicReference<String> structuralTraceKey = new AtomicReference<>(null);
+                AtomicReference<String> toolTraceSignature = new AtomicReference<>(null);
                 Flux<String> answerFlux = stream.doOnComplete(() -> eventPublisher.publishEvent(new ChartAutoSummarizeEvent(this, config)))
                                                 // 排除 START/END：END 常带整段合并 state，与直连 Flux 的 GRAPH_NODE_STREAMING 片段叠加会让前端 answer 重复累积。
                                                 .filter(nodeOutput -> !nodeOutput.isSTART() && !nodeOutput.isEND())
-                                                .concatMap(DbChatGraphStream::mapNodeToAnswerNdjsonLines);
+                                                .concatMap(nodeOutput -> DbChatGraphStream.concatChatStreamNdjsonLines(
+                                                        nodeOutput, structuralTraceKey, toolTraceSignature, streamTraceSegmentKey));
                 return answerFlux
                            .switchIfEmpty(Flux.defer(() -> {
                                log.warn("chatStream emitted no text for sessionId={}, model may have returned empty tokens", sessionId);

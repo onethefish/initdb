@@ -443,8 +443,12 @@ function renderChatMessages(messages) {
     chatMessagesElement.innerHTML = '';
 
     messages.forEach(msg => {
-        if (msg.role === 'bot' && msg.contextualize) {
-            addMessageToDOM('bot', {contextualize: msg.contextualize, content: msg.content || ''});
+        if (msg.role === 'bot' && (msg.contextualize || msg.trace)) {
+            addMessageToDOM('bot', {
+                contextualize: msg.contextualize,
+                trace: msg.trace,
+                content: msg.content || ''
+            });
         } else {
             addMessageToDOM(msg.role, msg.content);
         }
@@ -469,8 +473,8 @@ function setBotMessageHtml(messageDiv, md) {
     messageDiv.innerHTML = `<div class="bot-message-body">${parseBotMarkdown(md)}</div>`;
 }
 
-/** 补全区块 + 助手正文（最终态，answer 走 Markdown） */
-function setBotMessageStructured(messageDiv, contextualizeText, answerMd) {
+/** 补全区块 + 思考过程（工作流 trace）+ 助手正文（最终态，answer 走 Markdown） */
+function setBotMessageStructured(messageDiv, contextualizeText, traceText, answerMd) {
     const ctx = String(contextualizeText ?? '').trim();
     const ctxBlock = ctx
         ? `<div class="bot-contextualize-wrap" role="note" aria-label="补全的会话">
@@ -478,12 +482,20 @@ function setBotMessageStructured(messageDiv, contextualizeText, answerMd) {
         <div class="bot-contextualize-body">${escapeHtml(ctx)}</div>
     </div>`
         : '';
+    const tr = String(traceText ?? '').trim();
+    const traceBlock = tr
+        ? `<div class="bot-trace-wrap" role="note" aria-label="思考过程">
+        <div class="bot-trace-label">思考过程</div>
+        <div class="bot-trace-body">${escapeHtml(tr)}</div>
+    </div>`
+        : '';
+    const answerLead = tr ? '<div class="bot-answer-label">正式回答</div>' : '';
     const body = answerMd ? parseBotMarkdown(answerMd) : '';
-    messageDiv.innerHTML = `${ctxBlock}<div class="bot-message-body">${body}</div>`;
+    messageDiv.innerHTML = `${ctxBlock}${traceBlock}<div class="bot-message-body">${answerLead}${body}</div>`;
 }
 
-/** 流式：补全区 + 回答区均为纯文本，结束后再 setBotMessageStructured */
-function setBotMessageStreamingStructured(messageDiv, contextualizeText, answerPlain) {
+/** 流式：补全 / 思考过程 / 正式回答 三区；思考与回答流式阶段为纯文本，结束后再 setBotMessageStructured */
+function setBotMessageStreamingStructured(messageDiv, contextualizeText, tracePlain, answerPlain) {
     const ctx = String(contextualizeText ?? '').trim();
     const ctxBlock = ctx
         ? `<div class="bot-contextualize-wrap" role="note" aria-label="补全的会话">
@@ -491,7 +503,15 @@ function setBotMessageStreamingStructured(messageDiv, contextualizeText, answerP
         <div class="bot-contextualize-body">${escapeHtml(ctx)}</div>
     </div>`
         : '';
-    messageDiv.innerHTML = `${ctxBlock}<div class="bot-message-body"><pre class="bot-stream-plain">${escapeHtml(
+    const tr = String(tracePlain ?? '').trim();
+    const traceBlock = tr
+        ? `<div class="bot-trace-wrap" role="note" aria-label="思考过程">
+        <div class="bot-trace-label">思考过程</div>
+        <div class="bot-trace-body"><pre class="bot-stream-plain bot-trace-pre">${escapeHtml(tr)}</pre></div>
+    </div>`
+        : '';
+    const answerLead = tr ? '<div class="bot-answer-label">正式回答</div>' : '';
+    messageDiv.innerHTML = `${ctxBlock}${traceBlock}<div class="bot-message-body">${answerLead}<pre class="bot-stream-plain">${escapeHtml(
         String(answerPlain ?? '')
     )}</pre></div>`;
 }
@@ -507,7 +527,7 @@ function addMessageToDOM(role, content) {
     if (role === 'user') {
         messageDiv.innerHTML = escapeHtml(content);
     } else if (content && typeof content === 'object') {
-        setBotMessageStructured(messageDiv, content.contextualize, content.content || '');
+        setBotMessageStructured(messageDiv, content.contextualize, content.trace, content.content || '');
     } else {
         setBotMessageHtml(messageDiv, content || '');
     }
@@ -561,6 +581,7 @@ async function sendMessage() {
         const decoder = new TextDecoder('utf-8');
         let lineBuffer = '';
         let contextualizeText = '';
+        let traceAccum = '';
         let answerAccum = '';
         let streamRafId = null;
 
@@ -577,6 +598,8 @@ async function sendMessage() {
                     const o = JSON.parse(line);
                     if (o.p === 'contextualize' && typeof o.t === 'string') {
                         contextualizeText = o.t;
+                    } else if (o.p === 'trace' && typeof o.t === 'string') {
+                        traceAccum += (traceAccum ? '\n' : '') + o.t;
                     } else if (o.p === 'answer' && typeof o.t === 'string') {
                         answerAccum += o.t;
                     }
@@ -588,7 +611,7 @@ async function sendMessage() {
 
         const flushStreamToDom = () => {
             streamRafId = null;
-            setBotMessageStreamingStructured(botMessageDiv, contextualizeText, answerAccum);
+            setBotMessageStreamingStructured(botMessageDiv, contextualizeText, traceAccum, answerAccum);
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
         };
 
@@ -615,16 +638,25 @@ async function sendMessage() {
             streamRafId = null;
         }
 
-        if (!contextualizeText && !answerAccum) {
+        if (!contextualizeText && !answerAccum && !traceAccum) {
             throw new Error('请求失败：返回内容为空');
         }
 
-        setBotMessageStructured(botMessageDiv, contextualizeText, answerAccum);
+        setBotMessageStructured(botMessageDiv, contextualizeText, traceAccum, answerAccum);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
-        const botMsg = contextualizeText
-            ? {role: 'bot', contextualize: contextualizeText, content: answerAccum}
-            : {role: 'bot', content: answerAccum};
+        let botMsg;
+        if (contextualizeText || traceAccum) {
+            botMsg = {role: 'bot', content: answerAccum};
+            if (contextualizeText) {
+                botMsg.contextualize = contextualizeText;
+            }
+            if (traceAccum) {
+                botMsg.trace = traceAccum;
+            }
+        } else {
+            botMsg = {role: 'bot', content: answerAccum};
+        }
         sessions[sessionIndex].messages.push(botMsg);
         resetContextualizePreview();
         scheduleSessionNamePullAfterChatStream();

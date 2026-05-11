@@ -1,0 +1,82 @@
+package cn.fish.initDB.workflow.node;
+
+import cn.fish.chart.entity.ChatSession;
+import cn.fish.chart.repository.ChatSessionRepository;
+import cn.fish.database.service.DataBaseService;
+import cn.fish.initDB.constants.InitDBConstants;
+import cn.fish.initDB.entity.Table;
+import cn.fish.initDB.workflow.DbWorkflowBundle;
+import com.alibaba.cloud.ai.graph.OverAllState;
+import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 直连链路前置：按会话数据源拉取表清单（物理表名 + 注释），供 {@link DbDirectNl2SqlNode} 将用户中文称呼映射到真实 {@code FROM} 表名。
+ */
+@Slf4j
+@Component
+public class DbDirectTableCatalogNode implements NodeAction {
+
+    private final DataBaseService dataBaseService;
+    private final ChatSessionRepository chatSessionRepository;
+
+    public DbDirectTableCatalogNode(DataBaseService dataBaseService, ChatSessionRepository chatSessionRepository) {
+        this.dataBaseService = dataBaseService;
+        this.chatSessionRepository = chatSessionRepository;
+    }
+
+    @Override
+    public Map<String, Object> apply(OverAllState state) {
+        Map<String, Object> bundle = DbWorkflowBundle.readCopy(state);
+        String sessionId = DbWorkflowBundle.bundleString(bundle, InitDBConstants.STATE_KEY_SESSION_ID, "");
+        if (!StringUtils.hasText(sessionId)) {
+            return fail(state, "缺少会话标识，无法加载表清单。");
+        }
+        ChatSession chatSession = chatSessionRepository.queryUnique(sessionId);
+        if (chatSession == null) {
+            return fail(state, "未找到会话，请先连接数据库。");
+        }
+        try {
+            List<Table> tables = dataBaseService.queryTableList(chatSession);
+            JSONArray arr = new JSONArray();
+            if (tables != null) {
+                for (Table t : tables) {
+                    if (t == null || !StringUtils.hasText(t.getTableName())) {
+                        continue;
+                    }
+                    JSONObject o = new JSONObject(new LinkedHashMap<>(4));
+                    o.put("tableName", t.getTableName());
+                    o.put("remarks", t.getRemarks() != null ? t.getRemarks() : "");
+                    arr.add(o);
+                }
+            }
+            String json = JSON.toJSONString(arr);
+            log.info("db direct table_catalog tables={}", arr.size());
+            return DbWorkflowBundle.writeBundle(state, b -> {
+                b.put(InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, json);
+                b.put(InitDBConstants.STATE_KEY_DIRECT_CATALOG_OK, Boolean.TRUE);
+            });
+        } catch (Exception e) {
+            log.error("db direct table_catalog failed", e);
+            return fail(state, "加载表清单失败：" + e.getMessage());
+        }
+    }
+
+    private static Map<String, Object> fail(OverAllState state, String msg) {
+        String md = "## 提示\n\n" + msg;
+        return DbWorkflowBundle.writeBundle(state, b -> {
+            b.put(InitDBConstants.STATE_KEY_DIRECT_TABLE_CATALOG_JSON, "[]");
+            b.put(InitDBConstants.STATE_KEY_DIRECT_CATALOG_OK, Boolean.FALSE);
+            b.put(InitDBConstants.STATE_KEY_DIRECT_ANSWER, md);
+        });
+    }
+}

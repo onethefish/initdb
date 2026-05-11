@@ -95,8 +95,10 @@ public class ApplicationPromptTemplates {
 				"latestInput", latestInput == null ? "" : latestInput));
 	}
 
-	public String renderDbDirectNl2sql(String question) {
-		return dbDirectNl2sql.render(Map.of("question", question == null ? "" : question));
+	public String renderDbDirectNl2sql(String question, String tableCatalogJson) {
+		return dbDirectNl2sql.render(Map.of(
+				"question", question == null ? "" : question,
+				"table_catalog", tableCatalogJson == null ? "[]" : tableCatalogJson));
 	}
 
 	public String renderDbIntentRoute(String standalone) {
