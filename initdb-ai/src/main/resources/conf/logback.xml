@@ -4,7 +4,7 @@
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
     <!-- 日志目录默认在此维护；部署时若需覆盖，可在任意 Spring 配置中设置 logging.file.path（不必改本文件） -->
-    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="${system.basedir}/logs"/>
     <!--
       归档策略（与各 RollingFileAppender 的 fileNamePattern / maxHistory 一致）：
       - 按自然日滚动：当日写 ${LOG_PATH}/*.log，跨日后上一日内容压缩到 ${LOG_PATH}/archive/*.yyyy-MM-dd.log.gz（即「满 1 个日历日后进入 archive」）。

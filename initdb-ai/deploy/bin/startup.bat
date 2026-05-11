@@ -17,7 +17,7 @@ set CUSTOM_SEARCH_LOCATIONS=file:%BASE_DIR%/conf/
 set SERVER=initDB-AI
 
 
-set "JAVA_OPT=%JAVA_OPT% -server -Xms1g -Xmx1g -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m"
+set "JAVA_OPT=%JAVA_OPT% -server -Xms1g -Xmx1g -XX:MetaspaceSize=256m -XX:MaxMetaspaceSize=256m -Dfile.encoding=UTF-8 -Duser.language=zh -Duser.region=CN"
 
 set "JAVA_OPT=%JAVA_OPT% -Dsystem.basedir=%BASE_DIR%"
 set "JAVA_OPT=%JAVA_OPT% -Dloader.path=%BASE_DIR%/plugins/health -jar %BASE_DIR%\target\%SERVER%.jar"
