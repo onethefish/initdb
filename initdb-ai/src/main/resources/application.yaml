@@ -21,11 +21,11 @@ spring:
       base-url: "https://dashscope.aliyuncs.com/compatible-mode"
       chat:
         options:
-          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL:qvq-max-2025-03-25}
+          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL:qwen-plus-2025-07-28}
           max-tokens: 1024
-          temperature: 0.1          # 降低随机性，让回答更确定
-          presencePenalty: 0.2      # 降低存在惩罚，避免干扰模型聚焦
-          frequencyPenalty: 0.2     # 防止模型重复啰嗦
+#          temperature: 0.1          # 降低随机性，让回答更确定
+#          presencePenalty: 0.2      # 降低存在惩罚，避免干扰模型聚焦
+#          frequencyPenalty: 0.2     # 防止模型重复啰嗦
       embedding:
         options:
           model: ${AI_OPENAI_EMBEDDING_OPTIONS_MODEL:text-embedding-v1}
