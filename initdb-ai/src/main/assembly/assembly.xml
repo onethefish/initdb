@@ -1,0 +1,90 @@
+<assembly
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+    <id>bin</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+    <includeBaseDirectory>true</includeBaseDirectory>
+
+    <files>
+        <file>
+            <fileMode>775</fileMode>
+            <source>target/${project.build.finalName}.jar</source>
+            <destName>initDB-AI.jar</destName>
+            <outputDirectory>./target</outputDirectory>
+        </file>
+    </files>
+
+    <fileSets>
+
+        <fileSet>
+            <directory>src/main/resources</directory>
+            <outputDirectory>./conf</outputDirectory>
+            <includes>
+                <include>application.yaml</include>
+                <include>bootstrap.yaml</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>src/main/resources/conf</directory>
+            <outputDirectory>./conf</outputDirectory>
+            <includes>
+                <include>logback.xml</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>src/main/resources/i18n</directory>
+            <outputDirectory>./i18n</outputDirectory>
+            <includes>
+                <include>*.properties</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>src/main/resources</directory>
+            <outputDirectory>./</outputDirectory>
+            <includes>
+                <include>Dockerfile</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <fileMode>775</fileMode>
+            <directory>deploy/bin</directory>
+            <includes>
+                <include>*.sh</include>
+            </includes>
+            <outputDirectory>./bin</outputDirectory>
+            <lineEnding>unix</lineEnding>
+        </fileSet>
+
+        <fileSet>
+            <fileMode>775</fileMode>
+            <directory>deploy/bin</directory>
+            <includes>
+                <include>*.bat</include>
+            </includes>
+            <outputDirectory>./bin</outputDirectory>
+            <lineEnding>windows</lineEnding>
+        </fileSet>
+        <fileSet>
+            <directory>deploy/db</directory>
+            <outputDirectory>./db</outputDirectory>
+        </fileSet>
+
+    </fileSets>
+
+<!--    <dependencySets>-->
+<!--        <dependencySet>-->
+<!--            <outputDirectory>./bin/lib</outputDirectory>-->
+<!--            <scope>runtime</scope>-->
+<!--            <includes>-->
+<!--                <include>org.jasypt:jasypt</include>-->
+<!--            </includes>-->
+<!--        </dependencySet>-->
+<!--    </dependencySets>-->
+</assembly>
