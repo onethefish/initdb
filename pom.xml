@@ -28,6 +28,7 @@
 
     <dependencyManagement>
         <dependencies>
+            <!--https://github.com/onethefish/serva-->
             <dependency>
                 <groupId>cn.fish.cloud</groupId>
                 <artifactId>serva-dependencies</artifactId>
