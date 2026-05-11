@@ -53,7 +53,7 @@ JAVA_OPT="${JAVA_OPT} ${INIT_CONFIG}"
 JAVA_OPT="${JAVA_OPT} -Dsystem.basedir=${BASE_DIR}"
 JAVA_OPT="${JAVA_OPT} -Dloader.path=${BASE_DIR}/plugins/health -jar ${BASE_DIR}/target/${SERVER}.jar"
 JAVA_OPT="${JAVA_OPT} --spring.config.location=${CUSTOM_SEARCH_LOCATIONS}"
-JAVA_OPT="${JAVA_OPT} --logging.config=${BASE_DIR}/conf/log4j2.xml"
+JAVA_OPT="${JAVA_OPT} --logging.config=${BASE_DIR}/conf/logback.xml"
 JAVA_OPT="${JAVA_OPT} --server.max-http-header-size=524288"
 JAVA_OPT="${JAVA_OPT} --jasypt.encryptor.password=${JASYPT_PASSWORD}"
 

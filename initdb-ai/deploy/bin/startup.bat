@@ -22,7 +22,7 @@ set "JAVA_OPT=%JAVA_OPT% -server -Xms1g -Xmx1g -XX:MetaspaceSize=256m -XX:MaxMet
 set "JAVA_OPT=%JAVA_OPT% -Dsystem.basedir=%BASE_DIR%"
 set "JAVA_OPT=%JAVA_OPT% -Dloader.path=%BASE_DIR%/plugins/health -jar %BASE_DIR%\target\%SERVER%.jar"
 set "JAVA_OPT=%JAVA_OPT% --spring.config.location=%CUSTOM_SEARCH_LOCATIONS%"
-set "JAVA_OPT=%JAVA_OPT% --logging.config=%BASE_DIR%/conf/log4j2.xml"
+set "JAVA_OPT=%JAVA_OPT% --logging.config=%BASE_DIR%/conf/logback.xml"
 set "JAVA_OPT=%JAVA_OPT% --jasypt.encryptor.password=%JASYPT_PASSWORD%"
 
 call "%JAVA%" %JAVA_OPT% initDB-AI %*
