@@ -17,7 +17,7 @@ spring:
       idle-timeout: 30000
   ai:
     openai:
-      api-key: ${AI_OPENAI_API-KEY}
+      api-key: ${AI_OPENAI_APIKEY}
       base-url: "https://dashscope.aliyuncs.com/compatible-mode"
       chat:
         options:
@@ -52,5 +52,3 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     banner: false
-    db-config:
-      id-type: auto
