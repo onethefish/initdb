@@ -6,6 +6,7 @@ import cn.fish.initDB.entity.ChatRequest;
 import cn.fish.initDB.event.ChartAutoSummarizeEvent;
 import cn.fish.initDB.service.DBAgentService;
 import cn.fish.initDB.util.DbChatGraphStream;
+import cn.fish.initDB.workflow.DBAgentStateGraphConfig;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -31,7 +32,7 @@ public class DBAgentServiceImpl implements DBAgentService {
     private final ApplicationEventPublisher eventPublisher;
 
     public DBAgentServiceImpl(
-            @Qualifier(WorkflowConstants.DB_CHAT_WORKFLOW_BEAN) CompiledGraph dbChatWorkflow,
+            @Qualifier(DBAgentStateGraphConfig.COMPILED_GRAPH_BEAN) CompiledGraph dbChatWorkflow,
             ApplicationEventPublisher eventPublisher) {
         this.dbChatWorkflow = dbChatWorkflow;
         this.eventPublisher = eventPublisher;
@@ -41,7 +42,7 @@ public class DBAgentServiceImpl implements DBAgentService {
     public Flux<String> chatStream(ChatRequest chatRequest) {
         String sessionId = chatRequest.getSessionId();
         if (StrUtil.isEmpty(sessionId)) {
-            return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER,
+            return Flux.just(DbChatGraphStream.streamLineSafe(DbChatGraphStream.STREAM_PART_ANSWER,
                     "Sorry, an error occurred: sessionId is null"));
         }
         /*
@@ -59,7 +60,7 @@ public class DBAgentServiceImpl implements DBAgentService {
 
                 Map<String, Object> inputs = new LinkedHashMap<>(8);
                 inputs.put(WorkflowConstants.STANDALONE, effectiveStandalone);
-                inputs.put(WorkflowConstants.STATE_KEY_DB_BUNDLE, DbWorkflowBundle.newInitialBundle(sessionId));
+                inputs.put(DbWorkflowBundle.BUNDLE_STATE_KEY, DbWorkflowBundle.newInitialBundle(sessionId));
 
                 Flux<NodeOutput> stream = dbChatWorkflow.stream(inputs, config);
                 AtomicReference<String> streamTraceSegmentKey = new AtomicReference<>(null);
@@ -73,7 +74,7 @@ public class DBAgentServiceImpl implements DBAgentService {
                 return answerFlux
                            .switchIfEmpty(Flux.defer(() -> {
                                log.warn("chatStream emitted no text for sessionId={}, model may have returned empty tokens", sessionId);
-                               return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER,
+                               return Flux.just(DbChatGraphStream.streamLineSafe(DbChatGraphStream.STREAM_PART_ANSWER,
                                        "未收到模型的文本输出，请重试。若多次出现，请检查模型 API、配额及网络；若刚做过对话压缩，可新建会话再试。"));
                            }))
                            .onErrorResume(e -> createErrorFlux(e, sessionId));
@@ -106,17 +107,17 @@ public class DBAgentServiceImpl implements DBAgentService {
 
     private static Flux<String> createErrorFlux(Throwable e) {
         log.error("chatStream setup failed", e);
-        return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER, "对话启动失败: " + e.getMessage()));
+        return Flux.just(DbChatGraphStream.streamLineSafe(DbChatGraphStream.STREAM_PART_ANSWER, "对话启动失败: " + e.getMessage()));
     }
 
     private static Flux<String> createErrorFlux(Throwable e, String sessionId) {
         if (e instanceof IllegalStateException && StrUtil.isNotEmpty(e.getMessage()) && e.getMessage().contains("Empty flux detected")) {
             log.warn("LLM stream empty for sessionId={}: {}", sessionId, e.getMessage());
-            return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER,
+            return Flux.just(DbChatGraphStream.streamLineSafe(DbChatGraphStream.STREAM_PART_ANSWER,
                     "模型流式通道无有效内容（API 无结果、内容审核或上下文异常等）。请稍后重试，或新建会话。 详情：" + e.getMessage()));
         }
         log.error("chatStream failed sessionId={}", sessionId, e);
-        return Flux.just(DbChatGraphStream.streamLineSafe(WorkflowConstants.STREAM_PART_ANSWER, "对话生成失败: " + e.getMessage()));
+        return Flux.just(DbChatGraphStream.streamLineSafe(DbChatGraphStream.STREAM_PART_ANSWER, "对话生成失败: " + e.getMessage()));
     }
 
 }

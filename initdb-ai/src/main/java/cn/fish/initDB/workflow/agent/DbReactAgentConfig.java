@@ -1,7 +1,6 @@
 package cn.fish.initDB.workflow.agent;
 
 import cn.fish.common.prompt.ApplicationPromptTemplates;
-import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.workflow.agent.tool.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
@@ -18,13 +17,16 @@ public class DbReactAgentConfig {
     // StateGraph 节点 id（父图中嵌入的 ReAct 子图），勿改字符串以免破坏 checkpoint / 流式帧匹配
     public static final String GRAPH_NODE_ID = "db_react";
 
-    @Bean(name = WorkflowConstants.DB_REACT_AGENT_BEAN)
+    public static final String REACT_AGENT_BEAN = "dbReactAgent";
+    public static final String REACT_AGENT_DISPLAY_NAME = "数据库智能体";
+
+    @Bean(name = REACT_AGENT_BEAN)
     public ReactAgent dbReactAgent(ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                                    GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool,
                                    GetTableDataTool getTableDataTool, KnowledgeRetrievalTool knowledgeRetrievalTool,
                                    MemorySaver memorySaver, ApplicationPromptTemplates applicationPromptTemplates) {
         return ReactAgent.builder()
-                         .name(WorkflowConstants.DB_REACT_AGENT_DISPLAY_NAME)
+                         .name(REACT_AGENT_DISPLAY_NAME)
                          .systemPrompt(applicationPromptTemplates.dbReactSystemText())
                          .description(applicationPromptTemplates.dbReactDescriptionText())
                          .model(chatModel)

@@ -26,6 +26,9 @@ public class DbDirectNl2SqlNode implements NodeAction {
     // StateGraph 节点 id，勿改字符串以免破坏 checkpoint / 流式帧匹配
     public static final String GRAPH_NODE_ID = "db_direct_nl2sql";
 
+    /** {@link cn.fish.initDB.workflow.DbWorkflowBundle#BUNDLE_STATE_KEY} 内：直连链路生成的 SQL 文本。 */
+    public static final String DB_BUNDLE_KEY_GENERATED_SQL = "db_generated_sql";
+
     private static final Pattern CODE_FENCE_SQL = Pattern.compile("(?is)```(?:sql)?\\s*([\\s\\S]*?)```");
     private static final Pattern LEADING_SELECT = Pattern.compile("(?is)^\\s*(SELECT\\b[\\s\\S]+)$");
 
@@ -41,10 +44,10 @@ public class DbDirectNl2SqlNode implements NodeAction {
     public Map<String, Object> apply(OverAllState state) {
         String standalone = state.value(WorkflowConstants.STANDALONE, "").trim();
         String catalogJson = DbWorkflowBundle.bundleString(
-                DbWorkflowBundle.readCopy(state), WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG_JSON, "[]");
+                DbWorkflowBundle.readCopy(state), DbDirectTableCatalogNode.DB_BUNDLE_KEY_TABLE_CATALOG_JSON, "[]");
         String sql = resolveSql(standalone, catalogJson);
         log.info("db direct nl2sql length={}", StrUtil.length(sql));
-        return DbWorkflowBundle.writeBundle(state, b -> b.put(WorkflowConstants.DB_BUNDLE_KEY_GENERATED_SQL, sql));
+        return DbWorkflowBundle.writeBundle(state, b -> b.put(DB_BUNDLE_KEY_GENERATED_SQL, sql));
     }
 
     private String resolveSql(String text, String tableCatalogJson) {

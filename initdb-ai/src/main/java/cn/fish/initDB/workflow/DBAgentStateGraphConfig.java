@@ -25,9 +25,11 @@ import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 @Configuration
 public class DBAgentStateGraphConfig {
 
-    @Bean(name = WorkflowConstants.DB_CHAT_WORKFLOW_BEAN)
+    public static final String COMPILED_GRAPH_BEAN = "dbChatWorkflowGraph";
+
+    @Bean(name = COMPILED_GRAPH_BEAN)
     public CompiledGraph dbChatWorkflowGraph(
-            @Qualifier(WorkflowConstants.DB_REACT_AGENT_BEAN) ReactAgent dbReactAgent,
+            @Qualifier(DbReactAgentConfig.REACT_AGENT_BEAN) ReactAgent dbReactAgent,
             MemorySaver memorySaver,
             DbIntentClassificationNode dbIntentClassificationNode,
             DbDirectTableCatalogNode dbDirectTableCatalogNode,
@@ -58,8 +60,8 @@ public class DBAgentStateGraphConfig {
             m.put(OverAllState.DEFAULT_INPUT_KEY, new ReplaceStrategy());
             m.put(WorkflowConstants.STATE_KEY_MESSAGES, new AppendStrategy());
             m.put(WorkflowConstants.STANDALONE, new ReplaceStrategy());
-            m.put(WorkflowConstants.STATE_KEY_DB_BUNDLE, new ReplaceStrategy());
-            m.put(WorkflowConstants.STATE_KEY_DIRECT_EXECUTE_STREAM, new ReplaceStrategy());
+            m.put(DbWorkflowBundle.BUNDLE_STATE_KEY, new ReplaceStrategy());
+            m.put(DbDirectExecuteQueryNode.STATE_KEY_DIRECT_EXECUTE_STREAM, new ReplaceStrategy());
             return m;
         };
         // new StateGraph(图名, keyStrategyFactory, serializer)：图名用于调试；serializer 供 checkpoint 等序列化
@@ -75,32 +77,33 @@ public class DBAgentStateGraphConfig {
 
         // addEdge(from, to)：无条件边，上一节点结束必进下一节点；START/END 为框架入口/出口
         stateGraph.addEdge(StateGraph.START, DbIntentClassificationNode.GRAPH_NODE_ID);
-        Map<String, String> intentRouteEdges = new HashMap<>(4); // addConditionalEdges 第三参：分支 key -> 目标节点 id
-        intentRouteEdges.put(WorkflowConstants.GRAPH_BRANCH_TRUE, DbDirectTableCatalogNode.GRAPH_NODE_ID);
-        intentRouteEdges.put(WorkflowConstants.GRAPH_BRANCH_FALSE, DbAgentInputBridgeNode.GRAPH_NODE_ID);
-        // addConditionalEdges(源节点, edge_async(路由), pathMap)：路由返回值必须与 pathMap 的某一 key 完全一致（含大小写）
+        // addConditionalEdges 的 pathMap：key 与路由返回值须完全一致；此处 key 直接用「下一跳节点 id」（与 value 相同），避免 link1/link2 间接常量。
+        // 多路分支时在此增加 put，路由方法返回对应目标 id。
+        Map<String, String> intentRouteEdges = new HashMap<>(8);
+        intentRouteEdges.put(DbDirectTableCatalogNode.GRAPH_NODE_ID, DbDirectTableCatalogNode.GRAPH_NODE_ID);
+        intentRouteEdges.put(DbAgentInputBridgeNode.GRAPH_NODE_ID, DbAgentInputBridgeNode.GRAPH_NODE_ID);
         stateGraph.addConditionalEdges(
                 DbIntentClassificationNode.GRAPH_NODE_ID,
-                edge_async(DBAgentStateGraphConfig::intentRouteTarget),
+                edge_async(DBAgentStateGraphConfig::intentRouteBranch),
                 intentRouteEdges);
 
         stateGraph.addEdge(DbAgentInputBridgeNode.GRAPH_NODE_ID, DbReactAgentConfig.GRAPH_NODE_ID); // addEdge：桥接后必进 ReAct 子图
         stateGraph.addEdge(DbReactAgentConfig.GRAPH_NODE_ID, StateGraph.END);
 
-        Map<String, String> directCatalogEdges = new HashMap<>(4); // 表清单节点出边：ok -> NL2SQL，fail -> END
-        directCatalogEdges.put(WorkflowConstants.GRAPH_BRANCH_TRUE, DbDirectNl2SqlNode.GRAPH_NODE_ID);
-        directCatalogEdges.put(WorkflowConstants.GRAPH_BRANCH_FALSE, StateGraph.END); // catalog 失败直接 END，错误说明已由节点写入 state
+        Map<String, String> directCatalogEdges = new HashMap<>(8);
+        directCatalogEdges.put(DbDirectNl2SqlNode.GRAPH_NODE_ID, DbDirectNl2SqlNode.GRAPH_NODE_ID);
+        directCatalogEdges.put(StateGraph.END, StateGraph.END); // catalog 失败直接 END，错误说明已由节点写入 state
         stateGraph.addConditionalEdges(
                 DbDirectTableCatalogNode.GRAPH_NODE_ID,
-                edge_async(DBAgentStateGraphConfig::directCatalogBranch),
+                edge_async(DBAgentStateGraphConfig::directTableCatalogBranch),
                 directCatalogEdges);
         stateGraph.addEdge(DbDirectNl2SqlNode.GRAPH_NODE_ID, DbDirectSqlGuardNode.GRAPH_NODE_ID); // NL2SQL 后必进 SQL 守卫
-        Map<String, String> sqlGuardEdges = new HashMap<>(4); // 守卫出边：ok -> 执行，fail -> END
-        sqlGuardEdges.put(WorkflowConstants.GRAPH_BRANCH_TRUE, DbDirectExecuteQueryNode.GRAPH_NODE_ID);
-        sqlGuardEdges.put(WorkflowConstants.GRAPH_BRANCH_FALSE, StateGraph.END);
+        Map<String, String> sqlGuardEdges = new HashMap<>(8);
+        sqlGuardEdges.put(DbDirectExecuteQueryNode.GRAPH_NODE_ID, DbDirectExecuteQueryNode.GRAPH_NODE_ID);
+        sqlGuardEdges.put(StateGraph.END, StateGraph.END);
         stateGraph.addConditionalEdges(
                 DbDirectSqlGuardNode.GRAPH_NODE_ID,
-                edge_async(DBAgentStateGraphConfig::sqlGuardBranch),
+                edge_async(DBAgentStateGraphConfig::directSqlGuardBranch),
                 sqlGuardEdges);
         stateGraph.addEdge(DbDirectExecuteQueryNode.GRAPH_NODE_ID, StateGraph.END); // 直连执行完成后结束
         // getGraph：生成 PlantUML 等可读拓扑，仅调试用
@@ -116,25 +119,33 @@ public class DBAgentStateGraphConfig {
         return stateGraph.compile(compileConfig); // compile：生成 CompiledGraph，非法拓扑在此抛 GraphStateException
     }
 
-    // 供 addConditionalEdges 使用：读 bundle.db_route（Boolean，旧 checkpoint 可能为字符串，见 DbWorkflowBundle#readCopy 归一）
-    private static String intentRouteTarget(OverAllState state) {
-        Object v = DbWorkflowBundle.readCopy(state).get(WorkflowConstants.DB_BUNDLE_KEY_ROUTE);
-        return Boolean.TRUE.equals(v) ? WorkflowConstants.GRAPH_BRANCH_TRUE : WorkflowConstants.GRAPH_BRANCH_FALSE;
+    /** 意图分类之后：{@link DbIntentClassificationNode#DB_BUNDLE_KEY_ROUTE} 为真 → 直连表清单链路，否则 → ReAct 桥接链路。 */
+    private static String intentRouteBranch(OverAllState state) {
+        Object v = DbWorkflowBundle.readCopy(state).getOrDefault(DbIntentClassificationNode.DB_BUNDLE_KEY_ROUTE, Boolean.FALSE);
+        if (Boolean.TRUE.equals(v)) {
+            return DbDirectTableCatalogNode.GRAPH_NODE_ID;
+        } else {
+            return DbAgentInputBridgeNode.GRAPH_NODE_ID;
+        }
     }
 
-    // 供 addConditionalEdges 使用：读 bundle.db_sql_guard（布尔语义）；pathMap key 与 GRAPH_BRANCH_* 一致
-    private static String sqlGuardBranch(OverAllState state) {
-        Object ok = DbWorkflowBundle.readCopy(state).getOrDefault(WorkflowConstants.DB_BUNDLE_KEY_SQL_GUARD, Boolean.FALSE);
-        boolean pass = Boolean.TRUE.equals(ok)
-                || (ok instanceof String s && "true".equalsIgnoreCase(s.trim()));
-        return pass ? WorkflowConstants.GRAPH_BRANCH_TRUE : WorkflowConstants.GRAPH_BRANCH_FALSE;
+    /** 直连表清单之后：{@link DbDirectTableCatalogNode#DB_BUNDLE_KEY_TABLE_CATALOG} 为真 → NL2SQL，否则 → END。 */
+    private static String directTableCatalogBranch(OverAllState state) {
+        Object v = DbWorkflowBundle.readCopy(state).getOrDefault(DbDirectTableCatalogNode.DB_BUNDLE_KEY_TABLE_CATALOG, Boolean.FALSE);
+        if (Boolean.TRUE.equals(v)) {
+            return DbDirectNl2SqlNode.GRAPH_NODE_ID;
+        } else {
+            return StateGraph.END;
+        }
     }
 
-    // 供 addConditionalEdges 使用：读 bundle.db_table_catalog（布尔语义）
-    private static String directCatalogBranch(OverAllState state) {
-        Object ok = DbWorkflowBundle.readCopy(state).getOrDefault(WorkflowConstants.DB_BUNDLE_KEY_TABLE_CATALOG, Boolean.FALSE);
-        boolean pass = Boolean.TRUE.equals(ok)
-                || (ok instanceof String s && "true".equalsIgnoreCase(s.trim()));
-        return pass ? WorkflowConstants.GRAPH_BRANCH_TRUE : WorkflowConstants.GRAPH_BRANCH_FALSE;
+    /** SQL 守卫之后：{@link DbDirectSqlGuardNode#DB_BUNDLE_KEY_SQL_GUARD} 为真 → 执行查询，否则 → END。 */
+    private static String directSqlGuardBranch(OverAllState state) {
+        Object v = DbWorkflowBundle.readCopy(state).getOrDefault(DbDirectSqlGuardNode.DB_BUNDLE_KEY_SQL_GUARD, Boolean.FALSE);
+        if (Boolean.TRUE.equals(v)) {
+            return DbDirectExecuteQueryNode.GRAPH_NODE_ID;
+        } else {
+            return StateGraph.END;
+        }
     }
 }

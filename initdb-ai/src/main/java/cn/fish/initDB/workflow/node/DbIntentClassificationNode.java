@@ -28,6 +28,9 @@ public class DbIntentClassificationNode implements NodeAction {
     // 父图 StateGraph 节点 id，勿改字符串以免破坏 checkpoint / 流式帧匹配
     public static final String GRAPH_NODE_ID = "db_intent_classification";
 
+    /** {@link cn.fish.initDB.workflow.DbWorkflowBundle#BUNDLE_STATE_KEY} 内：直连 / ReAct 分支（布尔）。 */
+    public static final String DB_BUNDLE_KEY_ROUTE = "db_route";
+
     private static final Pattern ROUTE_TOKEN = Pattern.compile("\\b(DIRECT|REACT)\\b", Pattern.CASE_INSENSITIVE);
 
     private final ChatModel chatModel;
@@ -43,7 +46,7 @@ public class DbIntentClassificationNode implements NodeAction {
         String standalone = state.value(WorkflowConstants.STANDALONE, "");
         boolean useDirectData = classifyUseDirectData(standalone);
         log.debug("db intent useDirectData={} for question snippet: {}", useDirectData, abbreviate(standalone));
-        return DbWorkflowBundle.writeBundle(state, b -> b.put(WorkflowConstants.DB_BUNDLE_KEY_ROUTE, useDirectData));
+        return DbWorkflowBundle.writeBundle(state, b -> b.put(DB_BUNDLE_KEY_ROUTE, useDirectData));
     }
 
     private boolean classifyUseDirectData(String standalone) {
