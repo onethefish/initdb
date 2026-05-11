@@ -1,7 +1,7 @@
 package cn.fish.web.config;
 
 
-import cn.fish.web.aop.ControllerMethodLogAop;
+import cn.fish.cloud.serva.web.aop.ControllerMethodLogAop;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LogAutoConfiguration {
 
+    /**
+     * 注入 serva 默认的日志输出
+     */
     @Bean
     public ControllerMethodLogAop controllerMethodLogAop() {
         return new ControllerMethodLogAop();
