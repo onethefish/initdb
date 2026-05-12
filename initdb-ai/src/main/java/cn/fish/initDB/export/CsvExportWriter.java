@@ -1,4 +1,4 @@
-package cn.fish.initDB.export.io;
+package cn.fish.initDB.export;
 
 import cn.hutool.core.text.csv.CsvUtil;
 import cn.hutool.core.text.csv.CsvWriter;
