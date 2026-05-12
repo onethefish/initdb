@@ -23,7 +23,7 @@ import java.util.Map;
 /**
  * 使用 Apache POI {@link SXSSFWorkbook} 将查询结果流式写入 xlsx。
  * <p>
- * 表头：黑体加粗、水平垂直居中、粗边框；数据区：黑字、粗边框；不换行。
+ * 表头：黑体加粗、水平垂直居中、粗边框；数据区：黑字、左对齐、粗边框；不换行。
  * 列宽按内容逐步放宽，不低于 {@link ExportConfig#getXlsxMinColumnWidthChars()}，
  * 不超过 {@link ExportConfig#getXlsxMaxColumnWidthChars()}（超出不再加宽，单元格内仍保留全文）。
  */
@@ -71,6 +71,7 @@ public final class XlsxExportWriter implements AutoCloseable, TableExportSink {
 
         dataStyle = workbook.createCellStyle();
         dataStyle.setFont(dataFont);
+        dataStyle.setAlignment(HorizontalAlignment.LEFT);
         dataStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         dataStyle.setWrapText(false);
         applyThickBorders(dataStyle);
