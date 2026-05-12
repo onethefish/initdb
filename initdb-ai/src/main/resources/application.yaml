@@ -63,3 +63,6 @@ initdb:
     poll-interval-ms: 3000
     # 过期清理调度间隔（毫秒）
     cleanup-interval-ms: 3600000
+    # Excel 列宽（字符数近似）：下限保证可读；上限内随内容加宽，超出不再加宽且不换行（全文仍在单元格内）
+    xlsx-min-column-width-chars: 16
+    xlsx-max-column-width-chars: 80

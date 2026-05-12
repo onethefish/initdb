@@ -281,87 +281,60 @@
     box-sizing: border-box;
 }
 
-/* —— 异步数据导出面板 —— */
-.db-export-panel {
-    margin-top: 10px;
-    border: 1px solid var(--color-border-light, #e0e0e0);
-    border-radius: var(--radius-md, 8px);
-    background: #fafafa;
-    padding: 0 12px 10px;
-    font-size: 13px;
-}
-
-.db-export-summary {
-    cursor: pointer;
-    font-weight: 600;
-    padding: 10px 4px 8px;
-    color: var(--color-text-secondary, #555);
-    list-style-position: outside;
-}
-
-.db-export-body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-bottom: 4px;
-}
-
-.db-export-hint {
-    margin: 0;
-    color: var(--color-text-muted, #666);
-    line-height: 1.45;
-}
-
-.db-export-label {
-    font-weight: 600;
-    color: var(--color-text-secondary, #444);
-}
-
-.db-export-sql {
-    width: 100%;
-    min-height: 88px;
-    box-sizing: border-box;
-    padding: 10px 12px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 13px;
-    border: 1px solid var(--color-border-light, #ddd);
-    border-radius: 6px;
-    resize: vertical;
-}
-
-.db-export-toolbar {
+/* 助手气泡内：异步导出（无行数输入，由服务端上限约束） */
+.bot-export-bar {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px 14px;
+    gap: 8px 12px;
+    font-size: 13px;
+    color: var(--color-text-secondary, #555);
+    max-width: 100%;
 }
 
-.db-export-inline {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
+.bot-export-btn {
+    margin: 0;
+    padding: 6px 12px;
+    font-size: 13px;
 }
 
-.db-export-inline select,
-.db-export-inline input.db-export-max-rows {
+.bot-export-status {
+    flex: 1 1 160px;
     min-width: 0;
+    line-height: 1.35;
+    word-break: break-word;
 }
 
-.db-export-max-rows {
-    width: 140px;
-    padding: 6px 8px;
-    border: 1px solid var(--color-border-light, #ddd);
-    border-radius: 6px;
+/* 导出 SQL 编辑弹窗 */
+#exportSqlModal .export-sql-modal-content {
+    width: min(720px, 92vw);
+    max-width: none;
+    max-height: min(88vh, 900px);
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
-.db-export-fill-btn {
-    margin-right: auto;
+#exportSqlModal .export-modal-sql {
+    width: 100%;
+    min-height: 200px;
+    box-sizing: border-box;
+    padding: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.45;
+    border: 1px solid #ddd;
+    border-radius: var(--radius-sm, 4px);
+    resize: vertical;
 }
 
-.db-export-status {
-    min-height: 1.25em;
-    color: var(--color-text-secondary, #444);
-    line-height: 1.4;
+#exportSqlModal .export-modal-status {
+    margin: 8px 0 16px;
+    min-height: 1.35em;
+    font-size: 13px;
+    color: var(--color-text-secondary, #555);
+    line-height: 1.45;
     word-break: break-word;
 }

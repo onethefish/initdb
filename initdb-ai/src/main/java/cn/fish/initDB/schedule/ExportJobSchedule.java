@@ -65,14 +65,6 @@ public class ExportJobSchedule {
     }
     @Scheduled(fixedDelayString = "${initdb.export.cleanup-interval-ms:3600000}")
     public void cleanup() {
-        try {
-            cleanupExpiredExports();
-        } catch (Exception e) {
-            log.warn("export job cleanup failed", e);
-        }
-    }
-
-    private void cleanupExpiredExports() {
         LocalDateTime now = LocalDateTime.now();
         var list = exportJobRepository.listExpiredForCleanup(now);
         for (ExportJob job : list) {
@@ -90,6 +82,7 @@ public class ExportJobSchedule {
             exportJobRepository.updateById(patch);
         }
     }
+
     private void markFailed(ExportJob job, Exception e) {
         job.setStatus(ExportJobStatus.FAILED.name());
         String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();

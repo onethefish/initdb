@@ -128,33 +128,6 @@ function extractSqlFromAssistantMarkdown(md) {
     return '';
 }
 
-function fillExportSqlFromLastBotMessage() {
-    if (!currentSessionId) {
-        showErrorDialog({title: '提示', message: '请先选择对话。'});
-        return;
-    }
-    const session = sessions.find(s => s.id === currentSessionId);
-    if (!session || !Array.isArray(session.messages)) {
-        return;
-    }
-    for (let i = session.messages.length - 1; i >= 0; i--) {
-        const msg = session.messages[i];
-        if (!msg || msg.role !== 'bot') {
-            continue;
-        }
-        const content = typeof msg.content === 'string' ? msg.content : '';
-        const sql = extractSqlFromAssistantMarkdown(content);
-        if (sql) {
-            const ta = document.getElementById('exportSqlInput');
-            if (ta) {
-                ta.value = sql;
-            }
-            return;
-        }
-    }
-    showErrorDialog({title: '提示', message: '未在最近助手消息中找到 SQL 代码块。'});
-}
-
 function triggerBlobDownload(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -179,8 +152,7 @@ async function pollExportJobUntilDone(jobId, statusEl) {
                 sessionId: currentSessionId
             });
             triggerBlobDownload(blob, filename);
-            const rows = v.rowCount != null ? String(v.rowCount) : '?';
-            statusEl.textContent = `完成，已触发下载（约 ${rows} 行）。`;
+            statusEl.textContent = '完成，已开始下载。';
             return;
         }
         if (v.status === 'FAILED') {
@@ -191,23 +163,60 @@ async function pollExportJobUntilDone(jobId, statusEl) {
             statusEl.textContent = '任务已过期。';
             return;
         }
-        statusEl.textContent = `任务 ${jobId}：${v.status}${v.rowCount != null ? `，已写 ${v.rowCount} 行` : ''}…`;
+        statusEl.textContent = '处理中：' + v.status + '…';
     }
-    statusEl.textContent = '等待超时：请稍后重试或再次创建导出任务。';
+    statusEl.textContent = '等待超时，请稍后重试。';
 }
 
-async function submitDbExportJob() {
-    const statusEl = document.getElementById('exportJobStatus');
-    const btn = document.getElementById('exportSubmitBtn');
-    const sqlEl = document.getElementById('exportSqlInput');
-    const formatEl = document.getElementById('exportFormatSelect');
-    const maxRowsEl = document.getElementById('exportMaxRowsInput');
-    if (!statusEl || !sqlEl || !formatEl) {
+/** 打开导出弹窗时，用于回写气泡内状态 / 恢复按钮 */
+let exportModalBubbleCtx = null;
+
+function closeExportSqlModal() {
+    const modal = document.getElementById('exportSqlModal');
+    if (modal) {
+        closeModalAnimated(modal);
+    }
+    if (exportModalBubbleCtx && exportModalBubbleCtx.bubbleBtn) {
+        exportModalBubbleCtx.bubbleBtn.disabled = false;
+    }
+    exportModalBubbleCtx = null;
+}
+
+function openExportSqlModal(initialSql, format, bubbleCtx) {
+    const modal = document.getElementById('exportSqlModal');
+    const ta = document.getElementById('exportModalSqlInput');
+    const fmt = document.getElementById('exportModalFormatSelect');
+    const modalStatus = document.getElementById('exportModalStatus');
+    if (!modal || !ta || !fmt) {
         return;
     }
-    const sql = String(sqlEl.value || '').trim();
+    exportModalBubbleCtx = bubbleCtx;
+    ta.value = initialSql || '';
+    fmt.value = format === 'XLSX' ? 'XLSX' : 'CSV';
+    if (modalStatus) {
+        modalStatus.textContent = '';
+    }
+    const confirmBtn = document.getElementById('exportModalConfirmBtn');
+    const cancelBtn = document.getElementById('exportModalCancelBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+    }
+    if (cancelBtn) {
+        cancelBtn.disabled = false;
+    }
+    openModalAnimated(modal);
+    setTimeout(() => ta.focus(), 80);
+}
+
+async function confirmExportFromModal() {
+    const ta = document.getElementById('exportModalSqlInput');
+    const fmt = document.getElementById('exportModalFormatSelect');
+    const modalStatus = document.getElementById('exportModalStatus');
+    const cancelBtn = document.getElementById('exportModalCancelBtn');
+    const confirmBtn = document.getElementById('exportModalConfirmBtn');
+    const sql = String(ta && ta.value ? ta.value : '').trim();
     if (!sql) {
-        showErrorDialog({title: '提示', message: '请先填写 SQL。'});
+        showErrorDialog({title: '提示', message: 'SQL 不能为空。'});
         return;
     }
     if (!currentSessionId) {
@@ -218,43 +227,100 @@ async function submitDbExportJob() {
         showErrorDialog({title: '提示', message: '请等待当前对话流结束后再导出。'});
         return;
     }
-    const format = String(formatEl.value || 'CSV').trim();
+    const ctx = exportModalBubbleCtx;
+    const format = String(fmt && fmt.value ? fmt.value : 'CSV').trim();
     const body = {sessionId: currentSessionId, sql, format};
-    const maxRowsRaw = maxRowsEl ? String(maxRowsEl.value || '').trim() : '';
-    if (maxRowsRaw) {
-        const n = parseInt(maxRowsRaw, 10);
-        if (!Number.isNaN(n) && n > 0) {
-            body.maxRows = n;
-        }
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
     }
-    if (btn) {
-        btn.disabled = true;
+    if (cancelBtn) {
+        cancelBtn.disabled = true;
     }
-    statusEl.textContent = '正在创建导出任务…';
+    if (ctx && ctx.bubbleBtn) {
+        ctx.bubbleBtn.disabled = true;
+    }
+    if (modalStatus) {
+        modalStatus.textContent = '创建任务中…';
+    }
     try {
         const view = await Api.post('/db/export/jobs/add', body);
-        statusEl.textContent = `任务已创建（${view.id}），状态：${view.status}，等待处理…`;
-        await pollExportJobUntilDone(view.id, statusEl);
+        if (modalStatus) {
+            modalStatus.textContent = '排队处理中…';
+        }
+        await pollExportJobUntilDone(view.id, modalStatus);
+        if (ctx && ctx.statusEl && modalStatus) {
+            ctx.statusEl.textContent = modalStatus.textContent;
+        }
+        closeExportSqlModal();
     } catch (e) {
         console.error('export job failed', e);
         notifyErrorUnlessShown(e, '导出失败');
-        statusEl.textContent = '失败：' + (e.message || String(e));
+        if (modalStatus) {
+            modalStatus.textContent = '失败：' + (e.message || String(e));
+        }
+        if (ctx && ctx.statusEl) {
+            ctx.statusEl.textContent = modalStatus ? modalStatus.textContent : '导出失败';
+        }
     } finally {
-        if (btn) {
-            btn.disabled = false;
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+        }
+        if (cancelBtn) {
+            cancelBtn.disabled = false;
+        }
+        if (ctx && ctx.bubbleBtn) {
+            ctx.bubbleBtn.disabled = false;
         }
     }
 }
 
-function initDbExportPanel() {
-    const submitBtn = document.getElementById('exportSubmitBtn');
-    if (submitBtn) {
-        submitBtn.addEventListener('click', () => void submitDbExportJob());
+function initExportSqlModal() {
+    const modal = document.getElementById('exportSqlModal');
+    if (!modal) {
+        return;
     }
-    const fillBtn = document.getElementById('exportFillSqlFromChatBtn');
-    if (fillBtn) {
-        fillBtn.addEventListener('click', () => fillExportSqlFromLastBotMessage());
+    document.getElementById('exportModalCancelBtn')?.addEventListener('click', () => closeExportSqlModal());
+    document.getElementById('exportModalConfirmBtn')?.addEventListener('click', () => void confirmExportFromModal());
+    modal.addEventListener('click', e => {
+        if (e.target !== modal) {
+            return;
+        }
+        const confirmBtn = document.getElementById('exportModalConfirmBtn');
+        if (confirmBtn && confirmBtn.disabled) {
+            return;
+        }
+        closeExportSqlModal();
+    });
+}
+
+/**
+ * 在助手气泡底部挂载导出条（仅当正文 Markdown 中含可解析的 SQL 代码块时）。
+ * @param {HTMLElement} messageDiv .bot-message 根节点
+ * @param {string} answerMarkdown 用于提取 SQL 的原文（与气泡展示一致）
+ */
+function maybeBotExportBar(messageDiv, answerMarkdown) {
+    if (!messageDiv || !messageDiv.classList || !messageDiv.classList.contains('bot-message')) {
+        return;
     }
+    messageDiv.querySelectorAll('.bot-export-bar').forEach(el => el.remove());
+    const sql = extractSqlFromAssistantMarkdown(answerMarkdown || '');
+    if (!sql) {
+        return;
+    }
+    const bar = document.createElement('div');
+    bar.className = 'bot-export-bar';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-primary bot-export-btn';
+    btn.textContent = '导出';
+    const statusEl = document.createElement('span');
+    statusEl.className = 'bot-export-status';
+    btn.addEventListener('click', () =>
+        openExportSqlModal(sql, 'CSV', {bubbleStatusEl: statusEl, bubbleBtn: btn})
+    );
+    bar.appendChild(btn);
+    bar.appendChild(statusEl);
+    messageDiv.appendChild(bar);
 }
 
 /**
@@ -679,6 +745,14 @@ function addMessageToDOM(role, content) {
     }
     chatMessagesElement.appendChild(messageDiv);
 
+    if (role === 'bot') {
+        const md =
+            content && typeof content === 'object'
+                ? String(content.content || '')
+                : String(content || '');
+        maybeBotExportBar(messageDiv, md);
+    }
+
     chatMessagesElement.scrollTop = chatMessagesElement.scrollHeight;
     return messageDiv;
 }
@@ -792,13 +866,7 @@ async function sendMessage() {
         setBotMessageStructured(botMessageDiv, contextualizeText, traceAccum, answerAccum);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
-        const sqlForExport = extractSqlFromAssistantMarkdown(answerAccum);
-        if (sqlForExport) {
-            const exportTa = document.getElementById('exportSqlInput');
-            if (exportTa) {
-                exportTa.value = sqlForExport;
-            }
-        }
+        maybeBotExportBar(botMessageDiv, answerAccum);
 
         let botMsg;
         if (contextualizeText || traceAccum) {
@@ -897,8 +965,8 @@ function initChatKeyboardShortcuts() {
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initChatKeyboardShortcuts);
-    document.addEventListener('DOMContentLoaded', initDbExportPanel);
+    document.addEventListener('DOMContentLoaded', initExportSqlModal);
 } else {
     initChatKeyboardShortcuts();
-    initDbExportPanel();
+    initExportSqlModal();
 }
