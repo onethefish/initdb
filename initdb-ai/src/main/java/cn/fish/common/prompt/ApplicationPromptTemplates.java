@@ -34,7 +34,6 @@ public class ApplicationPromptTemplates {
 
 	private final PromptTemplate chartConversationSummary;
 	private final PromptTemplate dbReactSystem;
-	private final PromptTemplate dbReactDescription;
 	private final PromptTemplate querySqlCheck;
 	private final PromptTemplate agentVectorRagAnswer;
 	private final PromptTemplate contextualizeRewriteSystem;
@@ -45,7 +44,6 @@ public class ApplicationPromptTemplates {
 	public ApplicationPromptTemplates() {
 		this.chartConversationSummary = tpl("chart_conversation_summary.txt");
 		this.dbReactSystem = tpl("db_react_system.txt");
-		this.dbReactDescription = tpl("db_react_description.txt");
 		this.querySqlCheck = tpl("query_sql_check.txt");
 		this.agentVectorRagAnswer = tpl("agent_vector_rag_answer.txt");
 		this.contextualizeRewriteSystem = tpl("contextualize_rewrite_system.txt");
@@ -66,10 +64,6 @@ public class ApplicationPromptTemplates {
 
 	public String dbReactSystemText() {
 		return dbReactSystem.render();
-	}
-
-	public String dbReactDescriptionText() {
-		return dbReactDescription.render().strip();
 	}
 
 	public String renderQuerySqlCheck(String query) {

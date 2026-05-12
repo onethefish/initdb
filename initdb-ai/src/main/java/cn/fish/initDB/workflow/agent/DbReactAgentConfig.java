@@ -20,6 +20,9 @@ public class DbReactAgentConfig {
     public static final String REACT_AGENT_BEAN = "dbReactAgent";
     public static final String REACT_AGENT_DISPLAY_NAME = "数据库智能体";
 
+    public static final String REACT_AGENT_DESCRIPTION =
+            "数据库智能助手：以数据分析与多步查库为主（统计、对比、关联、归因等），兼表结构、只读 SQL 与知识库检索；单表明细拉取由系统直连优先，本代理处理其余库内任务。";
+
     @Bean(name = REACT_AGENT_BEAN)
     public ReactAgent dbReactAgent(ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                                    GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool,
@@ -28,7 +31,7 @@ public class DbReactAgentConfig {
         return ReactAgent.builder()
                          .name(REACT_AGENT_DISPLAY_NAME)
                          .systemPrompt(applicationPromptTemplates.dbReactSystemText())
-                         .description(applicationPromptTemplates.dbReactDescriptionText())
+                         .description(REACT_AGENT_DESCRIPTION)
                          .model(chatModel)
                          .saver(memorySaver)
                          .parallelToolExecution(false)
