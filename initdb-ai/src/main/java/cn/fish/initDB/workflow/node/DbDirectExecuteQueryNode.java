@@ -7,19 +7,22 @@ import cn.fish.database.sql.SelectSqlRowLimiter;
 import cn.fish.database.sql.SqlDialectResolver;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.cloud.ai.graph.GraphResponse;
 import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.alibaba.cloud.ai.graph.streaming.OutputType;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
-import cn.hutool.core.util.ObjectUtil;
-import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 直连链路：执行 {@link DbDirectNl2SqlNode#DB_BUNDLE_KEY_GENERATED_SQL}（位于 {@link DbWorkflowBundle#BUNDLE_STATE_KEY} 内），
@@ -33,11 +36,13 @@ public class DbDirectExecuteQueryNode implements NodeAction {
     // StateGraph 节点 id，勿改字符串以免破坏 checkpoint / 流式帧匹配
     public static final String GRAPH_NODE_ID = "db_direct_execute";
 
-    /** 父图 state 顶层键：本节点返回 Map 中须带嵌入 Flux 的流式通道（与 {@link cn.fish.initDB.workflow.DBAgentStateGraphConfig} KeyStrategy 一致）。 */
+    /**
+     * 父图 state 顶层键：本节点返回 Map 中须带嵌入 Flux 的流式通道（与 {@link cn.fish.initDB.workflow.DBAgentStateGraphConfig} KeyStrategy 一致）。
+     */
     public static final String STATE_KEY_DIRECT_EXECUTE_STREAM = "direct_execute_stream";
 
     private static final int MARKDOWN_CHUNK_CHARS = 900;
-    private static final int maxResults = 500;
+    private static final int maxResults = 100;
 
     private final DataBaseService dataBaseService;
     private final ChatSessionRepository chatSessionRepository;
@@ -141,7 +146,9 @@ public class DbDirectExecuteQueryNode implements NodeAction {
         return parts;
     }
 
-    /** 按行 JDBC 流式读取并拼 Markdown，避免整表 {@link List} 驻留内存。 */
+    /**
+     * 按行 JDBC 流式读取并拼 Markdown，避免整表 {@link List} 驻留内存。
+     */
     private String buildMarkdownTableStreaming(ChatSession chatSession, String sql) {
         List<String> columns = new ArrayList<>();
         StringBuilder sb = new StringBuilder();

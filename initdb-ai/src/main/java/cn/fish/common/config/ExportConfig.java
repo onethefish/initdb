@@ -15,7 +15,7 @@ public class ExportConfig {
     /**
      * 单次导出 SQL 行数硬顶（服务端钳制用户请求）
      */
-    private int maxRows = 1_000_000;
+    private int maxRows = 10000;
 
     /**
      * 任务与文件记录过期时间（小时）

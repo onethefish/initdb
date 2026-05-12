@@ -56,7 +56,7 @@ mybatis-plus:
 initdb:
   export:
     # 单次导出 SQL 行数上限（服务端钳制用户请求）
-    max-rows: 1000000
+    max-rows: 10000
     # 任务记录与文件过期时间（小时），由清理调度删除
     job-ttl-hours: 24
     # 后台轮询处理 PENDING 任务的间隔（毫秒）
