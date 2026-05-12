@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * 使用 Hutool CSV 将查询结果流式写入文件或输出流。
  */
-public final class CsvExportWriter implements AutoCloseable {
+public final class CsvExportWriter implements AutoCloseable, TableExportSink {
 
     private final CsvWriter csvWriter;
     private final List<String> columns = new ArrayList<>();
@@ -55,12 +55,14 @@ public final class CsvExportWriter implements AutoCloseable {
         };
     }
 
+    @Override
     public void writeHeader(Iterable<String> columnNames) {
         columns.clear();
         columnNames.forEach(columns::add);
         csvWriter.write(columns.toArray(new String[0]));
     }
 
+    @Override
     public void writeDataRow(Map<String, Object> row) {
         String[] cells = new String[columns.size()];
         for (int i = 0; i < columns.size(); i++) {
@@ -70,6 +72,7 @@ public final class CsvExportWriter implements AutoCloseable {
         csvWriter.write(cells);
     }
 
+    @Override
     public void writeNoDataRow() {
         csvWriter.write(new String[]{"（无数据行）"});
     }

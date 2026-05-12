@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * 使用 Apache POI {@link SXSSFWorkbook} 将查询结果流式写入 xlsx。
  */
-public final class XlsxExportWriter implements AutoCloseable {
+public final class XlsxExportWriter implements AutoCloseable, TableExportSink {
 
     private final SXSSFWorkbook workbook;
     private final Sheet sheet;
@@ -29,6 +29,7 @@ public final class XlsxExportWriter implements AutoCloseable {
         this.sheet = workbook.createSheet("export");
     }
 
+    @Override
     public void writeHeader(Iterable<String> columnNames) {
         columns.clear();
         columnNames.forEach(columns::add);
@@ -39,6 +40,7 @@ public final class XlsxExportWriter implements AutoCloseable {
         }
     }
 
+    @Override
     public void writeDataRow(Map<String, Object> row) {
         Row excelRow = sheet.createRow(nextRowIndex++);
         for (int i = 0; i < columns.size(); i++) {
@@ -56,6 +58,7 @@ public final class XlsxExportWriter implements AutoCloseable {
         }
     }
 
+    @Override
     public void writeNoDataRow() {
         Row row = sheet.createRow(nextRowIndex++);
         row.createCell(0).setCellValue("（无数据行）");

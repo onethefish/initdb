@@ -177,6 +177,65 @@
         });
     }
 
+    /**
+     * GET 下载二进制（如导出文件）。若响应为 application/json，则按统一封装解析并在失败时抛错。
+     * @returns {Promise<{blob: Blob, filename: string}>}
+     */
+    async function downloadGet(url, params) {
+        const finalUrl = buildUrlWithParams(url, params);
+        const response = await fetch(finalUrl, {
+            method: 'GET',
+            credentials: 'same-origin'
+        });
+        const contentType = (response.headers && response.headers.get && response.headers.get('content-type')) || '';
+        if (contentType.toLowerCase().includes('application/json')) {
+            const parsedBody = await parseResponseBody(response);
+            unwrapResponse(response, parsedBody);
+            throw new Error('期望文件流，但收到 JSON 响应');
+        }
+        if (!response.ok) {
+            let userMessage = `下载失败（HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}）`;
+            try {
+                const text = await response.text();
+                if (text && text.trim()) {
+                    try {
+                        const o = JSON.parse(text);
+                        if (o && o.message) {
+                            userMessage = String(o.message);
+                        } else {
+                            userMessage = text.trim().slice(0, 800);
+                        }
+                    } catch (e) {
+                        userMessage = text.trim().slice(0, 800);
+                    }
+                }
+            } catch (e) {
+                /* ignore */
+            }
+            if (typeof global.showErrorDialog === 'function') {
+                global.showErrorDialog({title: '下载失败', message: userMessage, code: response.status});
+            }
+            const err = new Error(userMessage);
+            err.apiErrorDialogShown = true;
+            throw err;
+        }
+        const blob = await response.blob();
+        const disposition = (response.headers.get && response.headers.get('content-disposition')) || '';
+        let filename = 'export';
+        const star = disposition.match(/filename\*=UTF-8''([^;\s]+)/i);
+        const plain = disposition.match(/filename="([^"]+)"/i);
+        if (star && star[1]) {
+            try {
+                filename = decodeURIComponent(star[1].replace(/\+/g, '%20'));
+            } catch (e) {
+                filename = star[1];
+            }
+        } else if (plain && plain[1]) {
+            filename = plain[1];
+        }
+        return {blob, filename};
+    }
+
     // 便利方法（JSON）
     function get(url, params) {
         return requestJsonMethod('GET', url, {params});
@@ -198,6 +257,7 @@
     global.Api = {
         requestForm,
         streamPost,
+        downloadGet,
         get,
         post,
         put,

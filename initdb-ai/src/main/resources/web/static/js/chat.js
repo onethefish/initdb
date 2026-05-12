@@ -114,6 +114,149 @@ function delayMs(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/** 从助手 Markdown 中取出第一个 ```sql … ``` 或首个 ``` … ``` 代码块内容 */
+function extractSqlFromAssistantMarkdown(md) {
+    const text = String(md ?? '');
+    let m = /```\s*sql\s*([\s\S]*?)```/i.exec(text);
+    if (m) {
+        return m[1].trim();
+    }
+    m = /```\s*([\s\S]*?)```/i.exec(text);
+    if (m) {
+        return m[1].trim();
+    }
+    return '';
+}
+
+function fillExportSqlFromLastBotMessage() {
+    if (!currentSessionId) {
+        showErrorDialog({title: '提示', message: '请先选择对话。'});
+        return;
+    }
+    const session = sessions.find(s => s.id === currentSessionId);
+    if (!session || !Array.isArray(session.messages)) {
+        return;
+    }
+    for (let i = session.messages.length - 1; i >= 0; i--) {
+        const msg = session.messages[i];
+        if (!msg || msg.role !== 'bot') {
+            continue;
+        }
+        const content = typeof msg.content === 'string' ? msg.content : '';
+        const sql = extractSqlFromAssistantMarkdown(content);
+        if (sql) {
+            const ta = document.getElementById('exportSqlInput');
+            if (ta) {
+                ta.value = sql;
+            }
+            return;
+        }
+    }
+    showErrorDialog({title: '提示', message: '未在最近助手消息中找到 SQL 代码块。'});
+}
+
+function triggerBlobDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'export.bin';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
+async function pollExportJobUntilDone(jobId, statusEl) {
+    const maxAttempts = 200;
+    for (let i = 0; i < maxAttempts; i++) {
+        await delayMs(1500);
+        const v = await Api.get('/db/export/jobs/query/unique', {id: jobId, sessionId: currentSessionId});
+        if (v.status === 'READY' && v.downloadReady) {
+            statusEl.textContent = '处理完成，正在下载…';
+            const {blob, filename} = await Api.downloadGet('/db/export/jobs/download', {
+                id: jobId,
+                sessionId: currentSessionId
+            });
+            triggerBlobDownload(blob, filename);
+            const rows = v.rowCount != null ? String(v.rowCount) : '?';
+            statusEl.textContent = `完成，已触发下载（约 ${rows} 行）。`;
+            return;
+        }
+        if (v.status === 'FAILED') {
+            statusEl.textContent = '失败：' + (v.errorMessage || '未知错误');
+            return;
+        }
+        if (v.status === 'EXPIRED') {
+            statusEl.textContent = '任务已过期。';
+            return;
+        }
+        statusEl.textContent = `任务 ${jobId}：${v.status}${v.rowCount != null ? `，已写 ${v.rowCount} 行` : ''}…`;
+    }
+    statusEl.textContent = '等待超时：请稍后重试或再次创建导出任务。';
+}
+
+async function submitDbExportJob() {
+    const statusEl = document.getElementById('exportJobStatus');
+    const btn = document.getElementById('exportSubmitBtn');
+    const sqlEl = document.getElementById('exportSqlInput');
+    const formatEl = document.getElementById('exportFormatSelect');
+    const maxRowsEl = document.getElementById('exportMaxRowsInput');
+    if (!statusEl || !sqlEl || !formatEl) {
+        return;
+    }
+    const sql = String(sqlEl.value || '').trim();
+    if (!sql) {
+        showErrorDialog({title: '提示', message: '请先填写 SQL。'});
+        return;
+    }
+    if (!currentSessionId) {
+        showErrorDialog({title: '提示', message: '请先选择对话。'});
+        return;
+    }
+    if (isDbChatStreaming) {
+        showErrorDialog({title: '提示', message: '请等待当前对话流结束后再导出。'});
+        return;
+    }
+    const format = String(formatEl.value || 'CSV').trim();
+    const body = {sessionId: currentSessionId, sql, format};
+    const maxRowsRaw = maxRowsEl ? String(maxRowsEl.value || '').trim() : '';
+    if (maxRowsRaw) {
+        const n = parseInt(maxRowsRaw, 10);
+        if (!Number.isNaN(n) && n > 0) {
+            body.maxRows = n;
+        }
+    }
+    if (btn) {
+        btn.disabled = true;
+    }
+    statusEl.textContent = '正在创建导出任务…';
+    try {
+        const view = await Api.post('/db/export/jobs/add', body);
+        statusEl.textContent = `任务已创建（${view.id}），状态：${view.status}，等待处理…`;
+        await pollExportJobUntilDone(view.id, statusEl);
+    } catch (e) {
+        console.error('export job failed', e);
+        notifyErrorUnlessShown(e, '导出失败');
+        statusEl.textContent = '失败：' + (e.message || String(e));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+        }
+    }
+}
+
+function initDbExportPanel() {
+    const submitBtn = document.getElementById('exportSubmitBtn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', () => void submitDbExportJob());
+    }
+    const fillBtn = document.getElementById('exportFillSqlFromChatBtn');
+    if (fillBtn) {
+        fillBtn.addEventListener('click', () => fillExportSqlFromLastBotMessage());
+    }
+}
+
 /**
  * 仅根据服务端列表更新本地 {@link sessions} 的展示名称（不改 messages / config / 当前选中会话）。
  * 供异步会话重命名后侧边栏刷新；失败由调用方捕获。
@@ -649,6 +792,14 @@ async function sendMessage() {
         setBotMessageStructured(botMessageDiv, contextualizeText, traceAccum, answerAccum);
         chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
+        const sqlForExport = extractSqlFromAssistantMarkdown(answerAccum);
+        if (sqlForExport) {
+            const exportTa = document.getElementById('exportSqlInput');
+            if (exportTa) {
+                exportTa.value = sqlForExport;
+            }
+        }
+
         let botMsg;
         if (contextualizeText || traceAccum) {
             botMsg = {role: 'bot', content: answerAccum};
@@ -746,6 +897,8 @@ function initChatKeyboardShortcuts() {
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initChatKeyboardShortcuts);
+    document.addEventListener('DOMContentLoaded', initDbExportPanel);
 } else {
     initChatKeyboardShortcuts();
+    initDbExportPanel();
 }

@@ -280,3 +280,88 @@
     max-width: 100%;
     box-sizing: border-box;
 }
+
+/* —— 异步数据导出面板 —— */
+.db-export-panel {
+    margin-top: 10px;
+    border: 1px solid var(--color-border-light, #e0e0e0);
+    border-radius: var(--radius-md, 8px);
+    background: #fafafa;
+    padding: 0 12px 10px;
+    font-size: 13px;
+}
+
+.db-export-summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 10px 4px 8px;
+    color: var(--color-text-secondary, #555);
+    list-style-position: outside;
+}
+
+.db-export-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.db-export-hint {
+    margin: 0;
+    color: var(--color-text-muted, #666);
+    line-height: 1.45;
+}
+
+.db-export-label {
+    font-weight: 600;
+    color: var(--color-text-secondary, #444);
+}
+
+.db-export-sql {
+    width: 100%;
+    min-height: 88px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    border: 1px solid var(--color-border-light, #ddd);
+    border-radius: 6px;
+    resize: vertical;
+}
+
+.db-export-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+}
+
+.db-export-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.db-export-inline select,
+.db-export-inline input.db-export-max-rows {
+    min-width: 0;
+}
+
+.db-export-max-rows {
+    width: 140px;
+    padding: 6px 8px;
+    border: 1px solid var(--color-border-light, #ddd);
+    border-radius: 6px;
+}
+
+.db-export-fill-btn {
+    margin-right: auto;
+}
+
+.db-export-status {
+    min-height: 1.25em;
+    color: var(--color-text-secondary, #444);
+    line-height: 1.4;
+    word-break: break-word;
+}

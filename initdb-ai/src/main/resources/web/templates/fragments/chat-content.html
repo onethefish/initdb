@@ -26,6 +26,29 @@
             <button disabled id="sendMessageBtn" onclick="sendMessage()" title="发送（快捷键 Enter）" type="button">发送</button>
           </div>
           <p class="input-shortcuts-hint" id="inputShortcutsHint"><kbd>Enter</kbd> 发送 · <kbd>F2</kbd> 补全会话 · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 填入输入框（Mac 为 <kbd>⌘</kbd>+<kbd>Enter</kbd>）</p>
+          <details class="db-export-panel" id="dbExportPanel">
+            <summary class="db-export-summary">数据导出（异步 CSV / Excel）</summary>
+            <div class="db-export-body">
+              <p class="db-export-hint">提交后服务端会再次校验 SQL；导出行数受服务端上限约束。完成后将自动下载文件。</p>
+              <label class="db-export-label" for="exportSqlInput">SQL（可编辑）</label>
+              <textarea class="db-export-sql" id="exportSqlInput" rows="4" spellcheck="false"
+                        placeholder="可从最近一条助手回答中的 SQL 代码块自动带出，或自行粘贴查询"></textarea>
+              <div class="db-export-toolbar">
+                <button class="btn btn-secondary db-export-fill-btn" id="exportFillSqlFromChatBtn" type="button">从最近一条助手回答填入 SQL</button>
+                <label class="db-export-inline">格式
+                  <select id="exportFormatSelect">
+                    <option value="CSV">CSV</option>
+                    <option value="XLSX">Excel (.xlsx)</option>
+                  </select>
+                </label>
+                <label class="db-export-inline">最大行数
+                  <input class="db-export-max-rows" id="exportMaxRowsInput" min="1" placeholder="默认服务端上限" type="number">
+                </label>
+                <button class="btn btn-primary" id="exportSubmitBtn" type="button">创建导出并等待下载</button>
+              </div>
+              <div class="db-export-status" id="exportJobStatus" aria-live="polite"></div>
+            </div>
+          </details>
           <div class="standalone-preview-wrap" id="standalonePreviewWrap" style="display: none">
             <div class="standalone-preview-toolbar">
               <label class="standalone-preview-label" for="standalonePreviewInput">补全后的问句（可编辑）</label>

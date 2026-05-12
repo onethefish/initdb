@@ -1,4 +1,4 @@
-package cn.fish.initDB.schedule.export;
+package cn.fish.initDB.schedule;
 
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
@@ -9,6 +9,7 @@ import cn.fish.initDB.entity.ExportJob;
 import cn.fish.initDB.enums.ExportFormat;
 import cn.fish.initDB.enums.ExportJobStatus;
 import cn.fish.initDB.export.io.CsvExportWriter;
+import cn.fish.initDB.export.io.TableExportSink;
 import cn.fish.initDB.export.io.XlsxExportWriter;
 import cn.fish.initDB.repository.ExportJobRepository;
 import cn.hutool.core.util.StrUtil;
@@ -28,7 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Slf4j
 @Component
-public class ExportJobWorker {
+public class ExportJobSchedule {
 
     private final ExportJobRepository exportJobRepository;
     private final ChatSessionRepository chatSessionRepository;
@@ -36,7 +37,7 @@ public class ExportJobWorker {
     private final ServaFile servaFile;
     private final ExportConfig exportConfig;
 
-    public ExportJobWorker(
+    public ExportJobSchedule(
             ExportJobRepository exportJobRepository,
             ChatSessionRepository chatSessionRepository,
             DataBaseService dataBaseService,
@@ -62,7 +63,33 @@ public class ExportJobWorker {
             markFailed(job, e);
         }
     }
+    @Scheduled(fixedDelayString = "${initdb.export.cleanup-interval-ms:3600000}")
+    public void cleanup() {
+        try {
+            cleanupExpiredExports();
+        } catch (Exception e) {
+            log.warn("export job cleanup failed", e);
+        }
+    }
 
+    private void cleanupExpiredExports() {
+        LocalDateTime now = LocalDateTime.now();
+        var list = exportJobRepository.listExpiredForCleanup(now);
+        for (ExportJob job : list) {
+            if (StrUtil.isNotBlank(job.getServaFileId())) {
+                try {
+                    servaFile.delete(job.getServaFileId());
+                } catch (Exception e) {
+                    log.warn("delete serva export file failed, jobId={}, fileId={}", job.getId(), job.getServaFileId(), e);
+                }
+            }
+            ExportJob patch = new ExportJob();
+            patch.setId(job.getId());
+            patch.setStatus(ExportJobStatus.EXPIRED.name());
+            patch.setFinishedAt(job.getFinishedAt() != null ? job.getFinishedAt() : now);
+            exportJobRepository.updateById(patch);
+        }
+    }
     private void markFailed(ExportJob job, Exception e) {
         job.setStatus(ExportJobStatus.FAILED.name());
         String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
@@ -93,39 +120,33 @@ public class ExportJobWorker {
 
     private long streamToCsv(ChatSession session, String sql, OutputStream out) throws IOException {
         try (CsvExportWriter writer = new CsvExportWriter(out, exportConfig)) {
-            AtomicLong rows = new AtomicLong();
-            dataBaseService.queryTableDataStreaming(session, sql, row -> {
-                if (rows.get() == 0) {
-                    writer.writeHeader(new ArrayList<>(row.keySet()));
-                }
-                writer.writeDataRow(row);
-                rows.incrementAndGet();
-            });
-            if (rows.get() == 0) {
-                writer.writeNoDataRow();
-            }
-            return rows.get();
+            return streamQueryToSink(session, sql, writer);
         }
     }
 
     private long streamToXlsx(ChatSession session, String sql, OutputStream out) throws IOException {
-        XlsxExportWriter xlsx = new XlsxExportWriter(exportConfig);
-        try {
-            AtomicLong rows = new AtomicLong();
-            dataBaseService.queryTableDataStreaming(session, sql, row -> {
-                if (rows.get() == 0) {
-                    xlsx.writeHeader(new ArrayList<>(row.keySet()));
-                }
-                xlsx.writeDataRow(row);
-                rows.incrementAndGet();
-            });
-            if (rows.get() == 0) {
-                xlsx.writeNoDataRow();
-            }
+        try (XlsxExportWriter xlsx = new XlsxExportWriter(exportConfig)) {
+            long rowCount = streamQueryToSink(session, sql, xlsx);
             xlsx.writeTo(out);
-            return rows.get();
-        } finally {
-            xlsx.close();
+            return rowCount;
         }
+    }
+
+    /**
+     * 流式查询并写入 {@link TableExportSink}；返回写入的数据行数（无数据时为 0，仍会写入占位行）。
+     */
+    private long streamQueryToSink(ChatSession session, String sql, TableExportSink sink) {
+        AtomicLong rows = new AtomicLong();
+        dataBaseService.queryTableDataStreaming(session, sql, row -> {
+            if (rows.get() == 0) {
+                sink.writeHeader(new ArrayList<>(row.keySet()));
+            }
+            sink.writeDataRow(row);
+            rows.incrementAndGet();
+        });
+        if (rows.get() == 0) {
+            sink.writeNoDataRow();
+        }
+        return rows.get();
     }
 }
