@@ -40,6 +40,10 @@ public class ChartEventListener {
 
     private static final ConcurrentHashMap<String, Object> SESSION_LOCKS = new ConcurrentHashMap<>();
 
+    /** 压缩摘要写入 checkpoint 时，作为首条 User 消息的固定前缀（非 classpath 提示词模板）。 */
+    private static final String CHART_COMPRESSED_SUMMARY_USER_PREFIX =
+            "以下为此前多轮对话的压缩摘要，请在回答时保留其中涉及的业务与库表信息：\n\n";
+
     /** 仅串行化同 thread 的自动命名逻辑，不与 {@link #SESSION_LOCKS} 共用，避免等待摘要压缩持锁过久。 */
     private static final ConcurrentHashMap<String, Object> SESSION_TITLE_LOCKS = new ConcurrentHashMap<>();
 
@@ -117,7 +121,7 @@ public class ChartEventListener {
                 }
                 String trimSummary = summary.trim();
                 List<Message> compressed = new ArrayList<>();
-                compressed.add(new UserMessage(applicationPromptTemplates.renderChartCompressedUserMessage(trimSummary)));
+                compressed.add(new UserMessage(CHART_COMPRESSED_SUMMARY_USER_PREFIX + trimSummary));
                 compressed.addAll(tail);
 
                 Map<String, Object> newState = new HashMap<>(again.get().getState());

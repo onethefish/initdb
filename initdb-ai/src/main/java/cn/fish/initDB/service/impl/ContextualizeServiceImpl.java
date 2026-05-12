@@ -2,8 +2,8 @@ package cn.fish.initDB.service.impl;
 
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
-import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.constants.ContextualizeChartConstants;
+import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.service.ContextualizeService;
 import cn.fish.initDB.util.ExplicitSqlUserInput;
 import cn.hutool.core.util.ObjectUtil;
@@ -16,6 +16,7 @@ import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,15 @@ import java.util.Optional;
 @Slf4j
 @Service
 public class ContextualizeServiceImpl implements ContextualizeService {
+
+    /** 追问改写 User 消息拼装格式（固定文案，非 classpath 提示词）。 */
+    private static String buildContextualizeUserBlock(String historyBlock, String latestInput) {
+        return "-----对话摘录-----\n"
+                + StrUtil.nullToEmpty(historyBlock) + "\n"
+                + "-----最新输入-----\n"
+                + StrUtil.nullToEmpty(latestInput) + "\n"
+                + "-----请只输出改写后的一行-----\n";
+    }
 
     private final ChatModel chatModel;
     private final BaseCheckpointSaver checkpointSaver;
@@ -63,12 +73,12 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         if (StrUtil.isBlank(historyBlock)) {
             return trimmed;
         }
-        String userBlock = applicationPromptTemplates.renderContextualizeUserBlock(historyBlock, trimmed);
-
+        String userBlock = buildContextualizeUserBlock(historyBlock, trimmed);
+        String systemText = applicationPromptTemplates.contextualizeRewriteSystemText();
         String rawText;
         try {
             rawText = chatModel.call(new Prompt(List.of(
-                                       new SystemMessage(applicationPromptTemplates.contextualizeRewriteSystemText()),
+                                       new SystemMessage(systemText),
                                        new UserMessage(userBlock))))
                                .getResult()
                                .getOutput()

@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Loads all prompt bodies from {@code classpath:prompts/*.txt} via {@link PromptTemplate}.
+ * Loads prompt bodies from {@code classpath:prompts/*.txt} via {@link PromptTemplate}.
  */
 @Component
 public class ApplicationPromptTemplates {
@@ -33,26 +33,22 @@ public class ApplicationPromptTemplates {
 	private static final String PROMPTS = "prompts/";
 
 	private final PromptTemplate chartConversationSummary;
-	private final PromptTemplate chartCompressedUserMessage;
 	private final PromptTemplate dbReactSystem;
 	private final PromptTemplate dbReactDescription;
 	private final PromptTemplate querySqlCheck;
 	private final PromptTemplate agentVectorRagAnswer;
 	private final PromptTemplate contextualizeRewriteSystem;
-	private final PromptTemplate contextualizeUserBlock;
 	private final PromptTemplate dbDirectNl2sql;
 	private final PromptTemplate dbIntentRoute;
 	private final PromptTemplate chartSessionTitle;
 
 	public ApplicationPromptTemplates() {
 		this.chartConversationSummary = tpl("chart_conversation_summary.txt");
-		this.chartCompressedUserMessage = tpl("chart_compressed_user_message.txt");
 		this.dbReactSystem = tpl("db_react_system.txt");
 		this.dbReactDescription = tpl("db_react_description.txt");
 		this.querySqlCheck = tpl("query_sql_check.txt");
 		this.agentVectorRagAnswer = tpl("agent_vector_rag_answer.txt");
 		this.contextualizeRewriteSystem = tpl("contextualize_rewrite_system.txt");
-		this.contextualizeUserBlock = tpl("contextualize_user_block.txt");
 		this.dbDirectNl2sql = tpl("db_direct_nl2sql.txt");
 		this.dbIntentRoute = tpl("db_intent_route.txt");
 		this.chartSessionTitle = tpl("chart_session_title.txt");
@@ -66,12 +62,6 @@ public class ApplicationPromptTemplates {
 		Map<String, Object> model = new HashMap<>(2);
 		model.put("history", StrUtil.nullToEmpty(history));
 		return chartConversationSummary.render(model);
-	}
-
-	public String renderChartCompressedUserMessage(String summary) {
-		Map<String, Object> model = new HashMap<>(2);
-		model.put("summary", StrUtil.nullToEmpty(summary));
-		return chartCompressedUserMessage.render(model);
 	}
 
 	public String dbReactSystemText() {
@@ -97,13 +87,6 @@ public class ApplicationPromptTemplates {
 
 	public String contextualizeRewriteSystemText() {
 		return contextualizeRewriteSystem.render();
-	}
-
-	public String renderContextualizeUserBlock(String historyBlock, String latestInput) {
-		Map<String, Object> model = new HashMap<>(4);
-		model.put("historyBlock", StrUtil.nullToEmpty(historyBlock));
-		model.put("latestInput", StrUtil.nullToEmpty(latestInput));
-		return contextualizeUserBlock.render(model);
 	}
 
 	public String renderDbDirectNl2sql(String question, String tableCatalogJson) {
