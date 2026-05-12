@@ -1,0 +1,44 @@
+package cn.fish.common.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * 异步导出相关配置，前缀 {@code initdb.export}。
+ */
+@Data
+@Configuration
+@ConfigurationProperties(prefix = "initdb.export")
+public class ExportConfig {
+
+    /**
+     * 单次导出 SQL 行数硬顶（服务端钳制用户请求）
+     */
+    private int maxRows = 1_000_000;
+
+    /**
+     * 任务与文件记录过期时间（小时）
+     */
+    private int jobTtlHours = 24;
+
+    /**
+     * 处理 PENDING 任务的轮询间隔（毫秒）
+     */
+    private long pollIntervalMs = 3000L;
+
+    /**
+     * 过期清理调度间隔（毫秒）
+     */
+    private long cleanupIntervalMs = 3_600_000L;
+
+    /**
+     * SXSSFWorkbook 内存中保留的行数窗口
+     */
+    private int sxssfRowAccessWindowSize = 500;
+
+    /**
+     * CSV 是否写 UTF-8 BOM（便于 Excel 打开中文）
+     */
+    private boolean csvUtf8Bom = true;
+}

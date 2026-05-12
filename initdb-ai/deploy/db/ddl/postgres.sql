@@ -75,3 +75,39 @@ COMMENT ON COLUMN agent_knowledge.file_id IS '文件ID';
 COMMENT ON COLUMN agent_knowledge.file_size IS '文件大小（字节）';
 COMMENT ON COLUMN agent_knowledge.file_type IS '文件类型';
 COMMENT ON COLUMN agent_knowledge.splitter_type IS '分块策略类型：token/recursive/sentence/paragraph/semantic';
+
+create table export_job
+(
+    id              varchar(32)  not null primary key,
+    session_id      varchar(32)  not null,
+    format          varchar(8)   not null,
+    max_rows        integer      not null,
+    submitted_sql   text         not null,
+    executed_sql    text         not null,
+    status          varchar(16)  not null,
+    serva_file_id   varchar(128),
+    row_count       bigint,
+    error_message   text,
+    created_time    timestamp    not null default now(),
+    expires_at      timestamp    not null,
+    finished_at     timestamp
+);
+
+comment on table export_job is '异步导出任务表';
+comment on column export_job.id is '导出任务ID';
+comment on column export_job.session_id is '聊天会话ID';
+comment on column export_job.format is '导出格式：CSV / XLSX';
+comment on column export_job.max_rows is '用户请求的最大行数（已钳制）';
+comment on column export_job.submitted_sql is '用户提交的 SQL';
+comment on column export_job.executed_sql is '经行数限制改写后的执行 SQL';
+comment on column export_job.status is 'PENDING/RUNNING/READY/FAILED/EXPIRED';
+comment on column export_job.serva_file_id is 'Serva 文件存储返回的 fileId';
+comment on column export_job.row_count is '实际导出行数';
+comment on column export_job.error_message is '失败原因';
+comment on column export_job.created_time is '创建时间';
+comment on column export_job.expires_at is '过期时间';
+comment on column export_job.finished_at is '完成时间';
+
+create index idx_export_job_session on export_job (session_id);
+create index idx_export_job_status on export_job (status);
+create index idx_export_job_expires on export_job (expires_at);

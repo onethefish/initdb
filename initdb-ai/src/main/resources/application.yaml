@@ -52,3 +52,14 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     banner: false
+
+initdb:
+  export:
+    # 单次导出 SQL 行数上限（服务端钳制用户请求）
+    max-rows: 1000000
+    # 任务记录与文件过期时间（小时），由清理调度删除
+    job-ttl-hours: 24
+    # 后台轮询处理 PENDING 任务的间隔（毫秒）
+    poll-interval-ms: 3000
+    # 过期清理调度间隔（毫秒）
+    cleanup-interval-ms: 3600000

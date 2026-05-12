@@ -39,3 +39,24 @@ CREATE TABLE agent_knowledge
     file_type        VARCHAR(50) COMMENT '文件类型',
     splitter_type    VARCHAR(20) COMMENT '分块策略类型：token/recursive/sentence/paragraph/semantic'
 ) COMMENT ='智能体知识表';
+
+CREATE TABLE export_job
+(
+    id              VARCHAR(32)  NOT NULL PRIMARY KEY COMMENT '导出任务ID',
+    session_id      VARCHAR(32)  NOT NULL COMMENT '聊天会话ID',
+    format          VARCHAR(8)   NOT NULL COMMENT '导出格式：CSV / XLSX',
+    max_rows        INT          NOT NULL COMMENT '用户请求的最大行数（已钳制）',
+    submitted_sql   TEXT         NOT NULL COMMENT '用户提交的 SQL',
+    executed_sql    TEXT         NOT NULL COMMENT '经行数限制改写后的执行 SQL',
+    status          VARCHAR(16)  NOT NULL COMMENT 'PENDING/RUNNING/READY/FAILED/EXPIRED',
+    serva_file_id   VARCHAR(128) NULL COMMENT 'Serva 文件存储返回的 fileId',
+    row_count       BIGINT       NULL COMMENT '实际导出行数',
+    error_message   TEXT         NULL COMMENT '失败原因',
+    created_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    expires_at      DATETIME     NOT NULL COMMENT '过期时间',
+    finished_at     DATETIME     NULL COMMENT '完成时间'
+) COMMENT = '异步导出任务表';
+
+CREATE INDEX idx_export_job_session ON export_job (session_id);
+CREATE INDEX idx_export_job_status ON export_job (status);
+CREATE INDEX idx_export_job_expires ON export_job (expires_at);
