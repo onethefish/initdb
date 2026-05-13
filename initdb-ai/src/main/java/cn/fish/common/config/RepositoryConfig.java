@@ -1,15 +1,18 @@
 package cn.fish.common.config;
 
-import cn.fish.common.savers.ChatMemorySaver;
+import cn.fish.common.savers.PostgresSaver;
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class RepositoryConfig {
+
 
     // 提供一个RAG向量库（pg）
     @Bean
@@ -25,9 +28,14 @@ public class RepositoryConfig {
     //        return SimpleVectorStore.builder(embeddingModel).build();
     //    }
 
-    // 会话记忆
     @Bean
-    public ChatMemorySaver createChatMemorySaver() {
-        return new ChatMemorySaver();
+    public BaseCheckpointSaver baseCheckpointSaver(
+            JdbcTemplate jdbcTemplate, PlatformTransactionManager transactionManager) {
+        return new PostgresSaver(jdbcTemplate, transactionManager);
     }
+
+    //    @Bean
+    //    public BaseCheckpointSaver baseCheckpointSaver() {
+    //        return new ChatMemorySaver();
+    //    }
 }

@@ -3,7 +3,7 @@ package cn.fish.initDB.workflow.agent;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.workflow.agent.tool.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
-import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,13 +27,14 @@ public class DbReactAgentConfig {
     public ReactAgent dbReactAgent(ChatModel chatModel, GetAllTablesTool getAllTablesTool,
                                    GetTableSchemaTool getTableSchemaTool, QuerySqlCheckTool querySqlCheckTool,
                                    GetTableDataTool getTableDataTool, KnowledgeRetrievalTool knowledgeRetrievalTool,
-                                   MemorySaver memorySaver, ApplicationPromptTemplates applicationPromptTemplates) {
+                                   BaseCheckpointSaver checkpointSaver,
+                                   ApplicationPromptTemplates applicationPromptTemplates) {
         return ReactAgent.builder()
                          .name(REACT_AGENT_DISPLAY_NAME)
                          .systemPrompt(applicationPromptTemplates.dbReactSystemText())
                          .description(REACT_AGENT_DESCRIPTION)
                          .model(chatModel)
-                         .saver(memorySaver)
+                         .saver(checkpointSaver)
                          .parallelToolExecution(false)
                          .maxParallelTools(1)
                          .enableLogging(true)

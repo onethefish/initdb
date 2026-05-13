@@ -6,7 +6,7 @@ import cn.fish.initDB.workflow.node.*;
 import com.alibaba.cloud.ai.graph.*;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
-import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.exception.GraphStateException;
 import com.alibaba.cloud.ai.graph.state.strategy.AppendStrategy;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
@@ -30,7 +30,7 @@ public class DBAgentStateGraphConfig {
     @Bean(name = COMPILED_GRAPH_BEAN)
     public CompiledGraph dbChatWorkflowGraph(
             @Qualifier(DbReactAgentConfig.REACT_AGENT_BEAN) ReactAgent dbReactAgent,
-            MemorySaver memorySaver,
+            BaseCheckpointSaver checkpointSaver,
             DbIntentClassificationNode dbIntentClassificationNode,
             DbDirectTableCatalogNode dbDirectTableCatalogNode,
             DbDirectNl2SqlNode dbDirectNl2SqlNode,
@@ -38,7 +38,7 @@ public class DBAgentStateGraphConfig {
             DbDirectExecuteQueryNode dbDirectExecuteQueryNode,
             DbAgentInputBridgeNode dbAgentInputBridgeNode) {
         try {
-            return buildDbChatWorkflow(dbReactAgent, memorySaver, dbIntentClassificationNode, dbDirectTableCatalogNode,
+            return buildDbChatWorkflow(dbReactAgent, checkpointSaver, dbIntentClassificationNode, dbDirectTableCatalogNode,
                     dbDirectNl2SqlNode, dbDirectSqlGuardNode, dbDirectExecuteQueryNode, dbAgentInputBridgeNode);
         } catch (GraphStateException e) { // compile 等构图阶段非法（未知节点、边配置错误）时抛出，此处包装便于 Spring 启动报错
             throw new IllegalStateException("db_chat_workflow compile failed", e);
@@ -47,7 +47,7 @@ public class DBAgentStateGraphConfig {
 
     private static CompiledGraph buildDbChatWorkflow(
             ReactAgent dbReactAgent,
-            MemorySaver memorySaver,
+            BaseCheckpointSaver checkpointSaver,
             DbIntentClassificationNode intentClassificationNode,
             DbDirectTableCatalogNode directTableCatalogNode,
             DbDirectNl2SqlNode directNl2SqlNode,
@@ -113,7 +113,7 @@ public class DBAgentStateGraphConfig {
 
         // compile：校验节点与边，应用 SaverConfig/recursionLimit，得到可执行 CompiledGraph
         CompileConfig compileConfig = CompileConfig.builder()
-                                                   .saverConfig(SaverConfig.builder().register(memorySaver).build())
+                                                   .saverConfig(SaverConfig.builder().register(checkpointSaver).build())
                                                    .recursionLimit(100)
                                                    .build();
         return stateGraph.compile(compileConfig); // compile：生成 CompiledGraph，非法拓扑在此抛 GraphStateException
