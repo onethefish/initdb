@@ -3,7 +3,7 @@ package cn.fish.knowledge.service.impl;
 import cn.fish.cloud.serva.file.operate.ServaFile;
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.knowledge.converter.AgentKnowledgeConverter;
-import cn.fish.knowledge.converter.EntityConver;
+import cn.fish.common.convert.EntityConver;
 import cn.fish.knowledge.entity.AgentKnowledge;
 import cn.fish.knowledge.entity.AgentKnowledgeDTO;
 import cn.fish.knowledge.entity.AgentKnowledgeVO;

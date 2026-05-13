@@ -1,4 +1,4 @@
-package cn.fish.knowledge.converter;
+package cn.fish.common.convert;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;

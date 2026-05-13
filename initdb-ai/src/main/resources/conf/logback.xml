@@ -130,6 +130,12 @@
         <appender-ref ref="FILE_ALL"/>
         <appender-ref ref="FILE_SQL"/>
     </logger>
+    <!-- ExportJob poll 在有任务时仍较频繁；仅该 Mapper 降为 INFO，同包其它 Mapper 仍继承上面 DEBUG -->
+    <logger name="cn.fish.initDB.mapper.ExportJobMapper" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SQL"/>
+    </logger>
     <logger name="cn.fish.datasource.mapper" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>

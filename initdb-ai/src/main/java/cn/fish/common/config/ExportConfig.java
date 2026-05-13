@@ -23,9 +23,9 @@ public class ExportConfig {
     private int jobTtlHours = 24;
 
     /**
-     * 处理 PENDING 任务的轮询间隔（毫秒）
+     * 无事件唤醒时的兜底轮询间隔（毫秒）；有任务时由 {@link cn.fish.initDB.event.ExportJobPendingEvent} 触发立即处理。
      */
-    private long pollIntervalMs = 3000L;
+    private long pollIntervalMs = 60_000L;
 
     /**
      * 过期清理调度间隔（毫秒）

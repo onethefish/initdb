@@ -9,16 +9,20 @@ import cn.fish.database.sql.SelectSqlRowLimiter;
 import cn.fish.database.sql.SqlDialect;
 import cn.fish.database.sql.SqlDialectResolver;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
+import cn.fish.initDB.converter.ExportJobConverter;
 import cn.fish.initDB.entity.ExportJob;
 import cn.fish.initDB.entity.ExportJobCreateRequest;
 import cn.fish.initDB.entity.ExportJobDownloadOpen;
 import cn.fish.initDB.entity.ExportJobView;
 import cn.fish.initDB.enums.ExportFormat;
 import cn.fish.initDB.enums.ExportJobStatus;
+import cn.fish.initDB.event.ExportJobPendingEvent;
 import cn.fish.initDB.repository.ExportJobRepository;
 import cn.fish.initDB.service.ExportJobService;
 import cn.hutool.core.util.StrUtil;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -32,6 +36,7 @@ public class ExportJobServiceImpl implements ExportJobService {
     private final ExportSqlGuardService exportSqlGuardService;
     private final ExportConfig exportConfig;
     private final ServaFile servaFile;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public ExportJobServiceImpl(
             ExportJobRepository exportJobRepository,
@@ -39,16 +44,19 @@ public class ExportJobServiceImpl implements ExportJobService {
             AgentDatasourceRepository agentDatasourceRepository,
             ExportSqlGuardService exportSqlGuardService,
             ExportConfig exportConfig,
-            ServaFile servaFile) {
+            ServaFile servaFile,
+            ApplicationEventPublisher applicationEventPublisher) {
         this.exportJobRepository = exportJobRepository;
         this.chatSessionRepository = chatSessionRepository;
         this.agentDatasourceRepository = agentDatasourceRepository;
         this.exportSqlGuardService = exportSqlGuardService;
         this.exportConfig = exportConfig;
         this.servaFile = servaFile;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ExportJobView add(ExportJobCreateRequest request) {
         ExportFormat format = ExportFormat.fromClient(request.getFormat());
         int cap = exportConfig.getMaxRows();
@@ -67,23 +75,17 @@ public class ExportJobServiceImpl implements ExportJobService {
         String executedSql = SelectSqlRowLimiter.ensureSelectRowLimit(rawSql, cap, dialect);
 
         LocalDateTime now = LocalDateTime.now();
-        ExportJob job = new ExportJob();
-        job.setSessionId(request.getSessionId());
-        job.setFormat(format.name());
-        job.setMaxRows(cap);
-        job.setSubmittedSql(rawSql);
-        job.setExecutedSql(executedSql);
-        job.setStatus(ExportJobStatus.PENDING.name());
-        job.setCreatedTime(now);
-        job.setExpiresAt(now.plusHours(exportConfig.getJobTtlHours()));
+        ExportJob job = ExportJobConverter.toPendingEntity(
+                request, format, cap, rawSql, executedSql, now, exportConfig.getJobTtlHours());
         exportJobRepository.save(job);
-        return toView(job);
+        applicationEventPublisher.publishEvent(new ExportJobPendingEvent(this));
+        return ExportJobConverter.toView(job);
     }
 
     @Override
     public ExportJobView queryUnique(String jobId, String sessionId) {
         ExportJob job = requireOwnedJob(jobId, sessionId);
-        return toView(job);
+        return ExportJobConverter.toView(job);
     }
 
     private ExportJob requireDownloadable(String jobId, String sessionId) {
@@ -119,21 +121,5 @@ public class ExportJobServiceImpl implements ExportJobService {
             throw new CommonException("无权访问该导出任务。");
         }
         return job;
-    }
-
-    private static ExportJobView toView(ExportJob job) {
-        return ExportJobView.builder()
-                            .id(job.getId())
-                            .sessionId(job.getSessionId())
-                            .format(job.getFormat())
-                            .maxRows(job.getMaxRows())
-                            .status(job.getStatus())
-                            .rowCount(job.getRowCount())
-                            .errorMessage(job.getErrorMessage())
-                            .createdTime(job.getCreatedTime())
-                            .expiresAt(job.getExpiresAt())
-                            .finishedAt(job.getFinishedAt())
-                            .downloadReady(ExportJobStatus.READY.name().equals(job.getStatus()) && StrUtil.isNotBlank(job.getServaFileId()))
-                            .build();
     }
 }

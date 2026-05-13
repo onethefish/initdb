@@ -71,8 +71,8 @@ initdb:
     max-rows: 10000
     # 任务记录与文件过期时间（小时），由清理调度删除
     job-ttl-hours: 24
-    # 后台轮询处理 PENDING 任务的间隔（毫秒）
-    poll-interval-ms: 3000
+    # 兜底轮询 PENDING 的间隔（毫秒）；提交导出后会发事件异步立刻处理，此处主要应对重启遗漏等
+    poll-interval-ms: 60000
     # 过期清理调度间隔（毫秒）
     cleanup-interval-ms: 3600000
     # Excel 列宽（字符数近似）：下限保证可读；上限内随内容加宽，超出不再加宽且不换行（全文仍在单元格内）
