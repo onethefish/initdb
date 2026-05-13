@@ -1,6 +1,7 @@
 package cn.fish.common.config;
 
 import cn.fish.common.savers.PostgresSaver;
+import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -8,7 +9,8 @@ import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
+
+import javax.sql.DataSource;
 
 @Configuration
 public class RepositoryConfig {
@@ -29,9 +31,12 @@ public class RepositoryConfig {
     //    }
 
     @Bean
-    public BaseCheckpointSaver baseCheckpointSaver(
-            JdbcTemplate jdbcTemplate, PlatformTransactionManager transactionManager) {
-        return new PostgresSaver(jdbcTemplate, transactionManager);
+    public BaseCheckpointSaver baseCheckpointSaver(DataSource dataSource) {
+        return PostgresSaver.builder()
+                            .datasource(dataSource)
+                            .createTables(true)
+                            .stateSerializer(StateGraph.DEFAULT_JACKSON_SERIALIZER)
+                            .build();
     }
 
     //    @Bean

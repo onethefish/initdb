@@ -2,187 +2,498 @@ package cn.fish.common.savers;
 
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.StateGraph;
-import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.serializer.StateSerializer;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.postgresql.ds.PGSimpleDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.IntStream;
+import java.sql.*;
+import java.util.*;
 
-import static com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver.THREAD_ID_DEFAULT;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
-/**
- * 与 {@link com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver} 等价的 checkpoint 语义，
- * 持久化到当前应用使用的 PostgreSQL（仅依赖 {@link JdbcTemplate}，不再单独解析 JDBC URL）。
- */
-public final class PostgresSaver implements BaseCheckpointSaver {
+public class PostgresSaver extends MemorySaver {
+    private static final Logger log = LoggerFactory.getLogger(PostgresSaver.class);
+    /**
+     * Datasource used to create the store
+     */
+    protected final DataSource datasource;
 
-    private static final String TABLE = "initdb_graph_checkpoint_entry";
-
-    private final JdbcTemplate jdbcTemplate;
-    private final TransactionTemplate transactionTemplate;
     private final StateSerializer stateSerializer;
-    private final ReentrantLock lock = new ReentrantLock();
-    private volatile boolean tableReady;
 
-    public PostgresSaver(JdbcTemplate jdbcTemplate, PlatformTransactionManager transactionManager) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.stateSerializer = StateGraph.DEFAULT_JACKSON_SERIALIZER;
+    protected PostgresSaver(Builder builder) throws SQLException {
+        this.datasource = builder.datasource;
+        this.stateSerializer = builder.stateSerializer;
+        initTable(builder.dropTablesFirst, builder.createTables);
     }
 
-    private void ensureTable() {
-        if (tableReady) {
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private void rollback(Connection conn, Checkpoint checkpoint, String threadId) {
+        if (conn == null)
             return;
-        }
-        lock.lock();
+
+        requireNonNull(checkpoint, "checkpoint cannot be null");
+
         try {
-            if (tableReady) {
-                return;
-            }
-            jdbcTemplate.execute(
-                    "CREATE TABLE IF NOT EXISTS " + TABLE + " ("
-                            + "thread_id VARCHAR(190) NOT NULL,"
-                            + "sort_ord INT NOT NULL,"
-                            + "checkpoint_id VARCHAR(190) NOT NULL,"
-                            + "node_id VARCHAR(512),"
-                            + "next_node_id VARCHAR(512),"
-                            + "state_bytes BYTEA NOT NULL,"
-                            + "PRIMARY KEY (thread_id, sort_ord)"
-                            + ")");
-            tableReady = true;
-        } finally {
-            lock.unlock();
+            conn.rollback();
+            log.warn("Transaction rolled back for checkpoint {}", checkpoint.getId());
+        } catch (SQLException exRollback) {
+            log.error("Failed to rollback transaction for checkpoint id {} in thread {}",
+                    checkpoint.getId(),
+                    threadId,
+                    exRollback);
         }
     }
 
-    private static String resolveThreadId(RunnableConfig config) {
-        return config.threadId().orElse(THREAD_ID_DEFAULT);
+    private String encodeState(Map<String, Object> data) throws IOException {
+        var binaryData = stateSerializer.dataToBytes(data);
+        var base64Data = Base64.getEncoder().encodeToString(binaryData);
+        return format("""
+                {"binaryPayload": "%s"}
+                """, base64Data);
     }
 
-    private LinkedList<Checkpoint> loadAll(String threadId) {
-        ensureTable();
-        List<Checkpoint> rows = jdbcTemplate.query(
-                "SELECT checkpoint_id, node_id, next_node_id, state_bytes FROM " + TABLE
-                        + " WHERE thread_id = ? ORDER BY sort_ord ASC",
-                (rs, rowNum) -> {
-                    byte[] stateBytes = rs.getBytes("state_bytes");
-                    Map<String, Object> state;
-                    try {
-                        state = stateSerializer.dataFromBytes(stateBytes);
-                    } catch (IOException | ClassNotFoundException e) {
-                        throw new IllegalStateException("checkpoint state 反序列化失败", e);
-                    }
-                    return Checkpoint.builder()
-                            .id(rs.getString("checkpoint_id"))
-                            .nodeId(rs.getString("node_id"))
-                            .nextNodeId(rs.getString("next_node_id"))
-                            .state(state != null ? state : new HashMap<>())
-                            .build();
-                },
-                threadId);
-        return new LinkedList<>(rows);
+    private Map<String, Object> decodeState(byte[] binaryPayload, String contentType) throws IOException, ClassNotFoundException {
+        if (!Objects.equals(contentType, stateSerializer.contentType())) {
+            throw new IllegalStateException(
+                    format("Content Type used for store state '%s' is different from one '%s' used for deserialize it",
+                            contentType,
+                            stateSerializer.contentType()));
+        }
+
+        byte[] bytes = Base64.getDecoder().decode(binaryPayload);
+        return stateSerializer.dataFromBytes(bytes);
     }
 
-    private void replaceAll(String threadId, LinkedList<Checkpoint> checkpoints) {
-        transactionTemplate.executeWithoutResult(status -> {
-            jdbcTemplate.update("DELETE FROM " + TABLE + " WHERE thread_id = ?", threadId);
-            int ord = 0;
-            for (Checkpoint c : checkpoints) {
-                Map<String, Object> state = c.getState() != null ? c.getState() : Map.of();
-                byte[] stateBytes;
-                try {
-                    stateBytes = stateSerializer.dataToBytes(state);
-                } catch (IOException e) {
-                    throw new IllegalStateException("checkpoint state 序列化失败", e);
+    protected void initTable(boolean dropTablesFirst, boolean createTables) throws SQLException {
+        var sqlDropTables = """
+                DROP TABLE IF EXISTS GraphCheckpoint CASCADE;
+                DROP TABLE IF EXISTS GraphThread CASCADE;
+                """;
+
+        var sqlCreateTables = """
+                CREATE TABLE IF NOT EXISTS GraphThread (
+                     thread_id UUID PRIMARY KEY,
+                     thread_name VARCHAR(255),
+                     is_released BOOLEAN DEFAULT FALSE NOT NULL
+                 );
+                
+                 CREATE TABLE IF NOT EXISTS GraphCheckpoint (
+                     checkpoint_id UUID PRIMARY KEY,
+                     parent_checkpoint_id UUID,
+                     thread_id UUID NOT NULL,
+                     node_id VARCHAR(255),
+                     next_node_id VARCHAR(255),
+                     state_data JSONB NOT NULL,
+                     state_content_type VARCHAR(100) NOT NULL, -- New field for content type
+                     saved_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                
+                     CONSTRAINT fk_thread
+                         FOREIGN KEY(thread_id)
+                         REFERENCES GraphThread(thread_id)
+                         ON DELETE CASCADE
+                 );
+                
+                 CREATE INDEX idx_lg4jcheckpoint_thread_id ON GraphCheckpoint(thread_id);
+                 CREATE INDEX idx_lg4jcheckpoint_thread_id_saved_at_desc ON GraphCheckpoint(thread_id, saved_at DESC);
+                 CREATE UNIQUE INDEX idx_unique_lg4jthread_thread_name_unreleased  ON GraphThread(thread_name) WHERE is_released = FALSE;
+                """;
+
+
+        String sqlCommand = null;
+        try (Connection connection = getConnection(); Statement statement = connection.createStatement()) {
+            if (dropTablesFirst) {
+                log.trace("Executing drop tables:\n---\n{}---", sqlDropTables);
+                sqlCommand = sqlDropTables;
+                statement.executeUpdate(sqlCommand);
+            }
+            if (createTables) {
+                log.trace("Executing create tables:\n---\n{}---", sqlCreateTables);
+                sqlCommand = sqlCreateTables;
+                statement.executeUpdate(sqlCommand);
+            }
+        } catch (SQLException ex) {
+            log.error("error executing command\n{}\n", sqlCommand, ex);
+            throw ex;
+        }
+    }
+
+    @Override
+    protected LinkedList<Checkpoint> loadedCheckpoints(RunnableConfig config, LinkedList<Checkpoint> checkpoints) throws Exception {
+
+        if (!checkpoints.isEmpty())
+            return checkpoints;
+
+        var threadId = config.threadId().orElse(THREAD_ID_DEFAULT);
+
+        var sqlCheckThread = """
+                SELECT COUNT(*)
+                FROM GraphThread
+                WHERE thread_name = ? AND is_released = FALSE
+                """;
+        var sqlQueryCheckpoints = """
+                WITH matched_thread AS (
+                    SELECT thread_id
+                    FROM GraphThread
+                    WHERE thread_name = ? AND is_released = FALSE
+                )
+                SELECT  c.checkpoint_id,
+                        c.node_id,
+                        c.next_node_id,
+                        c.state_data->>'binaryPayload' AS base64_data,
+                        c.state_content_type,
+                        c.parent_checkpoint_id
+                FROM matched_thread t
+                JOIN GraphCheckpoint c ON c.thread_id = t.thread_id
+                ORDER BY c.saved_at DESC
+                """;
+        try (Connection conn = getConnection()) {
+
+            try (PreparedStatement ps = conn.prepareStatement(sqlCheckThread)) {
+                ps.setString(1, threadId);
+                var resultSet = ps.executeQuery();
+                resultSet.next();
+                var count = resultSet.getInt(1);
+
+                if (count == 0) {
+                    return checkpoints;
                 }
-                jdbcTemplate.update(
-                        "INSERT INTO " + TABLE
-                                + " (thread_id, sort_ord, checkpoint_id, node_id, next_node_id, state_bytes) VALUES (?,?,?,?,?,?)",
-                        threadId,
-                        ord++,
-                        c.getId(),
-                        c.getNodeId(),
-                        c.getNextNodeId(),
-                        stateBytes);
+                if (count > 1) {
+                    throw new IllegalStateException(format("there are more than one Thread '%s' open (not released yet)", threadId));
+                }
             }
-        });
-    }
 
-    @Override
-    public Collection<Checkpoint> list(RunnableConfig config) {
-        lock.lock();
-        try {
-            LinkedList<Checkpoint> checkpoints = loadAll(resolveThreadId(config));
-            return Collections.unmodifiableCollection(new ArrayList<>(checkpoints));
-        } finally {
-            lock.unlock();
+            log.trace("Executing select checkpoints:\n---\n{}---", sqlQueryCheckpoints);
+            try (PreparedStatement ps = conn.prepareStatement(sqlQueryCheckpoints)) {
+                ps.setString(1, threadId);
+                var rs = ps.executeQuery();
+                while (rs.next()) {
+                    var checkpoint = Checkpoint.builder()
+                                               .id(rs.getString(1))
+                                               .nodeId(rs.getString(2))
+                                               .nextNodeId(rs.getString(3))
+                                               .state(decodeState(rs.getBytes(4), rs.getString(5)))
+                                               .build();
+                    checkpoints.add(checkpoint);
+                }
+            }
+
         }
+
+        return checkpoints;
+    }
+
+    private void insertCheckpoint(Connection conn, RunnableConfig config, LinkedList<Checkpoint> checkpoints, Checkpoint checkpoint) throws Exception {
+        var threadId = config.threadId().orElse(THREAD_ID_DEFAULT);
+
+        var upsertThreadSql = """
+                WITH inserted AS (
+                    INSERT INTO GraphThread (thread_id, thread_name, is_released)
+                    VALUES (?, ?, FALSE)
+                    ON CONFLICT (thread_name)
+                    WHERE is_released = FALSE
+                    DO NOTHING
+                    RETURNING thread_id
+                )
+                SELECT thread_id FROM inserted
+                UNION ALL
+                SELECT thread_id FROM GraphThread
+                WHERE thread_name = ? AND is_released = FALSE
+                LIMIT 1;
+                """;
+
+        var insertCheckpointSql = """
+                INSERT INTO GraphCheckpoint(
+                checkpoint_id,
+                parent_checkpoint_id,
+                thread_id,
+                node_id,
+                next_node_id,
+                state_data,
+                state_content_type)
+                VALUES (?, ?, ?, ?, ?, ?::jsonb, ?)
+                """;
+        UUID threadUUID = null;
+
+        // 1. Upsert thread information
+        try (PreparedStatement ps = conn.prepareStatement(upsertThreadSql)) {
+            var field = 0;
+            ps.setObject(++field, UUID.randomUUID(), Types.OTHER);
+            ps.setString(++field, threadId);
+            ps.setString(++field, threadId);
+
+            log.trace("Executing upsert thread:\n---\n{}---", upsertThreadSql);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    threadUUID = rs.getObject("thread_id", UUID.class);
+                }
+            }
+        }
+
+
+        // 2. Insert checkpoint data
+        try (PreparedStatement ps = conn.prepareStatement(insertCheckpointSql)) {
+            var field = 0;
+            // checkpoint_id
+            ps.setObject(++field,
+                    UUID.fromString(checkpoint.getId()),
+                    Types.OTHER);
+            // parent_checkpoint_id
+            ps.setNull(++field, Types.OTHER);
+            // thread_id
+            ps.setObject(++field,
+                    requireNonNull(threadUUID, "threadUUID cannot be null"),
+                    Types.OTHER);
+            // node_id
+            ps.setString(++field, checkpoint.getNodeId());
+            // next_node_id
+            ps.setString(++field, checkpoint.getNextNodeId());
+            // state_data
+            ps.setString(++field, encodeState(checkpoint.getState()));
+            // state_content_type
+            ps.setString(++field, stateSerializer.contentType());
+
+            // DB schema has DEFAULT CURRENT_TIMESTAMP for saved_at.
+            // If checkpoint provides a specific time, use it. Otherwise, use current time from Java.
+            // To use DB default, one would typically omit the column or pass NULL if the column definition allows it to trigger default.
+            // OffsetDateTime savedAt = checkpoint.getSavedAt().orElse(OffsetDateTime.now());
+            // psCheckpoint.setObject(8, savedAt);
+            log.trace("Executing insert checkpoint:\n---\n{}---", insertCheckpointSql);
+            ps.executeUpdate();
+        }
+
     }
 
     @Override
-    public Optional<Checkpoint> get(RunnableConfig config) {
-        lock.lock();
-        try {
-            LinkedList<Checkpoint> checkpoints = loadAll(resolveThreadId(config));
+    protected void insertedCheckpoint(RunnableConfig config, LinkedList<Checkpoint> checkpoints, Checkpoint checkpoint) throws Exception {
+        var threadId = config.threadId().orElse(THREAD_ID_DEFAULT);
+
+        Connection conn = null;
+        try (Connection ignored = conn = getConnection()) {
+            conn.setAutoCommit(false); // Start transaction
+
+            insertCheckpoint(conn, config, checkpoints, checkpoint);
+
+            conn.commit();
+            log.debug("Checkpoint {} for thread {} inserted successfully.", checkpoint.getId(), threadId);
+
+        } catch (SQLException | IOException e) { // IOException from convertStateToJson
+            log.error("Error inserting checkpoint with id {} in thread {}", checkpoint.getId(), threadId, e);
+            rollback(conn, checkpoint, threadId);
+            throw e;
+        }
+
+    }
+
+    @Override
+    protected void updatedCheckpoint(RunnableConfig config,
+                                     LinkedList<Checkpoint> checkpoints,
+                                     Checkpoint checkpoint) throws Exception {
+
+        final var threadId = config.threadId().orElse(THREAD_ID_DEFAULT);
+
+        var deletePreviousCheckpointSql = """
+                DELETE FROM GraphCheckpoint
+                WHERE checkpoint_id = ?;
+                """;
+
+        Connection conn = null;
+
+        try (Connection ignored = conn = getConnection()) {
+            conn.setAutoCommit(false); // Start transaction
+
             if (config.checkPointId().isPresent()) {
-                String id = config.checkPointId().get();
-                return checkpoints.stream().filter(cp -> id.equals(cp.getId())).findFirst();
+
+                try (PreparedStatement ps = conn.prepareStatement(deletePreviousCheckpointSql)) {
+                    var field = 0;
+                    ps.setObject(++field,
+                            UUID.fromString(config.checkPointId().get()),
+                            Types.OTHER); // nullable
+                    log.trace("Executing deleting previous checkpoint with id {} in thread {}:\n---\n{}---",
+                            config.checkPointId().get(),
+                            threadId,
+                            deletePreviousCheckpointSql);
+                    ps.executeUpdate();
+                }
             }
-            return getLast(checkpoints, config);
-        } finally {
-            lock.unlock();
+
+            insertCheckpoint(conn, config, checkpoints, checkpoint);
+
+            conn.commit();
+
+            log.debug("Checkpoint with id {} for thread {} inserted successfully.",
+                    checkpoint.getId(),
+                    threadId);
+
+        } catch (SQLException | IOException e) { // IOException from convertStateToJson
+            log.error("Error inserting checkpoint with id {} in thread {}",
+                    checkpoint.getId(),
+                    threadId,
+                    e);
+            rollback(conn, checkpoint, threadId);
+            throw e;
         }
     }
 
     @Override
-    public RunnableConfig put(RunnableConfig config, Checkpoint checkpoint) throws Exception {
-        lock.lock();
-        try {
-            String threadId = resolveThreadId(config);
-            LinkedList<Checkpoint> checkpoints = loadAll(threadId);
-            if (config.checkPointId().isPresent()) {
-                String checkPointId = config.checkPointId().get();
-                int index = IntStream.range(0, checkpoints.size())
-                        .filter(i -> checkpoints.get(i).getId().equals(checkPointId))
-                        .findFirst()
-                        .orElseThrow(() -> new NoSuchElementException(format("Checkpoint with id %s not found!", checkPointId)));
-                checkpoints.set(index, checkpoint);
-                replaceAll(threadId, checkpoints);
-                return config;
+    protected void releasedCheckpoints(RunnableConfig config, LinkedList<Checkpoint> checkpoints, Tag releaseTag) throws Exception {
+        var threadId = config.threadId().orElse(THREAD_ID_DEFAULT);
+
+        var selectThreadSql = """
+                SELECT thread_id FROM GraphThread
+                WHERE thread_name = ? AND is_released = FALSE
+                """;
+        var releaseThreadSql = """
+                UPDATE GraphThread
+                SET
+                    is_released = TRUE
+                WHERE thread_id = ?;
+                """;
+        try (Connection conn = getConnection()) {
+
+            UUID threadUUID = null;
+            try (PreparedStatement ps = conn.prepareStatement(selectThreadSql)) {
+                var field = 0;
+                ps.setString(++field, threadId);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    var rows = 0;
+                    while (rs.next()) {
+                        threadUUID = rs.getObject("thread_id", UUID.class);
+                        ++rows;
+                    }
+                    if (rows == 0) {
+                        throw new IllegalStateException(format("active Thread '%s' not found", threadId));
+                    }
+                    if (rows > 1) {
+                        throw new IllegalStateException(format("duplicate active Thread '%s' found", threadId));
+                    }
+                }
             }
-            checkpoints.push(checkpoint);
-            replaceAll(threadId, checkpoints);
-            return RunnableConfig.builder(config).checkPointId(checkpoint.getId()).build();
-        } finally {
-            lock.unlock();
+
+            log.trace("Executing release Thread:\n---\n{}---", releaseThreadSql);
+            try (PreparedStatement ps = conn.prepareStatement(releaseThreadSql)) {
+                var field = 0;
+                ps.setObject(++field,
+                        Objects.requireNonNull(threadUUID, "threadUUID cannot be null"),
+                        Types.OTHER); // nullable
+                ps.executeUpdate();
+
+            }
         }
+
     }
 
-    @Override
-    public Tag release(RunnableConfig config) throws Exception {
-        lock.lock();
-        try {
-            String threadId = resolveThreadId(config);
-            Collection<Checkpoint> snapshot = new ArrayList<>(loadAll(threadId));
-            jdbcTemplate.update("DELETE FROM " + TABLE + " WHERE thread_id = ?", threadId);
-            return new Tag(threadId, snapshot);
-        } finally {
-            lock.unlock();
+    /**
+     * Datasource connection
+     * Creates the vector extension and add the vector type if it does not exist.
+     * Could be overridden in case extension creation and adding type is done at datasource initialization step.
+     *
+     * @return Datasource connection
+     * @throws SQLException exception
+     */
+    protected Connection getConnection() throws SQLException {
+        return datasource.getConnection();
+    }
+
+    public static class Builder extends MemorySaver.Builder {
+        public StateSerializer stateSerializer;
+        private String host;
+        private Integer port;
+        private String user;
+        private String password;
+        private String database;
+        private boolean createTables;
+        private boolean dropTablesFirst;
+        private DataSource datasource;
+
+        public Builder stateSerializer(StateSerializer stateSerializer) {
+            this.stateSerializer = stateSerializer;
+            return this;
+        }
+
+        public Builder host(String host) {
+            this.host = host;
+            return this;
+        }
+
+        public Builder port(Integer port) {
+            this.port = port;
+            return this;
+        }
+
+        public Builder user(String user) {
+            this.user = user;
+            return this;
+        }
+
+        public Builder password(String password) {
+            this.password = password;
+            return this;
+        }
+
+        public Builder database(String database) {
+            this.database = database;
+            return this;
+        }
+
+        public Builder createTables(boolean createTables) {
+            this.createTables = createTables;
+            return this;
+        }
+
+        public Builder dropTablesFirst(boolean dropTablesFirst) {
+            this.dropTablesFirst = dropTablesFirst;
+            return this;
+        }
+
+        public Builder datasource(DataSource datasource) {
+            this.datasource = datasource;
+            return this;
+        }
+
+        private String requireNotBlank(String value, String name) {
+            if (requireNonNull(value, format("'%s' cannot be null", name)).isBlank()) {
+                throw new IllegalArgumentException(format("'%s' cannot be blank", name));
+            }
+            return value;
+        }
+
+        public PostgresSaver build() {
+            if (stateSerializer == null) {
+                log.info("No StateSerializer for saver provided, using default SpringAiJacksonStateSerializer, please make sure saver uses the " +
+                         "same serializer of the graph.");
+                this.stateSerializer = StateGraph.DEFAULT_JACKSON_SERIALIZER;
+            }
+            if (datasource == null) {
+                if (port <= 0) {
+                    throw new IllegalArgumentException("port must be greater than 0");
+                }
+                var ds = new PGSimpleDataSource();
+                ds.setDatabaseName(requireNotBlank(database, "database"));
+                ds.setUser(requireNotBlank(user, "user"));
+                ds.setPassword(requireNonNull(password, "password cannot be null"));
+                ds.setPortNumbers(new int[]{port});
+                ds.setServerNames(new String[]{requireNotBlank(host, "host")});
+                datasource = ds;
+            }
+
+            createTables = createTables || dropTablesFirst;
+
+            try {
+                return new PostgresSaver(this);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }
