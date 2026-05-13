@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <!-- 控制台与文件统一输出完整 logger 名（一般为全限定类名），覆盖 Boot 默认的 logger{39} 缩写 -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %clr(%5p){highlight} %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%logger){cyan} %clr(:){faint} %m%n%wEx"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <!-- 日志目录默认在此维护；部署时若需覆盖，可在任意 Spring 配置中设置 logging.file.path（不必改本文件） -->
-    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="${system.basedir}/logs"/>
+    <!--
+      日志目录：读 Spring 的 logging.file.path（在 application.yaml 中已设占位符，由 Spring 解析）。
+      此处 defaultValue 仅用单层占位符：logback 对 defaultValue 会先按 Logback 规则替换，嵌套 ${system.basedir:${user.dir}} 会错拼路径。
+    -->
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="${user.dir}/logs"/>
     <!--
       归档策略（与各 RollingFileAppender 的 fileNamePattern / maxHistory 一致）：
       - 按自然日滚动：当日写 ${LOG_PATH}/*.log，跨日后上一日内容压缩到 ${LOG_PATH}/archive/*.yyyy-MM-dd.log.gz（即「满 1 个日历日后进入 archive」）。
@@ -14,7 +20,7 @@
     <springProperty scope="context" name="LOG_MAX_HISTORY" source="logging.logback.max-history" defaultValue="3"/>
 
     <property name="FILE_LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%15.15t] %-40.40logger{39} : %m%n%wEx"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%15.15t] %logger : %m%n%wEx"/>
 
     <appender name="FILE_ALL" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_PATH}/default.log</file>
@@ -65,6 +71,19 @@
         </rollingPolicy>
     </appender>
 
+    <!-- MyBatis（Mapper 接口名即 logger）+ Spring JdbcTemplate / MyBatis-Plus：sql.log 专收 SQL；同时写入 FILE_ALL 保证 default.log 全量 -->
+    <appender name="FILE_SQL" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/sql.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/archive/sql.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
     <!-- 日志级别（原 application.yaml logging.level，统一在此维护） -->
     <logger name="com.alibaba.cloud.ai.graph" level="INFO"/>
     <logger name="io.modelcontextprotocol.server" level="DEBUG"/>
@@ -98,6 +117,38 @@
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
         <appender-ref ref="FILE_CLIENT"/>
+    </logger>
+
+    <!-- SQL：MyBatis Slf4jImpl 使用 Mapper 全限定名为 logger；default 全量 + sql 专档；新增 mapper 包时请同步增加一条 -->
+    <logger name="cn.fish.chart.mapper" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SQL"/>
+    </logger>
+    <logger name="cn.fish.initDB.mapper" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SQL"/>
+    </logger>
+    <logger name="cn.fish.datasource.mapper" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SQL"/>
+    </logger>
+    <logger name="cn.fish.knowledge.mapper" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SQL"/>
+    </logger>
+    <logger name="org.springframework.jdbc.core" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SQL"/>
+    </logger>
+    <logger name="com.baomidou.mybatisplus" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_SQL"/>
     </logger>
 
     <root level="INFO">

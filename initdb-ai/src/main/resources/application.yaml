@@ -16,19 +16,28 @@ spring:
       minimum-idle: 1
       idle-timeout: 30000
   ai:
+    # 未使用的 OpenAI 能力须关闭，否则会要求 spring.ai.openai.api-key（与 chat/embedding 分 key 冲突）
+    model:
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      moderation: none
     openai:
-      api-key: ${AI_OPENAI_APIKEY}
-      base-url: "https://dashscope.aliyuncs.com/compatible-mode"
       chat:
+        api-key: ${SPRING_AI_OPENAI_CHAT_APIKEY}
+        base-url: ${SPRING_AI_OPENAI_CHAT_BASEURL:https://dashscope.aliyuncs.com/compatible-mode}
         options:
-          model: ${AI_OPENAI_CHAT_OPTIONS_MODEL:qwen-plus-2025-07-28}
+          model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:qwen-plus-2025-07-28}
           max-tokens: 1024
-#          temperature: 0.1          # 降低随机性，让回答更确定
-#          presencePenalty: 0.2      # 降低存在惩罚，避免干扰模型聚焦
-#          frequencyPenalty: 0.2     # 防止模型重复啰嗦
+      #          temperature: 0.1          # 降低随机性，让回答更确定
+      #          presencePenalty: 0.2      # 降低存在惩罚，避免干扰模型聚焦
+      #          frequencyPenalty: 0.2     # 防止模型重复啰嗦
       embedding:
+        api-key: ${SPRING_AI_OPENAI_EMBEDDING_APIKEY}
+        base-url: ${SPRING_AI_OPENAI_EMBEDDING_BASEURL:https://dashscope.aliyuncs.com/compatible-mode}
         options:
-          model: ${AI_OPENAI_EMBEDDING_OPTIONS_MODEL:text-embedding-v1}
+          model: ${SPRING_AI_OPENAI_EMBEDDING_OPTIONS_MODEL:text-embedding-v1}
     alibaba:
       mcp:
         nacos:
@@ -47,6 +56,9 @@ spring:
 logging:
   # 日志配置在 resources/conf 下时需显式指定（根目录的 logback.xml 才会被自动发现）
   config: classpath:conf/logback.xml
+  # 目录占位符由 Spring 解析；勿在 logback.xml 的 springProperty defaultValue 里写 ${system.basedir:${user.dir}}，会与 Logback 自身替换规则冲突
+  file:
+    path: ${system.basedir:${user.dir}}/logs
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
