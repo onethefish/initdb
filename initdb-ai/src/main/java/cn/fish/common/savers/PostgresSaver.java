@@ -2,6 +2,7 @@ package cn.fish.common.savers;
 
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.StateGraph;
+import com.alibaba.cloud.ai.graph.checkpoint.BaseCheckpointSaver;
 import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.serializer.StateSerializer;
@@ -26,9 +27,16 @@ public class PostgresSaver extends MemorySaver {
 
     private final StateSerializer stateSerializer;
 
+    /**
+     * When true, {@link #releasedCheckpoints} removes the active {@code GraphThread} row (and checkpoints via FK cascade)
+     * instead of setting {@code is_released = TRUE}.
+     */
+    private final boolean physicalDeleteOnRelease;
+
     protected PostgresSaver(Builder builder) throws SQLException {
         this.datasource = builder.datasource;
         this.stateSerializer = builder.stateSerializer;
+        this.physicalDeleteOnRelease = builder.physicalDeleteOnRelease;
         initTable(builder.dropTablesFirst, builder.createTables);
     }
 
@@ -352,10 +360,14 @@ public class PostgresSaver extends MemorySaver {
                 SELECT thread_id FROM GraphThread
                 WHERE thread_name = ? AND is_released = FALSE
                 """;
-        var releaseThreadSql = """
+        var logicalReleaseSql = """
                 UPDATE GraphThread
                 SET
                     is_released = TRUE
+                WHERE thread_id = ?;
+                """;
+        var physicalReleaseSql = """
+                DELETE FROM GraphThread
                 WHERE thread_id = ?;
                 """;
         try (Connection conn = getConnection()) {
@@ -380,8 +392,11 @@ public class PostgresSaver extends MemorySaver {
                 }
             }
 
-            log.trace("Executing release Thread:\n---\n{}---", releaseThreadSql);
-            try (PreparedStatement ps = conn.prepareStatement(releaseThreadSql)) {
+            var releaseSql = physicalDeleteOnRelease ? physicalReleaseSql : logicalReleaseSql;
+            log.trace("Executing {}release Thread:\n---\n{}---",
+                    physicalDeleteOnRelease ? "physical " : "",
+                    releaseSql);
+            try (PreparedStatement ps = conn.prepareStatement(releaseSql)) {
                 var field = 0;
                 ps.setObject(++field,
                         Objects.requireNonNull(threadUUID, "threadUUID cannot be null"),
@@ -415,6 +430,16 @@ public class PostgresSaver extends MemorySaver {
         private boolean createTables;
         private boolean dropTablesFirst;
         private DataSource datasource;
+        private boolean physicalDeleteOnRelease = false;
+
+        /**
+         * If {@code true}, {@link BaseCheckpointSaver#release(RunnableConfig)} deletes the thread row and all checkpoints (FK cascade).
+         * Default is {@code false} (logical release: {@code is_released = true}).
+         */
+        public Builder physicalDeleteOnRelease(boolean physicalDeleteOnRelease) {
+            this.physicalDeleteOnRelease = physicalDeleteOnRelease;
+            return this;
+        }
 
         public Builder stateSerializer(StateSerializer stateSerializer) {
             this.stateSerializer = stateSerializer;

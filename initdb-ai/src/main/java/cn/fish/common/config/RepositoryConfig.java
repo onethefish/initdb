@@ -34,7 +34,8 @@ public class RepositoryConfig {
     public BaseCheckpointSaver baseCheckpointSaver(DataSource dataSource) {
         return PostgresSaver.builder()
                             .datasource(dataSource)
-//                            .createTables(true)
+                            .physicalDeleteOnRelease(true)
+                            //                            .createTables(true)
                             .stateSerializer(StateGraph.DEFAULT_JACKSON_SERIALIZER)
                             .build();
     }
