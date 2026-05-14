@@ -86,7 +86,7 @@
 
     <!-- LLM token usage（ChatModelUsageRecorder）；additivity=true 继续向上交给 cn.fish，保证 default.log 仍为全量 -->
     <appender name="FILE_LLM_USAGE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/llm/llm-usage.log</file>
+        <file>${LOG_PATH}/llm-usage.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
