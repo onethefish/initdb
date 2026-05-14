@@ -84,6 +84,19 @@
         </rollingPolicy>
     </appender>
 
+    <!-- LLM token usage（ChatModelUsageRecorder）；additivity=true 继续向上交给 cn.fish，保证 default.log 仍为全量 -->
+    <appender name="FILE_LLM_USAGE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/llm/llm-usage.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/llm/archive/llm-usage.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+        </rollingPolicy>
+    </appender>
+
     <!-- 日志级别（原 application.yaml logging.level，统一在此维护） -->
     <logger name="com.alibaba.cloud.ai.graph" level="INFO"/>
     <logger name="io.modelcontextprotocol.server" level="DEBUG"/>
@@ -93,6 +106,10 @@
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
         <appender-ref ref="FILE_APP"/>
+    </logger>
+
+    <logger name="cn.fish.common.ai.ChatModelUsageRecorder" level="INFO" additivity="true">
+        <appender-ref ref="FILE_LLM_USAGE"/>
     </logger>
 
     <logger name="org.springframework.ai" additivity="false">
