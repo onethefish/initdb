@@ -15,7 +15,7 @@ import java.util.Optional;
 public final class SqlSelectSyntaxPreCheck {
 
     /** 与 {@code prompts/query_sql_check.txt} 中约定一致，供 {@code verdict.contains("校验成功")} 判断 */
-    public static final String SUCCESS_VERDICT = "校验成功：该查询语句看起来没问题";
+    public static final String SUCCESS_VERDICT = "校验成功";
 
     private SqlSelectSyntaxPreCheck() {
     }
