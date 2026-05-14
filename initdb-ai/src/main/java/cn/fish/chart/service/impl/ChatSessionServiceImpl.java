@@ -3,6 +3,7 @@ package cn.fish.chart.service.impl;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.chart.service.ChatSessionService;
+import cn.fish.common.savers.CheckpointSessionTreeReleasable;
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.datasource.entity.AgentDatasource;
@@ -68,24 +69,34 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     public void delete(ChatSession chatSession) {
         chatSessionRepository.remove(chatSession);
         dataBaseRepository.remove(chatSession.getSessionId());
-        try {
-            baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
-        } catch (Exception ignored) {
-
-        }
+        releaseCheckpointThreadsQuietly(chatSession.getSessionId());
     }
 
     @Override
     public void deleteAll() {
         List<ChatSession> chatSessions = chatSessionRepository.queryList(new ChatSession());
-        try {
-            for (ChatSession chatSession : chatSessions) {
-                baseCheckpointSaver.release(RunnableConfig.builder().threadId(chatSession.getSessionId()).build());
-            }
-        } catch (Exception ignored) {
-
+        for (ChatSession chatSession : chatSessions) {
+            releaseCheckpointThreadsQuietly(chatSession.getSessionId());
         }
         chatSessionRepository.remove(chatSessions);
         dataBaseRepository.removeAll();
+    }
+
+    /**
+     * 若 saver 实现 {@link CheckpointSessionTreeReleasable}，则按业务会话释放其下全部相关 thread（含子图等）；
+     * 否则仅对 {@code sessionId} 调用一次 {@link BaseCheckpointSaver#release}。
+     */
+    private void releaseCheckpointThreadsQuietly(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            return;
+        }
+        try {
+            if (baseCheckpointSaver instanceof CheckpointSessionTreeReleasable tree) {
+                tree.releaseSessionTree(sessionId);
+            } else {
+                baseCheckpointSaver.release(RunnableConfig.builder().threadId(sessionId).build());
+            }
+        } catch (Exception ignored) {
+        }
     }
 }

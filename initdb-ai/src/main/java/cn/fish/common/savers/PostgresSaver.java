@@ -18,7 +18,7 @@ import java.util.*;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class PostgresSaver extends MemorySaver {
+public class PostgresSaver extends MemorySaver implements CheckpointSessionTreeReleasable {
     private static final Logger log = LoggerFactory.getLogger(PostgresSaver.class);
     /**
      * Datasource used to create the store
@@ -406,6 +406,50 @@ public class PostgresSaver extends MemorySaver {
             }
         }
 
+    }
+
+    @Override
+    public void releaseSessionTree(String sessionId) throws Exception {
+        if (sessionId == null || sessionId.isEmpty()) {
+            return;
+        }
+        var names = listUnreleasedCheckpointThreadNamesForSession(sessionId);
+        if (names.isEmpty()) {
+            release(RunnableConfig.builder().threadId(sessionId).build());
+            return;
+        }
+        for (var name : names) {
+            release(RunnableConfig.builder().threadId(name).build());
+        }
+    }
+
+    /**
+     * 业务会话 id 对应的 checkpoint 线程名：主线程为 {@code sessionId}；DB Agent 子图为
+     * {@code sessionId + "_subgraph_" + nodeId}（与 {@link cn.fish.initDB.workflow.agent.tool.AgentAbstractTool} 约定一致）。
+     *
+     * @return 仍为未释放（{@code is_released = false}）的 {@code GraphThread} 表 {@code thread_name}，有序；无则空列表
+     */
+    private List<String> listUnreleasedCheckpointThreadNamesForSession(String sessionId) throws SQLException {
+        if (sessionId == null || sessionId.isEmpty()) {
+            return List.of();
+        }
+        var sql = """
+                SELECT thread_name FROM GraphThread
+                WHERE is_released = FALSE
+                  AND (thread_name = ? OR thread_name LIKE ?)
+                ORDER BY thread_name
+                """;
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            ps.setString(2, sessionId + "_subgraph_%");
+            try (ResultSet rs = ps.executeQuery()) {
+                var out = new ArrayList<String>();
+                while (rs.next()) {
+                    out.add(rs.getString(1));
+                }
+                return out;
+            }
+        }
     }
 
     /**
