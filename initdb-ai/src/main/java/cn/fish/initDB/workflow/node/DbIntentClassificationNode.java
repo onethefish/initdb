@@ -1,9 +1,11 @@
 package cn.fish.initDB.workflow.node;
 
 import cn.fish.common.ai.ChatModelUsageRecorder;
+import cn.fish.common.config.DbIntentRouteConfig;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.constants.ContextualizeChartConstants;
+import cn.fish.initDB.util.DbIntentRouteHeuristics;
 import cn.fish.initDB.util.ExplicitSqlUserInput;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.OverAllState;
@@ -17,6 +19,7 @@ import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,12 +41,15 @@ public class DbIntentClassificationNode implements NodeAction {
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
     private final ChatModelUsageRecorder chatModelUsageRecorder;
+    private final DbIntentRouteConfig dbIntentRouteConfig;
 
     public DbIntentClassificationNode(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates,
-                                      ChatModelUsageRecorder chatModelUsageRecorder) {
+                                      ChatModelUsageRecorder chatModelUsageRecorder,
+                                      DbIntentRouteConfig dbIntentRouteConfig) {
         this.chatModel = chatModel;
         this.applicationPromptTemplates = applicationPromptTemplates;
         this.chatModelUsageRecorder = chatModelUsageRecorder;
+        this.dbIntentRouteConfig = dbIntentRouteConfig;
     }
 
     @Override
@@ -62,6 +68,15 @@ public class DbIntentClassificationNode implements NodeAction {
             return true;
         }
         String body = clampStandalone(standalone.trim());
+        if (dbIntentRouteConfig.isHeuristicEnabled()) {
+            Optional<Boolean> h = DbIntentRouteHeuristics.maybeRouteWithoutLlm(
+                    body, dbIntentRouteConfig.getChitchatMaxChars());
+            if (h.isPresent()) {
+                boolean useDirect = h.get();
+                log.debug("db intent heuristic useDirectData={} snippet={}", useDirect, abbreviate(body));
+                return useDirect;
+            }
+        }
         try {
             long t0 = System.nanoTime();
             ChatResponse cr = chatModel.call(new Prompt(applicationPromptTemplates.renderDbIntentRoute(body)));

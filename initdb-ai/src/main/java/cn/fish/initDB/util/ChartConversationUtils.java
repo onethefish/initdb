@@ -32,18 +32,40 @@ public final class ChartConversationUtils {
         return StrUtil.startWith(n, "新的对话");
     }
 
-    public static String buildSnippetForSessionTitle(List<Message> messages) {
+    /**
+     * @param maxMessages            参与 snippet 的消息条数上限（≥1）
+     * @param maxChars               snippet 字符上限（调用方宜保证 ≥ 数百）
+     * @param messageSliceFromTail   true：取列表末尾 maxMessages 条；false：取开头 maxMessages 条
+     * @param charsTruncateTail      超长时 true：保留末尾 maxChars 字符并加「更早省略」前缀；false：截头 + 截断后缀
+     */
+    public static String buildSnippetForSessionTitle(
+            List<Message> messages,
+            int maxMessages,
+            int maxChars,
+            boolean messageSliceFromTail,
+            boolean charsTruncateTail) {
         if (CollUtil.isEmpty(messages)) {
             return "";
         }
-        int n = Math.min(messages.size(), 10);
-        String block = buildHistoryText(messages.subList(0, n));
+        int cap = Math.max(1, maxMessages);
+        int n = Math.min(messages.size(), cap);
+        List<Message> slice;
+        if (messageSliceFromTail && messages.size() > n) {
+            slice = messages.subList(messages.size() - n, messages.size());
+        } else {
+            slice = messages.subList(0, n);
+        }
+        String block = buildHistoryText(slice);
         block = StrUtil.trim(block);
         if (block.isEmpty()) {
             return "";
         }
-        int max = 1_800;
+        int max = Math.max(200, maxChars);
         if (block.length() > max) {
+            if (charsTruncateTail) {
+                return ContextualizeChartConstants.CHART_SUMMARY_HEAD_OMITTED_PREFIX
+                        + block.substring(block.length() - max);
+            }
             return block.substring(0, max) + ContextualizeChartConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
         }
         return block;

@@ -12,6 +12,9 @@ public final class ContextualizeChartConstants {
     /** Chart 压缩与标题 snippet 共用的截断后缀（与前端展示一致） */
     public static final String CHART_SUMMARY_TRUNCATED_SUFFIX = "\n...[truncated]";
 
+    /** 摘要输入从末尾保留时，标明更早内容已省略的前缀 */
+    public static final String CHART_SUMMARY_HEAD_OMITTED_PREFIX = "（更早对话已省略）\n";
+
     public static final int CONTEXTUALIZE_MAX_HISTORY_CHARS = 4_000;
     public static final int CONTEXTUALIZE_MAX_PRIOR_MESSAGES = 20;
     public static final int CONTEXTUALIZE_BODY_MAX_CHARS = 2_000;

@@ -16,7 +16,9 @@
 package cn.fish.initDB.workflow.agent.tool;
 
 import cn.fish.common.ai.ChatModelUsageRecorder;
+import cn.fish.common.config.QuerySqlCheckConfig;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
+import cn.fish.database.sql.SqlSelectSyntaxPreCheck;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
@@ -29,6 +31,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.function.BiFunction;
 
 
@@ -39,12 +42,15 @@ public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, 
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
     private final ChatModelUsageRecorder chatModelUsageRecorder;
+    private final QuerySqlCheckConfig querySqlCheckConfig;
 
     public QuerySqlCheckTool(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates,
-                               ChatModelUsageRecorder chatModelUsageRecorder) {
+                             ChatModelUsageRecorder chatModelUsageRecorder,
+                             QuerySqlCheckConfig querySqlCheckConfig) {
         this.chatModel = chatModel;
         this.applicationPromptTemplates = applicationPromptTemplates;
         this.chatModelUsageRecorder = chatModelUsageRecorder;
+        this.querySqlCheckConfig = querySqlCheckConfig;
     }
 
     @Override
@@ -53,7 +59,21 @@ public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, 
         log.info("Query to check: {}", request.query());
 
         try {
-            String promptText = applicationPromptTemplates.renderQuerySqlCheck(request.query());
+            String sql = request.query();
+            if (querySqlCheckConfig.isSyntaxPreCheckEnabled()) {
+                Optional<String> syntaxFail = SqlSelectSyntaxPreCheck.tryParseFailureVerdict(
+                        sql, querySqlCheckConfig.getMaxSqlChars());
+                if (syntaxFail.isPresent()) {
+                    log.info("sql_check syntax precheck failed, skip LLM");
+                    return syntaxFail.get();
+                }
+                if (querySqlCheckConfig.isSkipLlmWhenSyntaxOk()) {
+                    log.info("sql_check syntax precheck ok, skip LLM");
+                    return SqlSelectSyntaxPreCheck.SUCCESS_VERDICT;
+                }
+            }
+
+            String promptText = applicationPromptTemplates.renderQuerySqlCheck(sql);
             Prompt prompt = new Prompt(promptText);
             long t0 = System.nanoTime();
             ChatResponse cr = chatModel.call(prompt);

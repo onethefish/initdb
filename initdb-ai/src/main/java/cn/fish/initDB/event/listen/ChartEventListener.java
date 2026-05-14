@@ -3,6 +3,8 @@ package cn.fish.initDB.event.listen;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.common.ai.ChatModelUsageRecorder;
+import cn.fish.common.config.ChartSessionTitleConfig;
+import cn.fish.common.config.ChartSummaryConfig;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.constants.ContextualizeChartConstants;
@@ -40,6 +42,8 @@ public class ChartEventListener {
     private final ApplicationPromptTemplates applicationPromptTemplates;
     private final ChatSessionRepository chatSessionRepository;
     private final ChatModelUsageRecorder chatModelUsageRecorder;
+    private final ChartSummaryConfig chartSummaryConfig;
+    private final ChartSessionTitleConfig chartSessionTitleConfig;
 
     private static final ConcurrentHashMap<String, Object> SESSION_LOCKS = new ConcurrentHashMap<>();
 
@@ -55,12 +59,16 @@ public class ChartEventListener {
             BaseCheckpointSaver baseCheckpointSaver,
             ApplicationPromptTemplates applicationPromptTemplates,
             ChatSessionRepository chatSessionRepository,
-            ChatModelUsageRecorder chatModelUsageRecorder) {
+            ChatModelUsageRecorder chatModelUsageRecorder,
+            ChartSummaryConfig chartSummaryConfig,
+            ChartSessionTitleConfig chartSessionTitleConfig) {
         this.chatModel = chatModel;
         this.baseCheckpointSaver = baseCheckpointSaver;
         this.applicationPromptTemplates = applicationPromptTemplates;
         this.chatSessionRepository = chatSessionRepository;
         this.chatModelUsageRecorder = chatModelUsageRecorder;
+        this.chartSummaryConfig = chartSummaryConfig;
+        this.chartSessionTitleConfig = chartSessionTitleConfig;
     }
 
     private Object lockForThread(String threadId) {
@@ -88,11 +96,13 @@ public class ChartEventListener {
                 Checkpoint latest = latestOpt.get();
                 String checkpointIdAtStart = latest.getId();
                 List<Message> messages = ChartConversationUtils.copyMessagesFromState(latest.getState());
-                if (messages.size() < 12) {
+                if (messages.size() < chartSummaryConfig.getMinMessages()) {
                     return;
                 }
-                int split = ChartConversationUtils.resolveCompressSplitIndex(
-                        messages, 6);
+                int keepRecent = Math.min(
+                        chartSummaryConfig.getKeepRecentMessages(),
+                        Math.max(1, messages.size() - 1));
+                int split = ChartConversationUtils.resolveCompressSplitIndex(messages, keepRecent);
                 if (split < 1) {
                     log.info(
                             "Skip compress: no tool-safe split (would orphan ToolResponse or truncate tool round), thread={}",
@@ -103,9 +113,15 @@ public class ChartEventListener {
                 List<Message> tail = new ArrayList<>(messages.subList(split, messages.size()));
 
                 String historyBlock = ChartConversationUtils.buildHistoryText(head);
-                if (historyBlock.length() > 14_000) {
-                    historyBlock = historyBlock.substring(0, 14_000)
-                            + ContextualizeChartConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
+                int historyMax = Math.max(500, chartSummaryConfig.getHistoryMaxChars());
+                if (historyBlock.length() > historyMax) {
+                    if (chartSummaryConfig.isTruncateTailAligned()) {
+                        historyBlock = ContextualizeChartConstants.CHART_SUMMARY_HEAD_OMITTED_PREFIX
+                                + historyBlock.substring(historyBlock.length() - historyMax);
+                    } else {
+                        historyBlock = historyBlock.substring(0, historyMax)
+                                + ContextualizeChartConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
+                    }
                 }
                 String fullPrompt = applicationPromptTemplates.renderChartConversationSummary(historyBlock);
                 long t0 = System.nanoTime();
@@ -162,7 +178,7 @@ public class ChartEventListener {
      * 在每次对话流结束后（与压缩摘要同一事件）尝试自动命名：
      * <ul>
      *   <li>占位名（「新的对话…」）时，首次有可用片段即调用模型；</li>
-     *   <li>否则每隔 3 次流结束才再次调用模型，避免每轮都打标题。</li>
+     *   <li>否则每隔 {@link ChartSessionTitleConfig#getRenamingIntervalStreams()} 次流结束才再次调用模型。</li>
      * </ul>
      * 根据 checkpoint 内前几条消息生成标题并写回 {@code chat_session}。
      * 不与 {@link #autoSummarizeEvent} 共用 {@link #SESSION_LOCKS}，避免压缩持锁期间阻塞命名；同会话命名用 {@link #SESSION_TITLE_LOCKS} 串行。
@@ -186,8 +202,8 @@ public class ChartEventListener {
                 int completed = ObjectUtil.defaultIfNull(session.getStreamDone(), 0);
                 int lastTitleAt = ObjectUtil.defaultIfNull(session.getNamedStream(), 0);
                 boolean placeholder = ChartConversationUtils.isPlaceholderSessionName(session.getSessionName());
-                boolean shouldCallModel =
-                        placeholder || (completed - lastTitleAt >= 3);
+                int interval = Math.max(1, chartSessionTitleConfig.getRenamingIntervalStreams());
+                boolean shouldCallModel = placeholder || (completed - lastTitleAt >= interval);
                 if (!shouldCallModel) {
                     return;
                 }
@@ -196,7 +212,12 @@ public class ChartEventListener {
                     return;
                 }
                 List<Message> messages = ChartConversationUtils.copyMessagesFromState(latestOpt.get().getState());
-                String snippet = ChartConversationUtils.buildSnippetForSessionTitle(messages);
+                String snippet = ChartConversationUtils.buildSnippetForSessionTitle(
+                        messages,
+                        chartSessionTitleConfig.getSnippetMaxMessages(),
+                        chartSessionTitleConfig.getSnippetMaxChars(),
+                        chartSessionTitleConfig.isSnippetMessagesFromTail(),
+                        chartSessionTitleConfig.isSnippetCharsTruncateTail());
                 if (StrUtil.isBlank(snippet)) {
                     return;
                 }

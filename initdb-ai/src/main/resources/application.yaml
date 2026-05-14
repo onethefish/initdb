@@ -66,6 +66,40 @@ mybatis-plus:
     banner: false
 
 initdb:
+  chart:
+    summary:
+      # 消息条数 ≥ 该值才触发 checkpoint 自动压缩摘要（越大越少调用 chart_conversation_summary）
+      min-messages: 16
+      # 送入摘要模型的历史文本最大字符数（降低可显著减少 prompt token）
+      history-max-chars: 8000
+      # 切分时保留在尾部、不参与本轮摘要的消息条数（略增大可缩短每轮摘要 head）
+      keep-recent-messages: 8
+      # 超长时保留历史块末尾（靠近近期对话）；false 则保留开头（旧行为）
+      truncate-tail-aligned: true
+    session-title:
+      # 非占位会话名时，每隔多少次流结束才再次调用标题模型（越大越少调用 chart_session_title）
+      renaming-interval-streams: 5
+      # 拼 snippet 时最多取多少条消息
+      snippet-max-messages: 8
+      # snippet 最大字符数（降低可减少 prompt token）
+      snippet-max-chars: 1200
+      # true：取末尾若干条消息（更贴近当前话题）；false：取开头（旧行为）
+      snippet-messages-from-tail: true
+      # snippet 超长时 true 保留末尾；false 截头 + ...[truncated]
+      snippet-chars-truncate-tail: true
+  db:
+    intent-route:
+      # 高置信度时跳过路由 LLM（省约 450 prompt/次）；关闭则始终走模型
+      heuristic-enabled: true
+      # 仅长度 ≤ 该值时才匹配「纯寒暄」启发式（略增大可覆盖稍长寒暄）
+      chitchat-max-chars: 28
+    query-sql-check:
+      # JSqlParser 语法预检：解析失败则直接返回校验失败，不调 LLM
+      syntax-pre-check-enabled: true
+      # 语法通过时是否跳过 LLM（省 token；不再做提示词中的语义/风险启发式）
+      skip-llm-when-syntax-ok: true
+      # 参与解析的 SQL 最大字符数
+      max-sql-chars: 256000
   export:
     # 单次导出 SQL 行数上限（服务端钳制用户请求）
     max-rows: 10000
