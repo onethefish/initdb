@@ -1,5 +1,6 @@
 package cn.fish.initDB.workflow.node;
 
+import cn.fish.common.ai.ChatModelUsageRecorder;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.constants.ContextualizeChartConstants;
@@ -9,6 +10,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -35,10 +37,13 @@ public class DbIntentClassificationNode implements NodeAction {
 
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
+    private final ChatModelUsageRecorder chatModelUsageRecorder;
 
-    public DbIntentClassificationNode(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates) {
+    public DbIntentClassificationNode(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates,
+                                      ChatModelUsageRecorder chatModelUsageRecorder) {
         this.chatModel = chatModel;
         this.applicationPromptTemplates = applicationPromptTemplates;
+        this.chatModelUsageRecorder = chatModelUsageRecorder;
     }
 
     @Override
@@ -58,10 +63,10 @@ public class DbIntentClassificationNode implements NodeAction {
         }
         String body = clampStandalone(standalone.trim());
         try {
-            String raw = chatModel.call(new Prompt(applicationPromptTemplates.renderDbIntentRoute(body)))
-                                  .getResult()
-                                  .getOutput()
-                                  .getText();
+            long t0 = System.nanoTime();
+            ChatResponse cr = chatModel.call(new Prompt(applicationPromptTemplates.renderDbIntentRoute(body)));
+            chatModelUsageRecorder.record("db_intent_route", cr, System.nanoTime() - t0, null);
+            String raw = cr.getResult().getOutput().getText();
             boolean useDirect = parseLlmWantsDirectData(raw);
             log.debug("db intent llm raw={} -> {}", abbreviate(raw), useDirect);
             return useDirect;

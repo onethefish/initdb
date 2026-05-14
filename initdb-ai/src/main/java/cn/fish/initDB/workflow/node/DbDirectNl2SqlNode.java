@@ -1,5 +1,6 @@
 package cn.fish.initDB.workflow.node;
 
+import cn.fish.common.ai.ChatModelUsageRecorder;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
@@ -9,6 +10,7 @@ import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 
@@ -34,10 +36,13 @@ public class DbDirectNl2SqlNode implements NodeAction {
 
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
+    private final ChatModelUsageRecorder chatModelUsageRecorder;
 
-    public DbDirectNl2SqlNode(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates) {
+    public DbDirectNl2SqlNode(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates,
+                              ChatModelUsageRecorder chatModelUsageRecorder) {
         this.chatModel = chatModel;
         this.applicationPromptTemplates = applicationPromptTemplates;
+        this.chatModelUsageRecorder = chatModelUsageRecorder;
     }
 
     @Override
@@ -63,10 +68,11 @@ public class DbDirectNl2SqlNode implements NodeAction {
             return normalizeOneStatement(sel.group(1));
         }
         try {
-            String raw = chatModel.call(new Prompt(applicationPromptTemplates.renderDbDirectNl2sql(text, tableCatalogJson)))
-                                  .getResult()
-                                  .getOutput()
-                                  .getText();
+            long t0 = System.nanoTime();
+            ChatResponse cr = chatModel.call(
+                    new Prompt(applicationPromptTemplates.renderDbDirectNl2sql(text, tableCatalogJson)));
+            chatModelUsageRecorder.record("db_direct_nl2sql", cr, System.nanoTime() - t0, null);
+            String raw = cr.getResult().getOutput().getText();
             return normalizeOneStatement(stripNoise(raw));
         } catch (Exception e) {
             log.warn("nl2sql model failed", e);

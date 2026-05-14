@@ -15,12 +15,14 @@
  */
 package cn.fish.initDB.workflow.agent.tool;
 
+import cn.fish.common.ai.ChatModelUsageRecorder;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import com.fasterxml.jackson.annotation.JsonClassDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.tool.ToolCallback;
@@ -36,10 +38,13 @@ public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, 
 
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
+    private final ChatModelUsageRecorder chatModelUsageRecorder;
 
-    public QuerySqlCheckTool(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates) {
+    public QuerySqlCheckTool(ChatModel chatModel, ApplicationPromptTemplates applicationPromptTemplates,
+                               ChatModelUsageRecorder chatModelUsageRecorder) {
         this.chatModel = chatModel;
         this.applicationPromptTemplates = applicationPromptTemplates;
+        this.chatModelUsageRecorder = chatModelUsageRecorder;
     }
 
     @Override
@@ -50,7 +55,10 @@ public class QuerySqlCheckTool implements BiFunction<QuerySqlCheckTool.Request, 
         try {
             String promptText = applicationPromptTemplates.renderQuerySqlCheck(request.query());
             Prompt prompt = new Prompt(promptText);
-            String result = chatModel.call(prompt).getResult().getOutput().getText();
+            long t0 = System.nanoTime();
+            ChatResponse cr = chatModel.call(prompt);
+            chatModelUsageRecorder.record("sql_check", cr, System.nanoTime() - t0, null);
+            String result = cr.getResult().getOutput().getText();
 
             log.info("Check result: {}", result);
             return result;

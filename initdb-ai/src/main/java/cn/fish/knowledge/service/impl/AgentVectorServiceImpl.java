@@ -1,6 +1,7 @@
 package cn.fish.knowledge.service.impl;
 
 import cn.fish.cloud.serva.web.exception.CommonException;
+import cn.fish.common.ai.ChatModelUsageRecorder;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.knowledge.constants.DocumentMetadataConstant;
 import cn.fish.knowledge.entity.AgentKnowledgeVO;
@@ -10,6 +11,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -26,12 +28,15 @@ public class AgentVectorServiceImpl implements AgentVectorService {
     private final VectorStoreRepository vectorStoreRepository;
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
+    private final ChatModelUsageRecorder chatModelUsageRecorder;
 
     public AgentVectorServiceImpl(ChatModel chatModel, VectorStoreRepository vectorStoreRepository,
-                                  ApplicationPromptTemplates applicationPromptTemplates) {
+                                  ApplicationPromptTemplates applicationPromptTemplates,
+                                  ChatModelUsageRecorder chatModelUsageRecorder) {
         this.chatModel = chatModel;
         this.vectorStoreRepository = vectorStoreRepository;
         this.applicationPromptTemplates = applicationPromptTemplates;
+        this.chatModelUsageRecorder = chatModelUsageRecorder;
     }
 
     private static final int QUERY_LIST_TOP_K = 1;
@@ -60,10 +65,10 @@ public class AgentVectorServiceImpl implements AgentVectorService {
 
         String fullPrompt = applicationPromptTemplates.renderAgentVectorRagAnswer(context, vo.getQuery());
 
-        return chatModel.call(new Prompt(fullPrompt))
-                        .getResult()
-                        .getOutput()
-                        .getText();
+        long t0 = System.nanoTime();
+        ChatResponse cr = chatModel.call(new Prompt(fullPrompt));
+        chatModelUsageRecorder.record("agent_vector_rag", cr, System.nanoTime() - t0, vo.getDatasourceId());
+        return cr.getResult().getOutput().getText();
     }
 
     private static void validateBase(AgentKnowledgeVO vo) {

@@ -2,6 +2,7 @@ package cn.fish.initDB.event.listen;
 
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
+import cn.fish.common.ai.ChatModelUsageRecorder;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.WorkflowConstants;
 import cn.fish.initDB.constants.ContextualizeChartConstants;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
@@ -37,6 +39,7 @@ public class ChartEventListener {
     private final ChatModel chatModel;
     private final ApplicationPromptTemplates applicationPromptTemplates;
     private final ChatSessionRepository chatSessionRepository;
+    private final ChatModelUsageRecorder chatModelUsageRecorder;
 
     private static final ConcurrentHashMap<String, Object> SESSION_LOCKS = new ConcurrentHashMap<>();
 
@@ -51,11 +54,13 @@ public class ChartEventListener {
             ChatModel chatModel,
             BaseCheckpointSaver baseCheckpointSaver,
             ApplicationPromptTemplates applicationPromptTemplates,
-            ChatSessionRepository chatSessionRepository) {
+            ChatSessionRepository chatSessionRepository,
+            ChatModelUsageRecorder chatModelUsageRecorder) {
         this.chatModel = chatModel;
         this.baseCheckpointSaver = baseCheckpointSaver;
         this.applicationPromptTemplates = applicationPromptTemplates;
         this.chatSessionRepository = chatSessionRepository;
+        this.chatModelUsageRecorder = chatModelUsageRecorder;
     }
 
     private Object lockForThread(String threadId) {
@@ -103,7 +108,10 @@ public class ChartEventListener {
                             + ContextualizeChartConstants.CHART_SUMMARY_TRUNCATED_SUFFIX;
                 }
                 String fullPrompt = applicationPromptTemplates.renderChartConversationSummary(historyBlock);
-                String summary = chatModel.call(new Prompt(fullPrompt)).getResult().getOutput().getText();
+                long t0 = System.nanoTime();
+                ChatResponse summaryCr = chatModel.call(new Prompt(fullPrompt));
+                chatModelUsageRecorder.record("chart_conversation_summary", summaryCr, System.nanoTime() - t0, threadId);
+                String summary = summaryCr.getResult().getOutput().getText();
                 if (StrUtil.isEmpty(summary)) {
                     log.warn("Auto summary empty, skip checkpoint update");
                     return;
@@ -193,7 +201,10 @@ public class ChartEventListener {
                     return;
                 }
                 String prompt = applicationPromptTemplates.renderChartSessionTitle(snippet);
-                String rawTitle = chatModel.call(new Prompt(prompt)).getResult().getOutput().getText();
+                long t0 = System.nanoTime();
+                ChatResponse titleCr = chatModel.call(new Prompt(prompt));
+                chatModelUsageRecorder.record("chart_session_title", titleCr, System.nanoTime() - t0, threadId);
+                String rawTitle = titleCr.getResult().getOutput().getText();
                 String title = ChartConversationUtils.sanitizeSessionTitle(rawTitle);
                 if (StrUtil.isBlank(title) || title.length() < 2) {
                     log.warn("Auto session title empty or too short, skip sessionId={}", sessionId);

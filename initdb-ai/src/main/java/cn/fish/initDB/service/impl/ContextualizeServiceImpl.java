@@ -1,6 +1,7 @@
 package cn.fish.initDB.service.impl;
 
 import cn.fish.cloud.serva.web.exception.CommonException;
+import cn.fish.common.ai.ChatModelUsageRecorder;
 import cn.fish.common.prompt.ApplicationPromptTemplates;
 import cn.fish.initDB.constants.ContextualizeChartConstants;
 import cn.fish.initDB.constants.WorkflowConstants;
@@ -14,6 +15,7 @@ import com.alibaba.cloud.ai.graph.checkpoint.Checkpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 
@@ -38,12 +40,15 @@ public class ContextualizeServiceImpl implements ContextualizeService {
     private final ChatModel chatModel;
     private final BaseCheckpointSaver checkpointSaver;
     private final ApplicationPromptTemplates applicationPromptTemplates;
+    private final ChatModelUsageRecorder chatModelUsageRecorder;
 
     public ContextualizeServiceImpl(ChatModel chatModel, BaseCheckpointSaver checkpointSaver,
-                                    ApplicationPromptTemplates applicationPromptTemplates) {
+                                    ApplicationPromptTemplates applicationPromptTemplates,
+                                    ChatModelUsageRecorder chatModelUsageRecorder) {
         this.chatModel = chatModel;
         this.checkpointSaver = checkpointSaver;
         this.applicationPromptTemplates = applicationPromptTemplates;
+        this.chatModelUsageRecorder = chatModelUsageRecorder;
     }
 
     @Override
@@ -77,12 +82,12 @@ public class ContextualizeServiceImpl implements ContextualizeService {
         String systemText = applicationPromptTemplates.contextualizeRewriteSystemText();
         String rawText;
         try {
-            rawText = chatModel.call(new Prompt(List.of(
-                                       new SystemMessage(systemText),
-                                       new UserMessage(userBlock))))
-                               .getResult()
-                               .getOutput()
-                               .getText();
+            long t0 = System.nanoTime();
+            ChatResponse cr = chatModel.call(new Prompt(List.of(
+                    new SystemMessage(systemText),
+                    new UserMessage(userBlock))));
+            chatModelUsageRecorder.record("contextualize", cr, System.nanoTime() - t0, sessionId);
+            rawText = cr.getResult().getOutput().getText();
         } catch (Exception e) {
             log.warn("Contextualize LLM call failed, using trimmed input: {}", e.getMessage());
             return trimmed;
