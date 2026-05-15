@@ -92,7 +92,7 @@
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_PATH}/llm/archive/llm-usage.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/archive/llm-usage.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
             <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
         </rollingPolicy>
     </appender>

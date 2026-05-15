@@ -8,6 +8,352 @@ let sessionNameSuffixCounter = 1;
 /** 智能对话流式输出进行中：仅禁用发送相关按钮，输入框可继续编辑下一条 */
 let isDbChatStreaming = false;
 
+/** 右侧「数据库表」列表：原始数据与并发加载序号 */
+let dbTableListRaw = [];
+let dbTableLoadSeq = 0;
+
+function getDbTableUiEls() {
+    return {
+        placeholder: document.getElementById('dbTablePlaceholder'),
+        loading: document.getElementById('dbTableLoading'),
+        empty: document.getElementById('dbTableEmpty'),
+        list: document.getElementById('dbTableList'),
+        search: document.getElementById('dbTableSearchInput'),
+        refreshBtn: document.getElementById('dbTableRefreshBtn')
+    };
+}
+
+function syncDbTableSearchAndRefreshDisabled() {
+    const hasSession = !!currentSessionId && sessions.some(s => s.id === currentSessionId);
+    const {search, refreshBtn} = getDbTableUiEls();
+    if (search) {
+        search.disabled = !hasSession;
+    }
+    if (refreshBtn) {
+        refreshBtn.disabled = !hasSession;
+    }
+}
+
+function resetDbTablePanelToPlaceholder() {
+    dbTableLoadSeq++;
+    dbTableListRaw = [];
+    const els = getDbTableUiEls();
+    if (els.search) {
+        els.search.value = '';
+    }
+    if (els.placeholder) {
+        els.placeholder.hidden = false;
+        els.placeholder.textContent = '请先创建并选择对话后显示表列表';
+    }
+    if (els.loading) {
+        els.loading.hidden = true;
+    }
+    if (els.empty) {
+        els.empty.hidden = true;
+    }
+    if (els.list) {
+        els.list.innerHTML = '';
+        els.list.hidden = true;
+    }
+    syncDbTableSearchAndRefreshDisabled();
+}
+
+function getDbTableFilterQuery() {
+    const input = document.getElementById('dbTableSearchInput');
+    return (input && String(input.value).trim().toLowerCase()) || '';
+}
+
+function filterDbTableList() {
+    const q = getDbTableFilterQuery();
+    let filtered = dbTableListRaw;
+    if (q) {
+        filtered = dbTableListRaw.filter(t => {
+            const name = String(t.tableName || '').toLowerCase();
+            const rem = String(t.remarks || '').toLowerCase();
+            return name.includes(q) || rem.includes(q);
+        });
+    }
+    renderDbTableRows(filtered);
+}
+
+function renderDbTableRows(filtered) {
+    const els = getDbTableUiEls();
+    if (!els.list || !els.empty) {
+        return;
+    }
+
+    if (!dbTableListRaw.length) {
+        els.list.hidden = true;
+        els.list.innerHTML = '';
+        els.empty.hidden = false;
+        els.empty.textContent = '当前库中未找到用户表';
+        return;
+    }
+
+    if (!filtered.length) {
+        els.list.hidden = true;
+        els.list.innerHTML = '';
+        els.empty.hidden = false;
+        els.empty.textContent = getDbTableFilterQuery() ? '无匹配的表' : '当前库中未找到用户表';
+        return;
+    }
+
+    els.empty.hidden = true;
+    els.list.hidden = false;
+    els.list.innerHTML = '';
+
+    filtered.forEach(t => {
+        const tableName = String(t.tableName || '');
+        const remarks = String(t.remarks || '');
+
+        const details = document.createElement('details');
+        details.className = 'db-table-row';
+        details.dataset.tableName = tableName;
+        details.setAttribute('role', 'listitem');
+
+        const summary = document.createElement('summary');
+        summary.className = 'db-table-row-summary';
+
+        const main = document.createElement('div');
+        main.className = 'db-table-row-main';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'db-table-name';
+        nameEl.textContent = tableName;
+        main.appendChild(nameEl);
+        if (remarks) {
+            const remEl = document.createElement('div');
+            remEl.className = 'db-table-remarks';
+            remEl.textContent = remarks;
+            main.appendChild(remEl);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'db-table-row-actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.textContent = '复制';
+        copyBtn.title = '复制表名';
+        copyBtn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            void copyDbTableName(tableName);
+        });
+
+        const insertBtn = document.createElement('button');
+        insertBtn.type = 'button';
+        insertBtn.textContent = '填入';
+        insertBtn.title = '将表名追加到输入框';
+        insertBtn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            insertDbTableNameIntoInput(tableName);
+        });
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(insertBtn);
+
+        summary.appendChild(main);
+        summary.appendChild(actions);
+
+        const slot = document.createElement('div');
+        slot.className = 'db-table-detail db-table-detail-slot';
+
+        details.appendChild(summary);
+        details.appendChild(slot);
+        details.addEventListener('toggle', () => {
+            void onDbTableDetailsToggle(details, slot);
+        });
+
+        els.list.appendChild(details);
+    });
+}
+
+async function copyDbTableName(name) {
+    const text = String(name || '');
+    if (!text) {
+        return;
+    }
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            throw new Error('no clipboard');
+        }
+    } catch (e) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        } catch (e2) {
+            console.warn('copy failed', e2);
+            showErrorDialog({title: '提示', message: '复制失败，请手动选择表名复制'});
+        }
+    }
+}
+
+function insertDbTableNameIntoInput(name) {
+    const input = document.getElementById('userInput');
+    if (!input || input.disabled) {
+        showErrorDialog({title: '提示', message: '请先选择对话后再填入输入框'});
+        return;
+    }
+    const t = String(name || '').trim();
+    if (!t) {
+        return;
+    }
+    const cur = String(input.value || '');
+    input.value = cur ? `${cur} ${t}` : t;
+    input.focus();
+}
+
+function columnNullableLabel(col) {
+    if (col && (col.isNullable === true || col.nullable === true)) {
+        return 'Y';
+    }
+    if (col && (col.isNullable === false || col.nullable === false)) {
+        return 'N';
+    }
+    return '';
+}
+
+function buildTableSchemaHtml(table) {
+    const cols = table && table.tableColumnList;
+    if (!table || !Array.isArray(cols) || cols.length === 0) {
+        return '<p class="db-table-detail-error">暂无列信息</p>';
+    }
+    const rows = cols
+        .map(c => {
+            const pk = c.pk === true || c.isPk === true ? 'Y' : '';
+            const typeParts = [c.columnType, c.columnSize].filter(Boolean);
+            const typeStr = typeParts.join(' ');
+            return `<tr>
+<td>${escapeHtml(c.columnName || '')}</td>
+<td>${escapeHtml(typeStr)}</td>
+<td>${escapeHtml(columnNullableLabel(c))}</td>
+<td>${escapeHtml(pk)}</td>
+<td>${escapeHtml(c.remarks || '')}</td>
+</tr>`;
+        })
+        .join('');
+    return `<div class="db-table-detail-table-wrap"><table class="db-table-detail-table"><thead><tr>
+<th>列名</th><th>类型</th><th>可空</th><th>主键</th><th>注释</th>
+</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+async function onDbTableDetailsToggle(details, slot) {
+    if (!details.open) {
+        return;
+    }
+    if (slot.dataset.loaded === '1') {
+        return;
+    }
+    const tableName = details.dataset.tableName;
+    const sid = currentSessionId;
+    if (!tableName || !sid) {
+        return;
+    }
+    slot.innerHTML = '<p class="db-table-detail-loading">加载表结构…</p>';
+    try {
+        const table = await Api.get('/dataBase/query/unique', {sessionId: sid, tableName});
+        if (!details.open) {
+            return;
+        }
+        if (!table) {
+            slot.innerHTML = '<p class="db-table-detail-error">未获取到表结构</p>';
+            return;
+        }
+        slot.dataset.loaded = '1';
+        slot.innerHTML = buildTableSchemaHtml(table);
+    } catch (e) {
+        if (!details.open) {
+            return;
+        }
+        slot.innerHTML = `<p class="db-table-detail-error">${escapeHtml(e.message || '加载失败')}</p>`;
+        notifyErrorUnlessShown(e, '加载表结构失败');
+    }
+}
+
+async function loadDbTableListForCurrentSession(options) {
+    const keepSearch = options && options.keepSearch;
+    const sid = currentSessionId;
+    syncDbTableSearchAndRefreshDisabled();
+
+    if (!sid || !sessions.some(s => s.id === sid)) {
+        resetDbTablePanelToPlaceholder();
+        return;
+    }
+
+    const els = getDbTableUiEls();
+    if (!keepSearch && els.search) {
+        els.search.value = '';
+    }
+
+    const seq = ++dbTableLoadSeq;
+    if (els.placeholder) {
+        els.placeholder.hidden = true;
+    }
+    if (els.loading) {
+        els.loading.hidden = false;
+    }
+    if (els.empty) {
+        els.empty.hidden = true;
+    }
+    if (els.list) {
+        els.list.innerHTML = '';
+        els.list.hidden = true;
+    }
+    if (els.refreshBtn) {
+        els.refreshBtn.disabled = true;
+    }
+
+    try {
+        const data = await Api.get('/dataBase/query/list', {sessionId: sid});
+        if (seq !== dbTableLoadSeq) {
+            return;
+        }
+        dbTableListRaw = Array.isArray(data) ? data : [];
+        if (els.loading) {
+            els.loading.hidden = true;
+        }
+        filterDbTableList();
+    } catch (e) {
+        if (seq !== dbTableLoadSeq) {
+            return;
+        }
+        dbTableListRaw = [];
+        if (els.loading) {
+            els.loading.hidden = true;
+        }
+        if (els.placeholder) {
+            els.placeholder.hidden = false;
+            els.placeholder.textContent = '表列表加载失败，请点击刷新重试';
+        }
+        if (els.list) {
+            els.list.innerHTML = '';
+            els.list.hidden = true;
+        }
+        if (els.empty) {
+            els.empty.hidden = true;
+        }
+        notifyErrorUnlessShown(e, '加载数据库表列表失败');
+    } finally {
+        if (seq === dbTableLoadSeq && els.refreshBtn) {
+            els.refreshBtn.disabled = !currentSessionId || !sessions.some(s => s.id === currentSessionId);
+        }
+    }
+}
+
+async function refreshDbTableList() {
+    await loadDbTableListForCurrentSession({keepSearch: true});
+}
+
 const DB_SESSIONS_STORAGE_KEY = 'dbSessions';
 
 function readPersistedState() {
@@ -87,6 +433,7 @@ async function loadSessionsFromServer() {
             currentSessionId = null;
             saveSessions();
             stripSessionQueryFromUrl();
+            resetDbTablePanelToPlaceholder();
             return;
         }
 
@@ -432,6 +779,7 @@ async function deleteSession(sessionId) {
         document.getElementById('chatContainer').style.display = 'none';
         document.getElementById('welcomeScreen').style.display = 'flex';
         resetContextualizePreview();
+        resetDbTablePanelToPlaceholder();
     }
 
     renderSessionList();
@@ -570,6 +918,7 @@ async function deleteModal() {
     document.getElementById('chatContainer').style.display = 'none';
     document.getElementById('welcomeScreen').style.display = 'flex';
     resetContextualizePreview();
+    resetDbTablePanelToPlaceholder();
 }
 
 function closeModal() {
@@ -644,6 +993,9 @@ function switchSession(sessionId) {
 
         document.getElementById('userInput').disabled = false;
         setSendButtonDisabled(false);
+        loadDbTableListForCurrentSession();
+    } else {
+        resetDbTablePanelToPlaceholder();
     }
 
     renderSessionList();
@@ -963,10 +1315,87 @@ function initChatKeyboardShortcuts() {
     }
 }
 
+const CHAT_DRAWER_LEFT_OPEN_KEY = 'chatDrawerLeftOpen';
+const CHAT_DRAWER_RIGHT_OPEN_KEY = 'chatDrawerRightOpen';
+
+function readChatDrawerPref(key, defaultOpen) {
+    try {
+        const v = localStorage.getItem(key);
+        if (v === null) {
+            return defaultOpen;
+        }
+        return v === '1' || v === 'true';
+    } catch (e) {
+        return defaultOpen;
+    }
+}
+
+function setLeftDrawerOpen(open) {
+    const shell = document.getElementById('chatLeftShell');
+    const panel = document.getElementById('chatLeftPanel');
+    const expandBtn = document.getElementById('chatLeftExpandBtn');
+    if (!shell) {
+        return;
+    }
+    if (open) {
+        shell.classList.remove('is-collapsed');
+    } else {
+        shell.classList.add('is-collapsed');
+    }
+    try {
+        localStorage.setItem(CHAT_DRAWER_LEFT_OPEN_KEY, open ? '1' : '0');
+    } catch (e) {
+        /* ignore */
+    }
+    if (panel) {
+        panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+    if (expandBtn) {
+        expandBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+}
+
+function setRightDrawerOpen(open) {
+    const shell = document.getElementById('chatRightShell');
+    const panel = document.getElementById('dbTableRightPanel');
+    const expandBtn = document.getElementById('chatRightExpandBtn');
+    if (!shell) {
+        return;
+    }
+    if (open) {
+        shell.classList.remove('is-collapsed');
+    } else {
+        shell.classList.add('is-collapsed');
+    }
+    try {
+        localStorage.setItem(CHAT_DRAWER_RIGHT_OPEN_KEY, open ? '1' : '0');
+    } catch (e) {
+        /* ignore */
+    }
+    if (panel) {
+        panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+    if (expandBtn) {
+        expandBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+}
+
+function initChatDrawers() {
+    setLeftDrawerOpen(readChatDrawerPref(CHAT_DRAWER_LEFT_OPEN_KEY, true));
+    setRightDrawerOpen(readChatDrawerPref(CHAT_DRAWER_RIGHT_OPEN_KEY, true));
+
+    document.getElementById('chatLeftCollapseBtn')?.addEventListener('click', () => setLeftDrawerOpen(false));
+    document.getElementById('chatLeftExpandBtn')?.addEventListener('click', () => setLeftDrawerOpen(true));
+    document.getElementById('chatRightCollapseBtn')?.addEventListener('click', () => setRightDrawerOpen(false));
+    document.getElementById('chatRightExpandBtn')?.addEventListener('click', () => setRightDrawerOpen(true));
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initChatKeyboardShortcuts);
     document.addEventListener('DOMContentLoaded', initExportSqlModal);
+    document.addEventListener('DOMContentLoaded', initChatDrawers);
 } else {
     initChatKeyboardShortcuts();
     initExportSqlModal();
+    initChatDrawers();
 }

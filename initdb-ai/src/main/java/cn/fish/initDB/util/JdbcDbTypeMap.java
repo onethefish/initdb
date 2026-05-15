@@ -23,7 +23,7 @@ public class JdbcDbTypeMap {
     static {
         JavaTypeMapping.put("DECIMAL", new String[]{"DECIMAL", "DOUBLE", "NUMERIC", "NUMBER"});
         JavaTypeMapping.put("STRING", new String[]{"VARCHAR", "VARCHAR2", "NVARCHAR2", "CHARACTER", "VARYING", "CHARACTER VARYING"});
-        JavaTypeMapping.put("CHAR", new String[]{"CHAR"});
+        JavaTypeMapping.put("CHAR", new String[]{"CHAR","BPCHAR"});
         JavaTypeMapping.put("INTEGER", new String[]{"INTEGER", "TINYINT", "INT","INT8","INT4","INT2","SERIAL"});
         JavaTypeMapping.put("BIGINT", new String[]{"BIGINT"});
         JavaTypeMapping.put("DATE", new String[]{"DATE", "YEAR"});

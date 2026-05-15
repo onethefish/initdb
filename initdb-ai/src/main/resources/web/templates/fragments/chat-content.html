@@ -2,13 +2,22 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div class="page-panel page-panel-active" id="chatPage" th:fragment="chatPage">
-  <div class="chat-layout">
-    <div class="chat-left-panel">
-      <div class="chat-actions">
-        <button class="create-chat-btn" onclick="createModal()" type="button">创建新对话</button>
-        <button class="delete-chat-btn" onclick="deleteModal()" type="button">删除所有对话</button>
+  <div class="chat-layout" id="chatLayout">
+    <div class="chat-drawer-shell chat-drawer-shell--left" id="chatLeftShell">
+      <button type="button" class="chat-drawer-expand-btn chat-drawer-expand-btn--left" id="chatLeftExpandBtn"
+              aria-controls="chatLeftPanel" aria-label="展开会话列表" title="展开会话列表">›</button>
+      <div class="chat-left-panel" id="chatLeftPanel">
+        <div class="chat-left-toolbar">
+          <span class="chat-left-toolbar-label">会话</span>
+          <button type="button" class="chat-drawer-collapse-btn" id="chatLeftCollapseBtn" aria-label="收起会话列表"
+                  title="收起会话列表">⟨</button>
+        </div>
+        <div class="chat-actions">
+          <button class="create-chat-btn" onclick="createModal()" type="button">创建新对话</button>
+          <button class="delete-chat-btn" onclick="deleteModal()" type="button">删除所有对话</button>
+        </div>
+        <div class="session-list chat-session-list" id="sessionList"></div>
       </div>
-      <div class="session-list chat-session-list" id="sessionList"></div>
     </div>
     <div class="chat-main-panel">
       <div class="welcome-screen" id="welcomeScreen">
@@ -35,6 +44,31 @@
           </div>
         </div>
       </div>
+    </div>
+    <div class="chat-drawer-shell chat-drawer-shell--right" id="chatRightShell">
+      <aside class="chat-right-panel" id="dbTableRightPanel" aria-label="数据库表">
+        <div class="db-table-panel-header">
+          <button type="button" class="chat-drawer-collapse-btn chat-drawer-collapse-btn--right" id="chatRightCollapseBtn"
+                  aria-label="收起数据库表" title="收起数据库表">⟩</button>
+          <h3 class="db-table-panel-title">数据库表</h3>
+          <button class="db-table-refresh-btn" id="dbTableRefreshBtn" onclick="refreshDbTableList()" title="重新加载表列表"
+                  type="button">刷新
+          </button>
+        </div>
+      <div class="db-table-search-wrap">
+        <label class="visually-hidden" for="dbTableSearchInput">搜索表</label>
+        <input autocomplete="off" class="db-table-search-input" id="dbTableSearchInput"
+               oninput="filterDbTableList()" placeholder="搜索表名、备注…" type="search">
+      </div>
+      <div class="db-table-panel-body">
+        <p class="db-table-placeholder" id="dbTablePlaceholder">请先创建并选择对话后显示表列表</p>
+        <p class="db-table-loading" hidden id="dbTableLoading">加载中…</p>
+        <p class="db-table-empty" hidden id="dbTableEmpty">当前库中未找到用户表</p>
+        <div class="db-table-list" id="dbTableList" role="list"></div>
+      </div>
+      </aside>
+      <button type="button" class="chat-drawer-expand-btn chat-drawer-expand-btn--right" id="chatRightExpandBtn"
+              aria-controls="dbTableRightPanel" aria-label="展开数据库表" title="展开数据库表">‹</button>
     </div>
   </div>
 </div>

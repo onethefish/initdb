@@ -1,6 +1,8 @@
 package cn.fish.database.service.impl;
 
 import cn.fish.chart.entity.ChatSession;
+import cn.fish.chart.repository.ChatSessionRepository;
+import cn.fish.common.config.DbMetadataCacheConfig;
 import cn.fish.database.repository.DataBaseRepository;
 import cn.fish.database.service.DataBaseService;
 import cn.fish.datasource.entity.AgentDatasource;
@@ -8,6 +10,7 @@ import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
@@ -30,28 +33,36 @@ import java.util.function.Consumer;
 @Service
 public class DataBaseServiceImpl implements DataBaseService {
 
+    private static final String META_KEY_SEP = "::";
 
-    private static final Cache<String, List<Table>> ALL_TABLE_CACHE = Caffeine.newBuilder()
-                                                                              .expireAfterWrite(1, TimeUnit.MINUTES)
-                                                                              .build();
+    private final Cache<String, List<Table>> allTableCache;
+    private final Cache<String, Table> tableSchemaCache;
 
-    private static final Cache<String, Table> TABLE_SCHEMA_CACHE = Caffeine.newBuilder()
-                                                                           .expireAfterWrite(1, TimeUnit.MINUTES)
-                                                                           .build();
     private final DataBaseRepository dataBaseRepository;
     private final AgentDatasourceRepository agentDatasourceRepository;
+    private final ChatSessionRepository chatSessionRepository;
 
     public DataBaseServiceImpl(
             DataBaseRepository dataBaseRepository,
-            AgentDatasourceRepository agentDatasourceRepository) {
+            AgentDatasourceRepository agentDatasourceRepository,
+            ChatSessionRepository chatSessionRepository,
+            DbMetadataCacheConfig metadataCacheConfig) {
         this.dataBaseRepository = dataBaseRepository;
         this.agentDatasourceRepository = agentDatasourceRepository;
+        this.chatSessionRepository = chatSessionRepository;
+        int ttl = Math.max(5, metadataCacheConfig.getTtlSeconds());
+        this.allTableCache = Caffeine.newBuilder()
+                .expireAfterWrite(ttl, TimeUnit.SECONDS)
+                .build();
+        this.tableSchemaCache = Caffeine.newBuilder()
+                .expireAfterWrite(ttl, TimeUnit.SECONDS)
+                .build();
     }
 
     @Override
     public List<Table> queryTableList(ChatSession chatSession) {
-        String sessionId = chatSession.getSessionId();
-        return ALL_TABLE_CACHE.get(sessionId, v -> {
+        String listKey = metaListKey(chatSession);
+        return allTableCache.get(listKey, v -> {
             DataSource dataSource = getDataSource(chatSession);
             List<Table> tables = new ArrayList<>();
             try (Connection conn = dataSource.getConnection()) {
@@ -79,8 +90,8 @@ public class DataBaseServiceImpl implements DataBaseService {
 
     @Override
     public Table queryTableSchema(ChatSession chatSession, String tableName) {
-        String sessionId = chatSession.getSessionId();
-        Table result = TABLE_SCHEMA_CACHE.get(sessionId + tableName, v -> {
+        String schemaKey = metaListKey(chatSession) + META_KEY_SEP + tableName;
+        Table result = tableSchemaCache.get(schemaKey, v -> {
             DataSource dataSource = getDataSource(chatSession);
             try (Connection conn = dataSource.getConnection()) {
                 DatabaseMetaData databaseMetaData = conn.getMetaData();
@@ -158,6 +169,7 @@ public class DataBaseServiceImpl implements DataBaseService {
         DataSource result = dataBaseRepository.get(sessionId);
         // 重新加载数据源
         if (ObjectUtil.isNull(result)) {
+            chatSession = chatSessionRepository.queryUnique(sessionId);
             String datasourceId = chatSession.getDatasourceId();
             AgentDatasource byId = agentDatasourceRepository.getById(datasourceId);
             result = dataBaseRepository.add(sessionId, byId.getConnectionUrl(), byId.getUsername(), byId.getPassword());
