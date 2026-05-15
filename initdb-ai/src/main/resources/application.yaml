@@ -88,6 +88,9 @@ initdb:
       # snippet 超长时 true 保留末尾；false 截头 + ...[truncated]
       snippet-chars-truncate-tail: true
   db:
+    metadata-cache:
+      # 全表清单 / 表结构元数据本地缓存（秒）；同一会话内多次工具调用可命中，避免重复 JDBC getTables/getColumns
+      ttl-seconds: 1800
     intent-route:
       # 高置信度时跳过路由 LLM（省约 450 prompt/次）；关闭则始终走模型
       heuristic-enabled: true

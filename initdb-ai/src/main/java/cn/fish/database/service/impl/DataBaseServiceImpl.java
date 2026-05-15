@@ -11,6 +11,9 @@ import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.entity.TableColumn;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +27,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +41,8 @@ public class DataBaseServiceImpl implements DataBaseService {
 
     private final Cache<String, List<Table>> allTableCache;
     private final Cache<String, Table> tableSchemaCache;
+    /** 与 {@link #allTableCache} 同生命周期；命中时可跳过 {@link #queryTableList} 与 JSONArray 构建（直连多轮常见）。 */
+    private final Cache<String, String> tableCatalogJsonCache;
 
     private final DataBaseRepository dataBaseRepository;
     private final AgentDatasourceRepository agentDatasourceRepository;
@@ -50,12 +56,15 @@ public class DataBaseServiceImpl implements DataBaseService {
         this.dataBaseRepository = dataBaseRepository;
         this.agentDatasourceRepository = agentDatasourceRepository;
         this.chatSessionRepository = chatSessionRepository;
-        int ttl = Math.max(5, metadataCacheConfig.getTtlSeconds());
+        int ttlSeconds = Math.max(5, metadataCacheConfig.getTtlSeconds());
         this.allTableCache = Caffeine.newBuilder()
-                .expireAfterWrite(ttl, TimeUnit.SECONDS)
+                .expireAfterWrite(ttlSeconds, TimeUnit.SECONDS)
                 .build();
         this.tableSchemaCache = Caffeine.newBuilder()
-                .expireAfterWrite(ttl, TimeUnit.SECONDS)
+                .expireAfterWrite(ttlSeconds, TimeUnit.SECONDS)
+                .build();
+        this.tableCatalogJsonCache = Caffeine.newBuilder()
+                .expireAfterWrite(ttlSeconds, TimeUnit.SECONDS)
                 .build();
     }
 
@@ -86,6 +95,12 @@ public class DataBaseServiceImpl implements DataBaseService {
             }
             return tables;
         });
+    }
+
+    @Override
+    public String queryTableCatalogJson(ChatSession chatSession) {
+        String k = metaListKey(chatSession);
+        return tableCatalogJsonCache.get(k, key -> buildTableCatalogJson(queryTableList(chatSession)));
     }
 
     @Override
@@ -147,6 +162,36 @@ public class DataBaseServiceImpl implements DataBaseService {
     }
 
     @Override
+    public void invalidateMetadataCache(String sessionId) {
+        if (StrUtil.isBlank(sessionId)) {
+            return;
+        }
+        String prefix = sessionId + META_KEY_SEP;
+        for (String k : new ArrayList<>(allTableCache.asMap().keySet())) {
+            if (k.startsWith(prefix)) {
+                allTableCache.invalidate(k);
+            }
+        }
+        for (String k : new ArrayList<>(tableSchemaCache.asMap().keySet())) {
+            if (k.startsWith(prefix)) {
+                tableSchemaCache.invalidate(k);
+            }
+        }
+        for (String k : new ArrayList<>(tableCatalogJsonCache.asMap().keySet())) {
+            if (k.startsWith(prefix)) {
+                tableCatalogJsonCache.invalidate(k);
+            }
+        }
+    }
+
+    @Override
+    public void invalidateAllMetadataCaches() {
+        allTableCache.invalidateAll();
+        tableSchemaCache.invalidateAll();
+        tableCatalogJsonCache.invalidateAll();
+    }
+
+    @Override
     public List<Map<String, Object>> queryTableData(ChatSession chatSession, String sql) {
         List<Map<String, Object>> rows = new ArrayList<>();
         queryTableDataStreaming(chatSession, sql, rows::add);
@@ -175,5 +220,26 @@ public class DataBaseServiceImpl implements DataBaseService {
             result = dataBaseRepository.add(sessionId, byId.getConnectionUrl(), byId.getUsername(), byId.getPassword());
         }
         return result;
+    }
+
+    /** 会话 + 数据源维度；同一会话换数据源后键不同，避免命中旧库元数据。 */
+    private static String metaListKey(ChatSession chatSession) {
+        return chatSession.getSessionId() + META_KEY_SEP + StrUtil.nullToEmpty(chatSession.getDatasourceId());
+    }
+
+    private static String buildTableCatalogJson(List<Table> tables) {
+        JSONArray arr = new JSONArray();
+        if (ObjectUtil.isNotNull(tables)) {
+            for (Table t : tables) {
+                if (ObjectUtil.isNull(t) || StrUtil.isBlank(t.getTableName())) {
+                    continue;
+                }
+                JSONObject o = new JSONObject(new LinkedHashMap<>(4));
+                o.put("tableName", t.getTableName());
+                o.put("remarks", StrUtil.nullToEmpty(t.getRemarks()));
+                arr.add(o);
+            }
+        }
+        return JSON.toJSONString(arr);
     }
 }

@@ -6,6 +6,7 @@ import cn.fish.chart.service.ChatSessionService;
 import cn.fish.common.savers.CheckpointSessionTreeReleasable;
 import cn.fish.cloud.serva.web.exception.CommonException;
 import cn.fish.database.repository.DataBaseRepository;
+import cn.fish.database.service.DataBaseService;
 import cn.fish.datasource.entity.AgentDatasource;
 import cn.fish.datasource.repository.AgentDatasourceRepository;
 import cn.hutool.core.util.ObjectUtil;
@@ -24,14 +25,17 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     private final DataBaseRepository dataBaseRepository;
     private final AgentDatasourceRepository agentDatasourceRepository;
     private final BaseCheckpointSaver baseCheckpointSaver;
+    private final DataBaseService dataBaseService;
 
     public ChatSessionServiceImpl(ChatSessionRepository chatSessionRepository, DataBaseRepository dataBaseRepository,
                                   AgentDatasourceRepository agentDatasourceRepository,
-                                  BaseCheckpointSaver baseCheckpointSaver) {
+                                  BaseCheckpointSaver baseCheckpointSaver,
+                                  DataBaseService dataBaseService) {
         this.chatSessionRepository = chatSessionRepository;
         this.dataBaseRepository = dataBaseRepository;
         this.agentDatasourceRepository = agentDatasourceRepository;
         this.baseCheckpointSaver = baseCheckpointSaver;
+        this.dataBaseService = dataBaseService;
     }
 
 
@@ -67,6 +71,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public void delete(ChatSession chatSession) {
+        dataBaseService.invalidateMetadataCache(chatSession.getSessionId());
         chatSessionRepository.remove(chatSession);
         dataBaseRepository.remove(chatSession.getSessionId());
         releaseCheckpointThreadsQuietly(chatSession.getSessionId());
@@ -78,6 +83,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         for (ChatSession chatSession : chatSessions) {
             releaseCheckpointThreadsQuietly(chatSession.getSessionId());
         }
+        dataBaseService.invalidateAllMetadataCaches();
         chatSessionRepository.remove(chatSessions);
         dataBaseRepository.removeAll();
     }

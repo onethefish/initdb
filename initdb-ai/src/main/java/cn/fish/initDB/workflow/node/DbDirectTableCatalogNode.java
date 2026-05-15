@@ -3,20 +3,14 @@ package cn.fish.initDB.workflow.node;
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
 import cn.fish.database.service.DataBaseService;
-import cn.fish.initDB.entity.Table;
 import cn.fish.initDB.workflow.DbWorkflowBundle;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,21 +49,8 @@ public class DbDirectTableCatalogNode implements NodeAction {
             return fail(state, "未找到会话，请先连接数据库。");
         }
         try {
-            List<Table> tables = dataBaseService.queryTableList(chatSession);
-            JSONArray arr = new JSONArray();
-            if (ObjectUtil.isNotNull(tables)) {
-                for (Table t : tables) {
-                    if (ObjectUtil.isNull(t) || StrUtil.isBlank(t.getTableName())) {
-                        continue;
-                    }
-                    JSONObject o = new JSONObject(new LinkedHashMap<>(4));
-                    o.put("tableName", t.getTableName());
-                    o.put("remarks", StrUtil.nullToEmpty(t.getRemarks()));
-                    arr.add(o);
-                }
-            }
-            String json = JSON.toJSONString(arr);
-            log.info("db direct table_catalog tables={}", arr.size());
+            String json = dataBaseService.queryTableCatalogJson(chatSession);
+            log.info("db direct table_catalog jsonChars={}", json.length());
             return DbWorkflowBundle.writeBundle(state, b -> {
                 b.put(DB_BUNDLE_KEY_TABLE_CATALOG_JSON, json);
                 b.put(DB_BUNDLE_KEY_TABLE_CATALOG, Boolean.TRUE);
