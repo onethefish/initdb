@@ -5,7 +5,7 @@ import cn.fish.cloud.serva.web.response.ResponseResult;
 import cn.fish.database.dto.DataSqlQueryRequest;
 import cn.fish.database.dto.DataSqlValidateRequest;
 import cn.fish.database.dto.DataSqlValidateResponse;
-import cn.fish.database.service.DataBaseDataQueryService;
+import cn.fish.database.service.DataBaseDataService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,10 +19,10 @@ import java.util.Map;
 @RequestMapping("/dataBase/data")
 public class DataBaseDataController extends BaseController {
 
-    private final DataBaseDataQueryService dataBaseDataQueryService;
+    private final DataBaseDataService dataBaseDataService;
 
-    public DataBaseDataController(DataBaseDataQueryService dataBaseDataQueryService) {
-        this.dataBaseDataQueryService = dataBaseDataQueryService;
+    public DataBaseDataController(DataBaseDataService dataBaseDataService) {
+        this.dataBaseDataService = dataBaseDataService;
     }
 
     /**
@@ -30,7 +30,7 @@ public class DataBaseDataController extends BaseController {
      */
     @PostMapping("/query/page")
     public ResponseResult<Page<Map<String, Object>>> queryPage(@Valid @RequestBody DataSqlQueryRequest request) {
-        return result(dataBaseDataQueryService.queryPage(request));
+        return result(dataBaseDataService.queryPage(request));
     }
 
     /**
@@ -38,6 +38,6 @@ public class DataBaseDataController extends BaseController {
      */
     @PostMapping({"/query/validate", "/validate"})
     public ResponseResult<DataSqlValidateResponse> validate(@Valid @RequestBody DataSqlValidateRequest request) {
-        return result(dataBaseDataQueryService.validate(request));
+        return result(dataBaseDataService.validate(request));
     }
 }

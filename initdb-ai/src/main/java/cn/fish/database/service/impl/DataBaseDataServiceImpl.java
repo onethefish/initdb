@@ -1,4 +1,4 @@
-package cn.fish.database.service;
+package cn.fish.database.service.impl;
 
 import cn.fish.chart.entity.ChatSession;
 import cn.fish.chart.repository.ChatSessionRepository;
@@ -7,6 +7,8 @@ import cn.fish.common.config.QuerySqlCheckConfig;
 import cn.fish.database.dto.DataSqlQueryRequest;
 import cn.fish.database.dto.DataSqlValidateRequest;
 import cn.fish.database.dto.DataSqlValidateResponse;
+import cn.fish.database.service.DataBaseDataService;
+import cn.fish.database.service.DataBaseService;
 import cn.fish.database.sql.SelectSqlPaginationWrapper;
 import cn.fish.database.sql.SqlDialect;
 import cn.fish.database.sql.SqlDialectResolver;
@@ -17,19 +19,14 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 
-/**
- * 会话内只读 SQL 分页与校验（与导出使用同一套 {@link ExportSqlGuardService}）。
- */
-@Slf4j
 @Service
 @RequiredArgsConstructor
-public class DataBaseDataQueryService {
+public class DataBaseDataServiceImpl implements DataBaseDataService {
 
     private static final int DEFAULT_PAGE_SIZE = 20;
     private static final int MAX_PAGE_SIZE = 500;
@@ -41,6 +38,7 @@ public class DataBaseDataQueryService {
     private final AgentDatasourceRepository agentDatasourceRepository;
     private final QuerySqlCheckConfig querySqlCheckConfig;
 
+    @Override
     public Page<Map<String, Object>> queryPage(DataSqlQueryRequest request) {
         ChatSession session = requireSession(request.getSessionId());
         String rawSql = StrUtil.trim(request.getSql());
@@ -72,6 +70,7 @@ public class DataBaseDataQueryService {
         return page;
     }
 
+    @Override
     public DataSqlValidateResponse validate(DataSqlValidateRequest request) {
         requireSession(request.getSessionId());
         String rawSql = StrUtil.trim(request.getSql());
