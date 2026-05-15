@@ -150,8 +150,19 @@ function renderDbTableRows(filtered) {
             insertDbTableNameIntoInput(tableName);
         });
 
+        const sqlTplBtn = document.createElement('button');
+        sqlTplBtn.type = 'button';
+        sqlTplBtn.textContent = 'SQL';
+        sqlTplBtn.title = '在「查询」页填入 SELECT 模板';
+        sqlTplBtn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            openQueryTabWithSqlTemplate(tableName);
+        });
+
         actions.appendChild(copyBtn);
         actions.appendChild(insertBtn);
+        actions.appendChild(sqlTplBtn);
 
         summary.appendChild(main);
         summary.appendChild(actions);
@@ -354,6 +365,564 @@ async function refreshDbTableList() {
     await loadDbTableListForCurrentSession({keepSearch: true});
 }
 
+let chatMainActiveTab = 'chat';
+let sqlQueryWinSeq = 0;
+/** @type {{ id: string, title: string, sql: string, validateText: string, validateOk: boolean|null, errText: string, pageNum: number, pageSize: number, total: number, records: object[] }[]} */
+let sqlQueryWindows = [];
+let sqlQueryActiveWindowId = null;
+
+function getActiveSqlQueryWindow() {
+    return sqlQueryWindows.find(w => w.id === sqlQueryActiveWindowId) || null;
+}
+
+function ensureSqlQueryWindowsBootstrapped() {
+    if (sqlQueryWindows.length > 0) {
+        return;
+    }
+    sqlQueryWinSeq++;
+    const id = `sqw_${sqlQueryWinSeq}`;
+    sqlQueryWindows.push({
+        id,
+        title: '查询 1',
+        sql: '',
+        validateText: '',
+        validateOk: null,
+        errText: '',
+        pageNum: 1,
+        pageSize: 20,
+        total: 0,
+        records: []
+    });
+    sqlQueryActiveWindowId = id;
+}
+
+function resetSqlQueryWindowsForSessionChange() {
+    sqlQueryWindows = [];
+    sqlQueryActiveWindowId = null;
+    sqlQueryWinSeq = 0;
+}
+
+function persistActiveSqlQueryWindowFromDom() {
+    const w = getActiveSqlQueryWindow();
+    if (!w) {
+        return;
+    }
+    const ta = document.getElementById('sqlQueryInput');
+    if (ta) {
+        w.sql = ta.value;
+    }
+    const sizeSel = document.getElementById('sqlQueryPageSize');
+    const parsedSize = Number(sizeSel && sizeSel.value);
+    if (Number.isFinite(parsedSize) && parsedSize > 0) {
+        w.pageSize = parsedSize;
+    }
+    const st = document.getElementById('sqlQueryValidateStatus');
+    if (st) {
+        w.validateText = st.textContent || '';
+        w.validateOk = st.classList.contains('is-ok') ? true : st.classList.contains('is-err') ? false : null;
+    }
+    const errEl = document.getElementById('sqlQueryError');
+    if (errEl) {
+        w.errText = errEl.hidden ? '' : String(errEl.textContent || '');
+    }
+}
+
+function hydrateSqlQueryWindowToDom(w) {
+    if (!w) {
+        return;
+    }
+    sqlQueryActiveWindowId = w.id;
+    const ta = document.getElementById('sqlQueryInput');
+    if (ta) {
+        ta.value = w.sql || '';
+    }
+    const st = document.getElementById('sqlQueryValidateStatus');
+    if (st) {
+        st.textContent = w.validateText || '';
+        st.classList.remove('is-ok', 'is-err');
+        if (w.validateOk === true) {
+            st.classList.add('is-ok');
+        } else if (w.validateOk === false) {
+            st.classList.add('is-err');
+        }
+    }
+    const errEl = document.getElementById('sqlQueryError');
+    if (errEl) {
+        const et = w.errText || '';
+        errEl.hidden = !et;
+        errEl.textContent = et;
+    }
+    const sel = document.getElementById('sqlQueryPageSize');
+    if (sel) {
+        sel.value = String(w.pageSize || 20);
+    }
+    renderSqlQueryResultTable(w.records || []);
+    updateSqlQueryPaginationUiForWin(w);
+}
+
+function renderSqlQuerySubtabs() {
+    const list = document.getElementById('sqlQuerySubtabsList');
+    if (!list) {
+        return;
+    }
+    list.innerHTML = '';
+    sqlQueryWindows.forEach(w => {
+        const tab = document.createElement('div');
+        tab.className = `sql-query-subtab${w.id === sqlQueryActiveWindowId ? ' is-active' : ''}`;
+        tab.setAttribute('role', 'tab');
+        tab.tabIndex = 0;
+        tab.setAttribute('aria-selected', w.id === sqlQueryActiveWindowId ? 'true' : 'false');
+        tab.dataset.winId = w.id;
+
+        const label = document.createElement('span');
+        label.className = 'sql-query-subtab-label';
+        label.textContent = w.title;
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'sql-query-subtab-close';
+        close.textContent = '×';
+        close.title = '关闭此查询窗口';
+        close.setAttribute('aria-label', '关闭');
+        close.addEventListener('click', ev => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            sqlQueryCloseSubWindow(w.id);
+        });
+
+        tab.appendChild(label);
+        tab.appendChild(close);
+        tab.addEventListener('click', ev => {
+            if (ev.target.closest('.sql-query-subtab-close')) {
+                return;
+            }
+            sqlQuerySwitchWindow(w.id);
+        });
+        tab.addEventListener('keydown', ev => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                sqlQuerySwitchWindow(w.id);
+            }
+        });
+        list.appendChild(tab);
+    });
+}
+
+function sqlQuerySwitchWindow(id) {
+    if (id === sqlQueryActiveWindowId) {
+        return;
+    }
+    persistActiveSqlQueryWindowFromDom();
+    const w = sqlQueryWindows.find(x => x.id === id);
+    if (!w) {
+        return;
+    }
+    sqlQueryActiveWindowId = id;
+    hydrateSqlQueryWindowToDom(w);
+    renderSqlQuerySubtabs();
+}
+
+function sqlQueryCloseSubWindow(id) {
+    if (sqlQueryWindows.length <= 1) {
+        const w = sqlQueryWindows[0];
+        if (w) {
+            w.sql = '';
+            w.validateText = '';
+            w.validateOk = null;
+            w.errText = '';
+            w.pageNum = 1;
+            w.pageSize = 20;
+            w.total = 0;
+            w.records = [];
+            w.title = '查询 1';
+            hydrateSqlQueryWindowToDom(w);
+            renderSqlQuerySubtabs();
+        }
+        return;
+    }
+    persistActiveSqlQueryWindowFromDom();
+    const idx = sqlQueryWindows.findIndex(x => x.id === id);
+    if (idx < 0) {
+        return;
+    }
+    sqlQueryWindows.splice(idx, 1);
+    if (sqlQueryActiveWindowId === id) {
+        const next = sqlQueryWindows[Math.min(idx, sqlQueryWindows.length - 1)];
+        sqlQueryActiveWindowId = next ? next.id : null;
+    }
+    ensureSqlQueryWindowsBootstrapped();
+    const active = getActiveSqlQueryWindow();
+    if (active) {
+        hydrateSqlQueryWindowToDom(active);
+    }
+    renderSqlQuerySubtabs();
+}
+
+function sqlQueryAddWindow(initialSql) {
+    ensureSqlQueryWindowsBootstrapped();
+    persistActiveSqlQueryWindowFromDom();
+    sqlQueryWinSeq++;
+    const id = `sqw_${sqlQueryWinSeq}`;
+    const n = sqlQueryWindows.length + 1;
+    const sql = initialSql != null ? String(initialSql) : '';
+    sqlQueryWindows.push({
+        id,
+        title: `查询 ${n}`,
+        sql,
+        validateText: '',
+        validateOk: null,
+        errText: '',
+        pageNum: 1,
+        pageSize: 20,
+        total: 0,
+        records: []
+    });
+    sqlQueryActiveWindowId = id;
+    hydrateSqlQueryWindowToDom(getActiveSqlQueryWindow());
+    renderSqlQuerySubtabs();
+    const ta = document.getElementById('sqlQueryInput');
+    if (ta) {
+        ta.focus();
+    }
+}
+
+function syncChatMainTabsVisibility() {
+    const wrap = document.getElementById('chatMainTabsWrap');
+    if (!wrap) {
+        return;
+    }
+    const hasSession = !!currentSessionId && sessions.some(s => s.id === currentSessionId);
+    wrap.style.display = hasSession ? 'block' : 'none';
+    if (!hasSession) {
+        setChatMainTab('chat');
+    }
+}
+
+function syncSqlQuerySessionLabel() {
+    const el = document.getElementById('sqlQuerySessionLabel');
+    if (!el) {
+        return;
+    }
+    const sid = currentSessionId;
+    if (!sid) {
+        el.textContent = '当前会话';
+        return;
+    }
+    const s = sessions.find(x => x.id === sid);
+    el.textContent = s ? `会话：${s.name}` : '当前会话';
+}
+
+function setChatMainTab(tab) {
+    const tChat = document.getElementById('chatTabChat');
+    const tQuery = document.getElementById('chatTabQuery');
+    const pChat = document.getElementById('chatMainPanelChat');
+    const pQuery = document.getElementById('chatMainPanelQuery');
+    if (!tChat || !tQuery || !pChat || !pQuery) {
+        return;
+    }
+    chatMainActiveTab = tab === 'query' ? 'query' : 'chat';
+    if (chatMainActiveTab === 'chat') {
+        tChat.classList.add('is-active');
+        tQuery.classList.remove('is-active');
+        tChat.setAttribute('aria-selected', 'true');
+        tQuery.setAttribute('aria-selected', 'false');
+        pChat.classList.add('is-active');
+        pQuery.classList.remove('is-active');
+    } else {
+        tQuery.classList.add('is-active');
+        tChat.classList.remove('is-active');
+        tQuery.setAttribute('aria-selected', 'true');
+        tChat.setAttribute('aria-selected', 'false');
+        pQuery.classList.add('is-active');
+        pChat.classList.remove('is-active');
+        ensureSqlQueryWindowsBootstrapped();
+        const w = getActiveSqlQueryWindow();
+        if (w) {
+            hydrateSqlQueryWindowToDom(w);
+        }
+        renderSqlQuerySubtabs();
+        syncSqlQuerySessionLabel();
+    }
+}
+
+function initChatMainTabs() {
+    document.getElementById('chatTabChat')?.addEventListener('click', () => setChatMainTab('chat'));
+    document.getElementById('chatTabQuery')?.addEventListener('click', () => setChatMainTab('query'));
+}
+
+function openQueryTabWithSqlTemplate(tableName) {
+    const name = String(tableName || '').trim();
+    if (!name) {
+        return;
+    }
+    if (!currentSessionId) {
+        showErrorDialog({title: '提示', message: '请先创建并选择对话'});
+        return;
+    }
+    const tpl = `SELECT * FROM ${name} LIMIT 20`;
+    setChatMainTab('query');
+    const w = getActiveSqlQueryWindow();
+    if (
+        w &&
+        sqlQueryWindows.length === 1 &&
+        !(String(w.sql || '').trim()) &&
+        (!w.records || w.records.length === 0)
+    ) {
+        w.sql = tpl;
+        hydrateSqlQueryWindowToDom(w);
+        renderSqlQuerySubtabs();
+        document.getElementById('sqlQueryInput')?.focus();
+        return;
+    }
+    sqlQueryAddWindow(tpl);
+}
+
+function closeSqlQueryPanel() {
+    setChatMainTab('chat');
+}
+
+async function validateSqlQuery() {
+    const statusEl = document.getElementById('sqlQueryValidateStatus');
+    if (!currentSessionId) {
+        showErrorDialog({title: '提示', message: '请先选择对话'});
+        return;
+    }
+    const w = getActiveSqlQueryWindow();
+    if (!w) {
+        return;
+    }
+    persistActiveSqlQueryWindowFromDom();
+    const sql = String(w.sql || '').trim();
+    if (!sql) {
+        showErrorDialog({title: '提示', message: '请输入 SQL'});
+        return;
+    }
+    if (statusEl) {
+        statusEl.textContent = '校验中…';
+        statusEl.classList.remove('is-ok', 'is-err');
+    }
+    try {
+        const res = await Api.post('/dataBase/data/query/validate', {sessionId: currentSessionId, sql});
+        const ok = !!(res && res.ok);
+        const msg = res && res.message != null ? String(res.message) : '';
+        w.validateText = msg;
+        w.validateOk = ok;
+        if (statusEl) {
+            statusEl.textContent = msg;
+            statusEl.classList.toggle('is-ok', ok);
+            statusEl.classList.toggle('is-err', !ok);
+        }
+    } catch (e) {
+        w.validateText = '';
+        w.validateOk = null;
+        if (statusEl) {
+            statusEl.textContent = '';
+            statusEl.classList.remove('is-ok', 'is-err');
+        }
+        notifyErrorUnlessShown(e, '校验 SQL 失败');
+    }
+}
+
+function runSqlQueryFromToolbar() {
+    const w = getActiveSqlQueryWindow();
+    if (w) {
+        w.pageNum = 1;
+    }
+    void executeSqlQueryPage();
+}
+
+function onSqlQueryPageSizeChange() {
+    const w = getActiveSqlQueryWindow();
+    if (!w) {
+        return;
+    }
+    persistActiveSqlQueryWindowFromDom();
+    const sel = document.getElementById('sqlQueryPageSize');
+    const v = Number(sel && sel.value);
+    w.pageSize = Number.isFinite(v) && v > 0 ? v : 20;
+    w.pageNum = 1;
+    const sql = String(w.sql || '').trim();
+    if (sql) {
+        void executeSqlQueryPage();
+    } else {
+        updateSqlQueryPaginationUiForWin(w);
+    }
+}
+
+function sqlQueryGoPrevPage() {
+    const w = getActiveSqlQueryWindow();
+    if (!w || w.pageNum <= 1) {
+        return;
+    }
+    persistActiveSqlQueryWindowFromDom();
+    w.pageNum--;
+    void executeSqlQueryPage();
+}
+
+function sqlQueryGoNextPage() {
+    const w = getActiveSqlQueryWindow();
+    if (!w) {
+        return;
+    }
+    const size = w.pageSize || 20;
+    const totalPages = Math.max(1, Math.ceil((w.total || 0) / size));
+    if (w.pageNum >= totalPages) {
+        return;
+    }
+    persistActiveSqlQueryWindowFromDom();
+    w.pageNum++;
+    void executeSqlQueryPage();
+}
+
+function updateSqlQueryPaginationUiForWin(w) {
+    if (!w) {
+        return;
+    }
+    const size = w.pageSize || 20;
+    const total = w.total || 0;
+    const pageNum = w.pageNum || 1;
+    const totalPages = Math.max(1, Math.ceil(total / size));
+    const info = document.getElementById('sqlQueryPageInfo');
+    const prev = document.getElementById('sqlQueryPagePrev');
+    const next = document.getElementById('sqlQueryPageNext');
+    const sel = document.getElementById('sqlQueryPageSize');
+    if (info) {
+        info.textContent = `第 ${pageNum} / ${totalPages} 页，共 ${total} 条`;
+    }
+    if (prev) {
+        prev.disabled = pageNum <= 1;
+    }
+    if (next) {
+        next.disabled = pageNum >= totalPages || total === 0;
+    }
+    if (sel && String(sel.value) !== String(size)) {
+        sel.value = String(size);
+    }
+}
+
+function collectSqlResultColumns(records) {
+    const cols = [];
+    const seen = new Set();
+    (records || []).forEach(row => {
+        if (!row || typeof row !== 'object') {
+            return;
+        }
+        Object.keys(row).forEach(k => {
+            if (!seen.has(k)) {
+                seen.add(k);
+                cols.push(k);
+            }
+        });
+    });
+    return cols;
+}
+
+function renderSqlQueryResultTable(records) {
+    const thead = document.getElementById('sqlQueryResultThead');
+    const tbody = document.getElementById('sqlQueryResultTbody');
+    const emptyEl = document.getElementById('sqlQueryResultEmpty');
+    if (!thead || !tbody || !emptyEl) {
+        return;
+    }
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+    if (!records || !records.length) {
+        emptyEl.hidden = false;
+        return;
+    }
+    emptyEl.hidden = true;
+    const cols = collectSqlResultColumns(records);
+    const hr = document.createElement('tr');
+    cols.forEach(c => {
+        const th = document.createElement('th');
+        th.textContent = c;
+        hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    records.forEach(row => {
+        const tr = document.createElement('tr');
+        cols.forEach(c => {
+            const td = document.createElement('td');
+            const v = row && Object.prototype.hasOwnProperty.call(row, c) ? row[c] : '';
+            td.textContent = v == null ? '' : String(v);
+            td.title = td.textContent;
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+}
+
+async function executeSqlQueryPage() {
+    const errEl = document.getElementById('sqlQueryError');
+    const ta = document.getElementById('sqlQueryInput');
+    const runBtn = document.getElementById('sqlQueryRunBtn');
+    const w = getActiveSqlQueryWindow();
+    if (!w) {
+        return;
+    }
+    if (!currentSessionId) {
+        showErrorDialog({title: '提示', message: '请先选择对话'});
+        return;
+    }
+    persistActiveSqlQueryWindowFromDom();
+    const sql = String((ta && ta.value) || w.sql || '').trim();
+    w.sql = sql;
+    if (!sql) {
+        showErrorDialog({title: '提示', message: '请输入 SQL'});
+        return;
+    }
+    if (errEl) {
+        errEl.hidden = true;
+        errEl.textContent = '';
+        w.errText = '';
+    }
+    const sizeSel = document.getElementById('sqlQueryPageSize');
+    const parsedSize = Number(sizeSel && sizeSel.value);
+    if (Number.isFinite(parsedSize) && parsedSize > 0) {
+        w.pageSize = parsedSize;
+    }
+    if (runBtn) {
+        runBtn.disabled = true;
+    }
+    try {
+        const raw = await Api.post('/dataBase/data/query/page', {
+            sessionId: currentSessionId,
+            sql,
+            pageNum: w.pageNum,
+            pageSize: w.pageSize
+        });
+        const pageData = normalizePagePayload(raw);
+        w.total = Number(pageData.total) || 0;
+        w.pageNum = Number(pageData.current) || w.pageNum;
+        w.pageSize = Number(pageData.size) || w.pageSize;
+        w.records = Array.isArray(pageData.records) ? pageData.records : [];
+        const line = sql.split(/\r?\n/).find(l => String(l).trim()) || sql;
+        const short = String(line).trim().slice(0, 28);
+        if (short) {
+            w.title = short.length >= 28 ? `${short}…` : short;
+        }
+        renderSqlQueryResultTable(w.records);
+        updateSqlQueryPaginationUiForWin(w);
+        renderSqlQuerySubtabs();
+    } catch (e) {
+        w.total = 0;
+        w.records = [];
+        w.errText = e.message || String(e);
+        renderSqlQueryResultTable([]);
+        updateSqlQueryPaginationUiForWin(w);
+        if (errEl) {
+            errEl.hidden = false;
+            errEl.textContent = w.errText;
+        }
+        notifyErrorUnlessShown(e, '执行查询失败');
+        renderSqlQuerySubtabs();
+    } finally {
+        if (runBtn) {
+            runBtn.disabled = false;
+        }
+    }
+}
+
 const DB_SESSIONS_STORAGE_KEY = 'dbSessions';
 
 function readPersistedState() {
@@ -434,6 +1003,9 @@ async function loadSessionsFromServer() {
             saveSessions();
             stripSessionQueryFromUrl();
             resetDbTablePanelToPlaceholder();
+            document.getElementById('chatContainer').style.display = 'none';
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            syncChatMainTabsVisibility();
             return;
         }
 
@@ -780,6 +1352,7 @@ async function deleteSession(sessionId) {
         document.getElementById('welcomeScreen').style.display = 'flex';
         resetContextualizePreview();
         resetDbTablePanelToPlaceholder();
+        syncChatMainTabsVisibility();
     }
 
     renderSessionList();
@@ -919,6 +1492,7 @@ async function deleteModal() {
     document.getElementById('welcomeScreen').style.display = 'flex';
     resetContextualizePreview();
     resetDbTablePanelToPlaceholder();
+    syncChatMainTabsVisibility();
 }
 
 function closeModal() {
@@ -994,8 +1568,13 @@ function switchSession(sessionId) {
         document.getElementById('userInput').disabled = false;
         setSendButtonDisabled(false);
         loadDbTableListForCurrentSession();
+        syncChatMainTabsVisibility();
+        syncSqlQuerySessionLabel();
+        setChatMainTab('chat');
+        resetSqlQueryWindowsForSessionChange();
     } else {
         resetDbTablePanelToPlaceholder();
+        syncChatMainTabsVisibility();
     }
 
     renderSessionList();
@@ -1394,8 +1973,10 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initChatKeyboardShortcuts);
     document.addEventListener('DOMContentLoaded', initExportSqlModal);
     document.addEventListener('DOMContentLoaded', initChatDrawers);
+    document.addEventListener('DOMContentLoaded', initChatMainTabs);
 } else {
     initChatKeyboardShortcuts();
     initExportSqlModal();
     initChatDrawers();
+    initChatMainTabs();
 }

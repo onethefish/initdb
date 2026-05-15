@@ -20,27 +20,83 @@
       </div>
     </div>
     <div class="chat-main-panel">
-      <div class="welcome-screen" id="welcomeScreen">
-        <h2>你好！我是智能数据库助手</h2>
-        <p>我可以通过自然语言查询你的数据库信息。请先在「数据源管理」中维护并测试数据源，再在此创建对话并选择要使用的数据源。</p>
-        <button class="create-chat-btn welcome-create-btn" onclick="createModal()" type="button">创建第一个对话</button>
+      <div class="chat-main-tabs-wrap" id="chatMainTabsWrap" style="display: none">
+        <div class="chat-main-tabs" role="tablist" aria-label="主内容切换">
+          <button type="button" class="chat-main-tab is-active" id="chatTabChat" role="tab" aria-selected="true"
+                  aria-controls="chatMainPanelChat">对话
+          </button>
+          <button type="button" class="chat-main-tab" id="chatTabQuery" role="tab" aria-selected="false"
+                  aria-controls="chatMainPanelQuery">查询
+          </button>
+        </div>
       </div>
-      <div class="chat-container" id="chatContainer">
-        <div class="chat-header" id="currentSessionHeader"></div>
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="input-area">
-          <div class="input-area-row">
-            <input disabled id="userInput" onkeydown="handleUserInputKeydown(event)" placeholder="请输入你的问题..." type="text">
-            <button disabled id="contextualizeBtn" onclick="previewContextualize()" title="根据当前会话历史补全问句（快捷键 F2）" type="button">补全会话</button>
-            <button disabled id="sendMessageBtn" onclick="sendMessage()" title="发送（快捷键 Enter）" type="button">发送</button>
+      <div class="chat-main-tab-panels">
+        <div class="chat-main-tab-panel is-active" id="chatMainPanelChat" role="tabpanel" aria-labelledby="chatTabChat">
+          <div class="welcome-screen" id="welcomeScreen">
+            <h2>你好！我是智能数据库助手</h2>
+            <p>我可以通过自然语言查询你的数据库信息。请先在「数据源管理」中维护并测试数据源，再在此创建对话并选择要使用的数据源。</p>
+            <button class="create-chat-btn welcome-create-btn" onclick="createModal()" type="button">创建第一个对话</button>
           </div>
-          <p class="input-shortcuts-hint" id="inputShortcutsHint"><kbd>Enter</kbd> 发送 · <kbd>F2</kbd> 补全会话 · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 填入输入框（Mac 为 <kbd>⌘</kbd>+<kbd>Enter</kbd>）</p>
-          <div class="standalone-preview-wrap" id="standalonePreviewWrap" style="display: none">
-            <div class="standalone-preview-toolbar">
-              <label class="standalone-preview-label" for="standalonePreviewInput">补全后的问句（可编辑）</label>
-              <button class="standalone-preview-fill-btn" id="standaloneFillBtn" onclick="applyStandaloneToUserInput()" title="将补全结果写入上方输入框（快捷键 Ctrl+Enter，Mac 为 ⌘+Enter）" type="button">填入输入框</button>
+          <div class="chat-container" id="chatContainer">
+            <div class="chat-header" id="currentSessionHeader"></div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="input-area">
+              <div class="input-area-row">
+                <input disabled id="userInput" onkeydown="handleUserInputKeydown(event)" placeholder="请输入你的问题..." type="text">
+                <button disabled id="contextualizeBtn" onclick="previewContextualize()" title="根据当前会话历史补全问句（快捷键 F2）" type="button">补全会话</button>
+                <button disabled id="sendMessageBtn" onclick="sendMessage()" title="发送（快捷键 Enter）" type="button">发送</button>
+              </div>
+              <p class="input-shortcuts-hint" id="inputShortcutsHint"><kbd>Enter</kbd> 发送 · <kbd>F2</kbd> 补全会话 · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 填入输入框（Mac 为 <kbd>⌘</kbd>+<kbd>Enter</kbd>）</p>
+              <div class="standalone-preview-wrap" id="standalonePreviewWrap" style="display: none">
+                <div class="standalone-preview-toolbar">
+                  <label class="standalone-preview-label" for="standalonePreviewInput">补全后的问句（可编辑）</label>
+                  <button class="standalone-preview-fill-btn" id="standaloneFillBtn" onclick="applyStandaloneToUserInput()" title="将补全结果写入上方输入框（快捷键 Ctrl+Enter，Mac 为 ⌘+Enter）" type="button">填入输入框</button>
+                </div>
+                <textarea class="standalone-preview-input" id="standalonePreviewInput" rows="2" spellcheck="false"></textarea>
+              </div>
             </div>
-            <textarea class="standalone-preview-input" id="standalonePreviewInput" rows="2" spellcheck="false"></textarea>
+          </div>
+        </div>
+        <div class="chat-main-tab-panel" id="chatMainPanelQuery" role="tabpanel" aria-labelledby="chatTabQuery">
+          <div class="sql-query-subtabs-row">
+            <div class="sql-query-subtabs-scroll" id="sqlQuerySubtabsScroll">
+              <div class="sql-query-subtabs-list" id="sqlQuerySubtabsList" role="tablist" aria-label="查询窗口"></div>
+            </div>
+            <button type="button" class="sql-query-subtab-add" id="sqlQueryAddWindowBtn" onclick="sqlQueryAddWindow()" title="新建查询窗口">+ 新查询</button>
+            <span class="sql-query-session-inline" id="sqlQuerySessionLabel">当前会话</span>
+          </div>
+          <div class="sql-query-toolbar">
+            <div class="sql-query-toolbar-actions sql-query-toolbar-actions--main">
+              <button type="button" class="btn btn-secondary sql-query-toolbar-btn" id="sqlQueryValidateBtn" onclick="validateSqlQuery()">校验 SQL</button>
+              <button type="button" class="btn btn-primary sql-query-toolbar-btn" id="sqlQueryRunBtn" onclick="runSqlQueryFromToolbar()">执行查询</button>
+              <button type="button" class="btn btn-secondary sql-query-toolbar-btn sql-query-close-btn" id="sqlQueryCloseBtn" onclick="closeSqlQueryPanel()" title="返回对话">关闭</button>
+            </div>
+          </div>
+          <p class="sql-query-hint">仅支持单条只读 SELECT/WITH；行数与分页由服务端限制。</p>
+          <label class="visually-hidden" for="sqlQueryInput">SQL</label>
+          <textarea class="sql-query-input" id="sqlQueryInput" rows="8" spellcheck="false" placeholder="输入 SQL，例如：SELECT * FROM your_table LIMIT 10"></textarea>
+          <div class="sql-query-validate-status" id="sqlQueryValidateStatus" aria-live="polite"></div>
+          <div class="sql-query-error" id="sqlQueryError" hidden></div>
+          <div class="sql-query-result-wrap">
+            <div class="sql-query-result-scroll">
+              <table class="sql-query-result-table" id="sqlQueryResultTable">
+                <thead id="sqlQueryResultThead"></thead>
+                <tbody id="sqlQueryResultTbody"></tbody>
+              </table>
+              <p class="sql-query-result-empty" id="sqlQueryResultEmpty" hidden>暂无查询结果，执行查询后在此显示。</p>
+            </div>
+          </div>
+          <div class="sql-query-pagination" id="sqlQueryPagination">
+            <label class="sql-query-page-size-label" for="sqlQueryPageSize">每页</label>
+            <select class="sql-query-page-size" id="sqlQueryPageSize" onchange="onSqlQueryPageSizeChange()">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <button type="button" class="sql-query-page-btn" id="sqlQueryPagePrev" onclick="sqlQueryGoPrevPage()">上一页</button>
+            <span class="sql-query-page-info" id="sqlQueryPageInfo">第 1 / 1 页，共 0 条</span>
+            <button type="button" class="sql-query-page-btn" id="sqlQueryPageNext" onclick="sqlQueryGoNextPage()">下一页</button>
           </div>
         </div>
       </div>
