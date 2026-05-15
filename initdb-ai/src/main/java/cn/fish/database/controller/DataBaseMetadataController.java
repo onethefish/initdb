@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/dataBase")
-public class DataBaseController extends BaseController {
+@RequestMapping("/dataBase/metadata")
+public class DataBaseMetadataController extends BaseController {
 
     private final DataBaseService dataBaseService;
 
-    public DataBaseController(DataBaseService dataBaseService) {
+    public DataBaseMetadataController(DataBaseService dataBaseService) {
         this.dataBaseService = dataBaseService;
     }
 

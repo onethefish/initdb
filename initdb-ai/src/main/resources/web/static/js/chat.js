@@ -261,7 +261,7 @@ async function onDbTableDetailsToggle(details, slot) {
     }
     slot.innerHTML = '<p class="db-table-detail-loading">加载表结构…</p>';
     try {
-        const table = await Api.get('/dataBase/query/unique', {sessionId: sid, tableName});
+        const table = await Api.get('/dataBase/metadata/query/unique', {sessionId: sid, tableName});
         if (!details.open) {
             return;
         }
@@ -314,7 +314,7 @@ async function loadDbTableListForCurrentSession(options) {
     }
 
     try {
-        const data = await Api.get('/dataBase/query/list', {sessionId: sid});
+        const data = await Api.get('/dataBase/metadata/query/list', {sessionId: sid});
         if (seq !== dbTableLoadSeq) {
             return;
         }
