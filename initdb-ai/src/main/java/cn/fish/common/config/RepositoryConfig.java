@@ -20,7 +20,7 @@ public class RepositoryConfig {
     @Bean
     public VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
         PgVectorStore.PgVectorStoreBuilder builder = PgVectorStore.builder(jdbcTemplate, embeddingModel);
-        //        builder.initializeSchema(true);
+        builder.initializeSchema(true);
         return builder.build();
     }
 
@@ -35,7 +35,7 @@ public class RepositoryConfig {
         return PostgresSaver.builder()
                             .datasource(dataSource)
                             .physicalDeleteOnRelease(true)
-                            //                            .createTables(true)
+                            .createTables(true)
                             .stateSerializer(StateGraph.DEFAULT_JACKSON_SERIALIZER)
                             .build();
     }
