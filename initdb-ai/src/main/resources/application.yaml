@@ -25,7 +25,7 @@ spring:
       moderation: none
     openai:
       chat:
-        api-key: ${SPRING_AI_OPENAI_CHAT_APIKEY:sk-41d5bcb9effe476196e6a1907078a1ce}
+        api-key: ${SPRING_AI_OPENAI_CHAT_APIKEY:}
         base-url: ${SPRING_AI_OPENAI_CHAT_BASEURL:https://dashscope.aliyuncs.com/compatible-mode}
         options:
           model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:qwen-plus-2025-07-28}
@@ -34,7 +34,7 @@ spring:
       #          presencePenalty: 0.2      # 降低存在惩罚，避免干扰模型聚焦
       #          frequencyPenalty: 0.2     # 防止模型重复啰嗦
       embedding:
-        api-key: ${SPRING_AI_OPENAI_EMBEDDING_APIKEY:sk-41d5bcb9effe476196e6a1907078a1ce}
+        api-key: ${SPRING_AI_OPENAI_EMBEDDING_APIKEY:}
         base-url: ${SPRING_AI_OPENAI_EMBEDDING_BASEURL:https://dashscope.aliyuncs.com/compatible-mode}
         options:
           model: ${SPRING_AI_OPENAI_EMBEDDING_OPTIONS_MODEL:text-embedding-v1}
