@@ -212,6 +212,106 @@ fetch() -> response.body.getReader()     ReadableStream API
 - **渲染两阶段切换：** 流式中用 `<pre>` 纯文本（因为 Markdown 不完整），流结束后用 `marked.parse()` 重新渲染为格式化 HTML（代码高亮、表格等）
 - **requestAnimationFrame 合并帧：** 前端用 `scheduleStreamFlush()` 合并同一动画帧内的多次 chunk 更新，避免高频 DOM 操作导致卡顿
 
+### 对话存储（PostgresSaver Checkpoint）
+
+对话消息（UserMessage + AssistantMessage）由 Spring AI Graph 框架通过 `PostgresSaver` 自动持久化到 PostgreSQL，不依赖独立的消息表。
+
+**代码位置：** `cn.fish.common.savers.PostgresSaver.java`
+
+**存储流程：**
+
+```
+StateGraph 节点执行完成
+    |
+    v
+框架自动调用 PostgresSaver
+    |
+    |-- insertedCheckpoint()  → 新 checkpoint（首次）
+    |-- updatedCheckpoint()   → 更新 checkpoint（先 DELETE 旧记录）
+    |       |
+    |       v
+    |   insertCheckpoint()
+    |       |
+    |       |-- 1. upsertThreadSql
+    |       |       INSERT INTO GraphThread (thread_id, thread_name, is_released)
+    |       |       VALUES (?, ?, FALSE)
+    |       |       ON CONFLICT (thread_name) WHERE is_released = FALSE DO NOTHING
+    |       |       -- thread_name = sessionId
+    |       |
+    |       |-- 2. encodeState(checkpoint.getState())
+    |       |       |-- stateSerializer.dataToBytes(data)   // 消息列表 → 二进制
+    |       |       |-- Base64.getEncoder().encodeToString() // → Base64 字符串
+    |       |       └-- {"binaryPayload": "base64..."}       // → JSONB
+    |       |
+    |       |-- 3. insertCheckpointSql
+    |               INSERT INTO GraphCheckpoint(
+    |                   checkpoint_id, parent_checkpoint_id, thread_id,
+    |                   node_id, next_node_id, state_data, state_content_type
+    |               ) VALUES (?, ?, ?, ?, ?, ?::jsonb, ?)
+    |
+    v
+GraphCheckpoint.state_data（JSONB）存储完整对话状态
+```
+
+**消息追加机制（`DbAgentInputBridgeNode` + `AppendStrategy`）：**
+
+`state["messages"]` 使用 `AppendStrategy`（`DBAgentStateGraphConfig:61`），每轮对话只追加新消息，历史由 checkpoint 自带：
+
+```
+第1轮对话：
+  checkpoint 加载 → state["messages"] = []（新会话）
+  DbAgentInputBridgeNode → 追加 UserMessage("第1个问题")
+    └-- 从 state 取 STANDALONE（上下文改写后的独立问题）
+    └-- 包装为 UserMessage，写入 state["messages"]
+    └-- 同时写入 state["input"]，供 ReAct Agent 读取
+  ReactAgent → 追加 AssistantMessage("第1个回答")
+  PostgresSaver → checkpoint 保存 [User1, Assistant1]
+
+第2轮对话：
+  checkpoint 加载 → state["messages"] = [User1, Assistant1]
+  DbAgentInputBridgeNode → 追加 UserMessage("第2个问题")
+  ReactAgent → 追加 AssistantMessage("第2个回答")
+  PostgresSaver → checkpoint 保存 [User1, Assistant1, User2, Assistant2]
+```
+
+包装为 `UserMessage` 的意义：与 Spring AI 消息模型对齐，ReAct Agent 内部直接把 `state["messages"]`（`List<Message>`）发给 ChatModel，LLM 能区分用户输入和自己的回答。如果不包装，框架无法识别消息角色。
+
+**读取流程（框架内部使用，未暴露 REST 接口）：**
+
+```
+loadedCheckpoints(config)
+    |-- SELECT state_data->>'binaryPayload' AS base64_data
+    |   FROM GraphCheckpoint c
+    |   JOIN GraphThread t ON c.thread_id = t.thread_id
+    |   WHERE t.thread_name = ? AND t.is_released = FALSE
+    |   ORDER BY c.saved_at DESC
+    |
+    |-- decodeState()
+    |       Base64.getDecoder().decode() → stateSerializer.dataFromBytes()
+    |       → Map<String, Object>（含 state["messages"] = List<Message>）
+    |
+    v
+框架恢复对话上下文，继续执行节点
+```
+
+**当前问题：** 后端 GraphCheckpoint 存了完整消息，但没有暴露查询接口。前端通过 `localStorage`（key: `dbSessions`）存储聊天历史，切换会话时从本地恢复。换浏览器或清缓存后历史丢失。
+
+**数据库表：**
+
+| 表 | 列 | 说明 |
+|---|---|---|
+| GraphThread | thread_id (UUID PK) | 线程唯一标识 |
+| | thread_name (VARCHAR) | 对应 sessionId |
+| | is_released (BOOLEAN) | 是否已释放 |
+| GraphCheckpoint | checkpoint_id (UUID PK) | 快照唯一标识 |
+| | parent_checkpoint_id (UUID) | 父快照 ID |
+| | thread_id (UUID FK) | 关联 GraphThread |
+| | node_id (VARCHAR) | 当前执行节点 |
+| | next_node_id (VARCHAR) | 下一个节点 |
+| | state_data (JSONB) | 序列化状态（含消息列表） |
+| | state_content_type (VARCHAR) | 序列化格式标识 |
+| | saved_at (TIMESTAMP) | 保存时间 |
+
 ### 数据库表数据导出
 
 通过对话完成数据库表数据导出，支持 CSV / XLSX 格式。采用**异步 Job 系统**架构：用户提交 SQL → 后台流式执行 → 上传云存储 → 前端轮询下载。
