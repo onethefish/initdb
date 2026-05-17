@@ -442,6 +442,11 @@
     color: var(--color-text-secondary, #888);
 }
 
+.sql-query-result-actions {
+    padding: 8px 12px;
+    text-align: left;
+}
+
 .sql-query-pagination {
     display: flex;
     align-items: center;

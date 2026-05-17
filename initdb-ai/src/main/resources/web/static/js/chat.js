@@ -731,6 +731,20 @@ function runSqlQueryFromToolbar() {
     void executeSqlQueryPage();
 }
 
+function exportSqlQueryFromToolbar() {
+    const ta = document.getElementById('sqlQueryInput');
+    const sql = String((ta && ta.value) || '').trim();
+    if (!sql) {
+        showErrorDialog({title: '提示', message: '请输入 SQL'});
+        return;
+    }
+    if (!currentSessionId) {
+        showErrorDialog({title: '提示', message: '请先选择对话'});
+        return;
+    }
+    openExportSqlModal(sql, 'CSV');
+}
+
 function onSqlQueryPageSizeChange() {
     const w = getActiveSqlQueryWindow();
     if (!w) {
@@ -826,11 +840,14 @@ function renderSqlQueryResultTable(records) {
     }
     thead.innerHTML = '';
     tbody.innerHTML = '';
+    const actionsEl = document.getElementById('sqlQueryResultActions');
     if (!records || !records.length) {
         emptyEl.hidden = false;
+        if (actionsEl) { actionsEl.hidden = true; }
         return;
     }
     emptyEl.hidden = true;
+    if (actionsEl) { actionsEl.hidden = false; }
     const cols = collectSqlResultColumns(records);
     const hr = document.createElement('tr');
     cols.forEach(c => {
