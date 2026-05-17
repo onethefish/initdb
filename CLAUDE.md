@@ -212,58 +212,221 @@ fetch() -> response.body.getReader()     ReadableStream API
 - **渲染两阶段切换：** 流式中用 `<pre>` 纯文本（因为 Markdown 不完整），流结束后用 `marked.parse()` 重新渲染为格式化 HTML（代码高亮、表格等）
 - **requestAnimationFrame 合并帧：** 前端用 `scheduleStreamFlush()` 合并同一动画帧内的多次 chunk 更新，避免高频 DOM 操作导致卡顿
 
-### 数据库知识库（RAG）
+### 数据库表数据导出
 
-用户可以管理数据库相关知识文档，对话时通过 RAG 检索增强回答。
+通过对话完成数据库表数据导出，支持 CSV / XLSX 格式。采用**异步 Job 系统**架构：用户提交 SQL → 后台流式执行 → 上传云存储 → 前端轮询下载。
 
-**代码位置：** `cn.fish.knowledge` 包，前端 `knowledge.js`。
+**代码位置：**
+
+| 层 | 类 / 文件 |
+|---|---|
+| Controller | `cn.fish.initDB.controller.ExportJobController` — `/db/export/jobs/*` |
+| Service | `cn.fish.initDB.service.impl.ExportJobServiceImpl` |
+| Processor | `cn.fish.initDB.service.impl.ExportJobProcessorImpl` |
+| Writer | `cn.fish.initDB.export.CsvExportWriter` / `XlsxExportWriter` |
+| SQL Guard | `cn.fish.initDB.service.impl.ExportSqlGuardService` |
+| Config | `cn.fish.common.config.ExportConfig`（prefix: `initdb.export`） |
+| DDL | `export_job` 表，见 `initdb-ai/deploy/db/ddl/postgres.sql` |
+| 前端 | `web/static/js/chat.js`（`maybeBotExportBar`, `pollExportJobUntilDone`） |
 
 **端到端流程：**
 
 ```
-POST /agentKnowledge/add (multipart)
-  |
-  v
-AgentKnowledgeServiceImpl.add()
-  |-- 上传文件到 ServaFile -> fileId
-  |-- DTO -> AgentKnowledge 实体 (embeddingStatus=PENDING)
-  |-- INSERT agent_knowledge 表
-  |-- 发布 AgentKnowledgeEmbeddingEvent
-  v
- [事务提交]
-  |
-  v
-AgentKnowledgeListener (@Async + @TransactionalEventListener AFTER_COMMIT)
-  |-- 状态置 PROCESSING
-  |-- 删除旧向量 (按 datasourceId + agentKnowledgeId + vectorType 过滤)
-  |-- 新增向量：
-  |     QA/FAQ -> 格式化为单个 Document，不分片
-  |     DOCUMENT -> TikaDocumentReader 解析 -> TextSplitter 分片
-  |     -> DocumentConverter 打元数据 (datasourceId, agentKnowledgeId, vectorType)
-  |     -> VectorStoreRepository.add() -> PgVectorStore 自动 embedding + 入库
-  |-- 状态置 COMPLETED (失败置 FAILED + 记录错误信息)
-  |
-  v
- [pgvector 表]
-  |
-  v
-对话检索：
-  (A) AgentVectorService.rag() -> SearchRequest + 元数据过滤 -> pgvector 相似度搜索
-  (B) KnowledgeRetrievalTool (Agent 工具调用) -> 按 datasourceId 查询 -> 返回文档给 LLM
+用户点"导出"（Bot 回复中自动检测 SQL 代码块）
+    |
+    v
+前端 openExportSqlModal() — 用户可编辑 SQL，选格式 (CSV/XLSX)
+    |
+    v
+POST /db/export/jobs/add {sessionId, sql, format}
+    |
+    v
+ExportJobServiceImpl.add()
+    --> ExportSqlGuardService.isAllowed()       [复用 QuerySqlCheckTool: 语法预检 + LLM 语义校验]
+    --> SelectSqlRowLimiter.ensureSelectRowLimit() [自动注入 LIMIT，cap = min(userMaxRows, configMaxRows)]
+    --> exportJobRepository.save()               [持久化 PENDING Job]
+    --> publishEvent(ExportJobPendingEvent)
+    |
+    v
+ExportJobPendingListener (@Async + @TransactionalEventListener AFTER_COMMIT)
+    --> ExportJobProcessorImpl.drainPendingJobs()
+    |
+    v
+ExportJobRepositoryImpl.pollOnePending()  [乐观锁: UPDATE WHERE status='PENDING'，原子抢占]
+    |
+    v
+ExportJobProcessorImpl.execute()
+    --> servaFile.uploadDirect(outputStream -> ...)
+        --> streamQueryToSink(session, sql, CsvExportWriter | XlsxExportWriter)
+            --> DataBaseService.queryTableDataStreaming()  [JDBC streaming cursor，逐行回调]
+            --> sink.writeHeader() / sink.writeDataRow()
+    --> 更新 Job: READY + servaFileId + rowCount
+    |
+    v
+前端 pollExportJobUntilDone()  [GET /query/unique 每 1.5s 轮询，最多 5 分钟]
+    |
+    v
+GET /download --> 校验 session 所有权 + 状态 + 过期 --> 流式返回文件 --> 浏览器下载
 ```
 
-**关键技术点：**
+**核心技术点：**
 
-- **事务事件驱动的异步管线：** `@Transactional` + `@TransactionalEventListener(phase = AFTER_COMMIT)` + `@Async` 三重注解组合，保证 DB 插入提交后才触发异步 embedding，事件处理在独立线程池（`initDbExecutor`）中执行，不阻塞用户请求
-- **五种文本分片策略：** 通过 `TextSplitterFactory` + Spring Bean Map 自动发现，用户上传时可选：
-  - `token` — Spring AI 内置的 TokenTextSplitter，按 token 数切分
-  - `recursive` — 阿里云 AI 的 RecursiveCharacterTextSplitter，递归按分隔符切分
-  - `sentence` — 自定义 SentenceSplitter，按句子切分并支持句子重叠，处理中英文超长句子
-  - `paragraph` — 自定义 ParagraphTextSplitter，段落优先切分，递归回退到句子/字符级，重叠对齐到段落边界
-  - `semantic` — 自定义 SemanticTextSplitter，用 EmbeddingModel 计算滑动窗口内句子的 embedding，按余弦相似度下降点切分（语义级分片）
-- **PgVectorStore 自动 embedding：** `vectorStore.add(documents)` 时自动调用 `EmbeddingModel`（DashScope `text-embedding-v1`）生成向量，文本和向量同时写入 pgvector 表
-- **元数据过滤检索：** 向量检索时通过 `SearchRequest` 的 filter expression 按 `datasourceId` 强制过滤 + 可选按 `agentKnowledgeId` / `concreteAgentKnowledgeType` / 自定义元数据过滤，确保不同数据源的知识互不干扰
-- **Agent 工具集成：** `KnowledgeRetrievalTool` 注册为 `"knowledge_retrieval"` 函数工具，ReAct Agent 在对话中自动调用，检索结果直接作为上下文返回给 LLM
+- **Job 抢占式乐观锁：** `pollOnePending()` 用 `UPDATE ... WHERE status = 'PENDING'` 原子抢占，返回 0 行说明被其他实例抢走，天然支持多实例部署
+- **双重触发机制：** 事件驱动（`@TransactionalEventListener AFTER_COMMIT`，事务提交后即时处理）+ 定时兜底（`@Scheduled` 每 60s 扫描残留 PENDING Job，防止事件丢失或实例重启后饿死）
+- **流式 JDBC + 流式上传：** `queryTableDataStreaming()` 使用 JDBC streaming cursor 逐行回调，通过 `servaFile.uploadDirect()` 直接流式上传到云存储，内存中始终只有一行数据
+- **两种 Writer：** `CsvExportWriter`（Hutool `CsvWriter`，UTF-8 BOM 兼容 Excel）/ `XlsxExportWriter`（Apache POI `SXSSFWorkbook`，流式 XLSX，`rowAccessWindowSize=500`，动态列宽自适应）
+- **SQL 安全三重防护：** `ExportSqlGuardService`（复用 Agent 的 `QuerySqlCheckTool`）→ `SelectSqlRowLimiter`（自动注入 LIMIT）→ `maxRows` 硬上限（默认 10000）
+- **前端自动检测：** `maybeBotExportBar()` 在每条 Bot 回复后自动提取第一个 SQL 代码块，命中则显示"导出"按钮
+- **Job 生命周期：** `PENDING → RUNNING → READY/FAILED → EXPIRED`，默认 24h TTL，每小时清理过期 Job（删除 Serva 文件 + 标记 EXPIRED）
+- **与 AI 工作流独立：** 导出功能不经过 Agent 工作流（`/db/chat/stream`），是独立的 REST 接口。但复用了 `QuerySqlCheckTool` 做 SQL 校验
+
+**配置项**（`application.yaml` `initdb.export.*`）：
+
+| 属性 | 默认值 | 说明 |
+|---|---|---|
+| `maxRows` | 10000 | 单次导出最大行数 |
+| `jobTtlHours` | 24 | Job 有效期（小时） |
+| `pollIntervalMs` | 60000 | 定时兜底轮询间隔 |
+| `cleanupIntervalMs` | 3600000 | 过期 Job 清理间隔 |
+| `sxssfRowAccessWindowSize` | 500 | POI 流式 XLSX 窗口大小 |
+| `csvUtf8Bom` | true | CSV UTF-8 BOM（Excel 兼容） |
+
+**`export_job` 表 DDL：**
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `id` | VARCHAR(32) PK | Snowflake ID |
+| `session_id` | VARCHAR(32) NOT NULL | 关联会话（所有权 + 数据源查找） |
+| `format` | VARCHAR(8) NOT NULL | `CSV` / `XLSX` |
+| `max_rows` | INT NOT NULL | 实际行数上限（服务端 clamp 后） |
+| `submitted_sql` | TEXT NOT NULL | 用户原始 SQL |
+| `executed_sql` | TEXT NOT NULL | 注入 LIMIT 后的 SQL |
+| `status` | VARCHAR(16) NOT NULL | `PENDING` / `RUNNING` / `READY` / `FAILED` / `EXPIRED` |
+| `serva_file_id` | VARCHAR(128) NULL | 云存储文件 ID |
+| `row_count` | BIGINT NULL | 实际导出行数 |
+| `error_message` | TEXT NULL | 错误信息（截断至 4000 字符） |
+| `created_time` | DATETIME | 创建时间 |
+| `expires_at` | DATETIME | 过期时间 |
+| `finished_at` | DATETIME NULL | 完成时间 |
+
+索引：`session_id`、`status`、`expires_at`。
+
+### 数据库知识库（RAG）
+
+用户可以管理数据库相关知识文档，对话时通过 RAG 检索增强回答。按数据源隔离，每个数据源拥有独立的知识库和向量空间。
+
+**代码位置：** `cn.fish.knowledge` 包（31 个 Java 文件，10 个子包），前端 `knowledge.js`。
+
+**技术栈：** Spring AI VectorStore + PgVector（pgvector 扩展做向量相似度搜索）+ DashScope `text-embedding-v1`（向量嵌入）+ Apache Tika（文档解析）+ 事件驱动异步管线（`@TransactionalEventListener AFTER_COMMIT` + `@Async`）
+
+**包结构：**
+
+| 子包 | 核心类 | 职责 |
+|---|---|---|
+| `controller` | `AgentKnowledgeController`, `AgentVectorController`, `DocumentController` | REST 接口 |
+| `service` | `AgentKnowledgeService`, `AgentVectorService`, `DocumentService` | 业务逻辑 |
+| `repository` | `AgentKnowledgeRepository`, `VectorStoreRepository` | 数据访问（DB + pgvector） |
+| `splitter` | `TextSplitterFactory`, `SentenceSplitter`, `ParagraphTextSplitter`, `SemanticTextSplitter` | 文本分片策略 |
+| `converter` | `AgentKnowledgeConverter`, `DocumentConverter` | DTO↔实体转换、文档元数据注入 |
+| `event` / `event/listen` | `AgentKnowledgeEmbeddingEvent`, `AgentKnowledgeDeleteEvent`, `AgentKnowledgeListener` | 事件驱动的异步 embedding 管线 |
+| `entity` / `enums` | `AgentKnowledge`, `AgentKnowledgeDTO`, `AgentKnowledgeVO`, `EmbeddingStatus`, `KnowledgeType`, `SplitterType` | 数据模型与枚举 |
+| `constants` | `DocumentMetadataConstant` | 向量文档元数据 key 常量 |
+
+**关联文件（knowledge 包外）：**
+- `cn.fish.initDB.workflow.agent.tool.KnowledgeRetrievalTool` — ReAct Agent 工具
+- `cn.fish.common.config.TextSplitterConfig` — 5 种分片器 Bean 定义
+- `cn.fish.common.properties.TextSplitterProperties` — 分片器配置属性（prefix: `spring.ai.init-db.text-splitter`）
+- `cn.fish.common.config.RepositoryConfig` — PgVectorStore Bean 定义
+
+#### 两条上传路径
+
+**路径 A：`POST /agentKnowledge/add`（主路径，事件驱动）**
+
+```
+AgentKnowledgeServiceImpl.add(dto)
+  |-- servaFile.upload(file) -> fileId
+  |-- DTO -> AgentKnowledge 实体 (embeddingStatus=PENDING)
+  |-- agentKnowledgeRepository.save()
+  |-- ApplicationEventPublisher.publishEvent(AgentKnowledgeEmbeddingEvent)
+  v
+ [事务提交后]
+  |
+  v
+AgentKnowledgeListener (@Async("initDbExecutor") + @TransactionalEventListener AFTER_COMMIT)
+  |-- 重新加载实体（异步线程安全）
+  |-- 状态置 PROCESSING
+  |-- deleteVectorStore() — 按 datasourceId + agentKnowledgeId + vectorType 删除旧向量
+  |-- addVectorStore():
+  |     QA/FAQ -> "问题：{question}\n,回答:{content}" 格式化为单个 Document，不分片
+  |     DOCUMENT -> TikaDocumentReader 解析 -> TextSplitterFactory.getSplitter(type) 分片
+  |     -> DocumentConverter 打元数据 -> VectorStoreRepository.add()
+  |        -> PgVectorStore 自动调用 EmbeddingModel 生成向量并入库
+  |-- 状态置 COMPLETED (异常时 FAILED + errorMsg)
+```
+
+- 删除操作发布 `AgentKnowledgeDeleteEvent`，listener 调用 `deleteVectorStore()`
+- 刷新操作重新发布 `AgentKnowledgeEmbeddingEvent`，不重新保存实体
+
+**路径 B：`POST /document/upload/txt`（旧路径，同步）**
+
+`DocumentServiceImpl.importTxtDocument(sessionId, file)` — 同步读取 + 分片 + 入库，无事件机制，分片器硬编码为 `ParagraphTextSplitter`。
+
+#### 五种文本分片策略
+
+通过 `TextSplitterFactory`（Spring Bean Map 注入自动发现）+ `TextSplitterConfig` 实现，用户上传时可选：
+
+| 策略 | 实现类 | 核心参数 | 特点 |
+|---|---|---|---|
+| `token` | `TokenTextSplitter`（Spring AI 内置） | `chunkSize`, `minChunkSizeChars=400`, `keepSeparator=true` | 默认分片器，按 token 数切分 |
+| `recursive` | `RecursiveCharacterTextSplitter`（阿里云 AI） | `chunkSize`, `chunkOverlap=200` | 递归按分隔符切分 |
+| `sentence` | `SentenceSplitter`（自定义） | `chunkSize`, `sentenceOverlap=1` | 正则提取句子，支持中英文超长句硬切分，注入 `chunk_index`/`chunk_size` 元数据 |
+| `paragraph` | `ParagraphTextSplitter`（自定义） | `chunkSize`, `paragraphOverlapChars=200` | 段落优先，递归回退：paragraph → sentence → character，重叠对齐段落边界 |
+| `semantic` | `SemanticTextSplitter`（自定义） | `minChunkSize=200`, `maxChunkSize=1000`, `similarityThreshold=0.5`, `embeddingBatchSize=10` | 滑动窗口计算句子 embedding，余弦相似度下降点切分（语义级分片） |
+
+#### 向量存储与检索
+
+**PgVectorStore 配置**（`RepositoryConfig`）：Spring AI 的 `PgVectorStore`，`initializeSchema(true)` 自动建表（`vector_store`，列：`id` UUID, `content` TEXT, `metadata` JSONB, `embedding` vector），不在 DDL 文件中管理。
+
+**VectorStoreRepository** 三个操作：`add(List<Document>)`, `queryList(SearchRequest)`, `delete(Filter.Expression)`。
+
+**元数据 key**（`DocumentMetadataConstant`）：`datasourceId`（必选）、`agentKnowledgeId`、`vectorType`（固定 `"agentKnowledge"`）、`concreteAgentKnowledgeType`（`DOCUMENT`/`QA`/`FAQ`）、业务元数据（`column`, `table`, `tableName`, `businessTerm` 等）。
+
+**过滤逻辑**（`AgentVectorServiceImpl.buildExpression()`）：`datasourceId` 强制过滤 + 可选 `agentKnowledgeId` / `concreteAgentKnowledgeType` + 自定义 `vectorMetadataEq` map，所有条件 AND 组合。
+
+**Embedding 模型：** DashScope `text-embedding-v1`，`vectorStore.add()` 时自动调用生成向量。
+
+#### 对话检索集成
+
+**方式 A — AgentVectorService.rag()**（`GET /agentVector/query/rag`）：
+1. 校验 `datasourceId` 必填
+2. `SearchRequest(query, topK=5, filterExpression)` → `vectorStoreRepository.queryList()`
+3. 无结果返回 `"未找到相关知识库内容"`
+4. 拼接文档文本 → `applicationPromptTemplates.renderAgentVectorRagAnswer()` → `chatModel.call()`
+5. 记录 usage（`chatModelUsageRecorder`）
+
+**方式 B — KnowledgeRetrievalTool**（ReAct Agent 工具）：
+- 工具名 `"knowledge_retrieval"`，在 `DbReactAgentConfig` 中注册
+- 参数：`query`（必填）, `top_k`（可选，默认 1）
+- 逻辑：从 `ToolContext` 取 `sessionId` → 查 `ChatSession.datasourceId` → `SearchRequest(topK=1, filter=datasourceId)` → 返回 `List<Document>`
+- 工具描述提示 LLM：当 `information_schema` 不足以理解业务规则、领域概念、字段含义、KPI 定义时使用
+
+#### `agent_knowledge` 表 DDL
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| `id` | VARCHAR(32) PK | Snowflake ID |
+| `datasource_id` | VARCHAR(32) | 关联数据源 |
+| `title` | VARCHAR(500) | 文档标题 |
+| `type` | VARCHAR(20) | DOCUMENT / QA / FAQ |
+| `question` | TEXT | QA/FAQ 类型的问题 |
+| `content` | TEXT | QA/FAQ 类型的回答 |
+| `is_recall` | INTEGER | 1=参与检索, 0=归档 |
+| `embedding_status` | INTEGER | 0=PENDING, 1=PROCESSING, 2=COMPLETED, 3=FAILED |
+| `error_msg` | TEXT | 失败时的错误信息 |
+| `file_id` | VARCHAR(64) | Serva 文件存储 ID |
+| `file_size` | BIGINT | 文件大小 |
+| `file_type` | VARCHAR(50) | MIME 类型 |
+| `splitter_type` | VARCHAR(20) | 分片策略 |
 
 ### Custom Parent POM
 
