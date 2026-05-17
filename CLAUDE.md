@@ -212,6 +212,59 @@ fetch() -> response.body.getReader()     ReadableStream API
 - **渲染两阶段切换：** 流式中用 `<pre>` 纯文本（因为 Markdown 不完整），流结束后用 `marked.parse()` 重新渲染为格式化 HTML（代码高亮、表格等）
 - **requestAnimationFrame 合并帧：** 前端用 `scheduleStreamFlush()` 合并同一动画帧内的多次 chunk 更新，避免高频 DOM 操作导致卡顿
 
+### 数据库知识库（RAG）
+
+用户可以管理数据库相关知识文档，对话时通过 RAG 检索增强回答。
+
+**代码位置：** `cn.fish.knowledge` 包，前端 `knowledge.js`。
+
+**端到端流程：**
+
+```
+POST /agentKnowledge/add (multipart)
+  |
+  v
+AgentKnowledgeServiceImpl.add()
+  |-- 上传文件到 ServaFile -> fileId
+  |-- DTO -> AgentKnowledge 实体 (embeddingStatus=PENDING)
+  |-- INSERT agent_knowledge 表
+  |-- 发布 AgentKnowledgeEmbeddingEvent
+  v
+ [事务提交]
+  |
+  v
+AgentKnowledgeListener (@Async + @TransactionalEventListener AFTER_COMMIT)
+  |-- 状态置 PROCESSING
+  |-- 删除旧向量 (按 datasourceId + agentKnowledgeId + vectorType 过滤)
+  |-- 新增向量：
+  |     QA/FAQ -> 格式化为单个 Document，不分片
+  |     DOCUMENT -> TikaDocumentReader 解析 -> TextSplitter 分片
+  |     -> DocumentConverter 打元数据 (datasourceId, agentKnowledgeId, vectorType)
+  |     -> VectorStoreRepository.add() -> PgVectorStore 自动 embedding + 入库
+  |-- 状态置 COMPLETED (失败置 FAILED + 记录错误信息)
+  |
+  v
+ [pgvector 表]
+  |
+  v
+对话检索：
+  (A) AgentVectorService.rag() -> SearchRequest + 元数据过滤 -> pgvector 相似度搜索
+  (B) KnowledgeRetrievalTool (Agent 工具调用) -> 按 datasourceId 查询 -> 返回文档给 LLM
+```
+
+**关键技术点：**
+
+- **事务事件驱动的异步管线：** `@Transactional` + `@TransactionalEventListener(phase = AFTER_COMMIT)` + `@Async` 三重注解组合，保证 DB 插入提交后才触发异步 embedding，事件处理在独立线程池（`initDbExecutor`）中执行，不阻塞用户请求
+- **五种文本分片策略：** 通过 `TextSplitterFactory` + Spring Bean Map 自动发现，用户上传时可选：
+  - `token` — Spring AI 内置的 TokenTextSplitter，按 token 数切分
+  - `recursive` — 阿里云 AI 的 RecursiveCharacterTextSplitter，递归按分隔符切分
+  - `sentence` — 自定义 SentenceSplitter，按句子切分并支持句子重叠，处理中英文超长句子
+  - `paragraph` — 自定义 ParagraphTextSplitter，段落优先切分，递归回退到句子/字符级，重叠对齐到段落边界
+  - `semantic` — 自定义 SemanticTextSplitter，用 EmbeddingModel 计算滑动窗口内句子的 embedding，按余弦相似度下降点切分（语义级分片）
+- **PgVectorStore 自动 embedding：** `vectorStore.add(documents)` 时自动调用 `EmbeddingModel`（DashScope `text-embedding-v1`）生成向量，文本和向量同时写入 pgvector 表
+- **元数据过滤检索：** 向量检索时通过 `SearchRequest` 的 filter expression 按 `datasourceId` 强制过滤 + 可选按 `agentKnowledgeId` / `concreteAgentKnowledgeType` / 自定义元数据过滤，确保不同数据源的知识互不干扰
+- **Agent 工具集成：** `KnowledgeRetrievalTool` 注册为 `"knowledge_retrieval"` 函数工具，ReAct Agent 在对话中自动调用，检索结果直接作为上下文返回给 LLM
+
 ### Custom Parent POM
 
 Uses `cn.fish.cloud:serva-dependencies:1.0.0` as parent BOM (from the author's [serva](https://github.com/onethefish/serva) framework). Core web and MyBatis starters come from this.
