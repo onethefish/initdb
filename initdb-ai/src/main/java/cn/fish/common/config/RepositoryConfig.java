@@ -32,12 +32,12 @@ public class RepositoryConfig {
 
     @Bean
     public BaseCheckpointSaver baseCheckpointSaver(DataSource dataSource) {
-        return PostgresSaver.builder()
-                            .datasource(dataSource)
-                            .physicalDeleteOnRelease(true)
-                            .createTables(true)
-                            .stateSerializer(StateGraph.DEFAULT_JACKSON_SERIALIZER)
-                            .build();
+        PostgresSaver.Builder builder = PostgresSaver.builder();
+        builder.datasource(dataSource);
+        builder.physicalDeleteOnRelease(true);
+        builder.createTables(true);
+        builder.stateSerializer(StateGraph.DEFAULT_JACKSON_SERIALIZER);
+        return builder.build();
     }
 
     //    @Bean
